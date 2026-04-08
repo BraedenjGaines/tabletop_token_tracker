@@ -1,7 +1,7 @@
 import "package:flutter/material.dart";
 void main() {
   runApp(MaterialApp(
-    title: 'My App',
+    title: 'TableTop Token Tracker',
     home: Scaffold(
       appBar: AppBar(
         title: Text('Resource Tracker'),
