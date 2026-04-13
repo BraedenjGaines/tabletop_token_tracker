@@ -188,9 +188,19 @@ class _CounterScreenState extends State<CounterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Resource Tracker'),
-        centerTitle: true,
-      ),
+      title: Text('Resource Tracker'),
+      centerTitle: true,
+      actions: [
+        IconButton(
+          icon: Icon(Icons.refresh),
+          onPressed: () {
+            setState(() {
+              playerHealth = List.filled(widget.playerCount, widget.startingLife);
+            });
+          },
+        ),
+      ],
+    ),
       body: playerHealth.length == 2
   ? Column(
       children: [
