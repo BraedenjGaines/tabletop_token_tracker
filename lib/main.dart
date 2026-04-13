@@ -146,33 +146,61 @@ class _CounterScreenState extends State<CounterScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Resource Tracker'),
-        centerTitle: true, // Center the title in the app bar
+        centerTitle: true,
       ),
       body: Column(
-  children: [
-    for (int i = 0; i < playerHealth.length; i++)
-      Expanded(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(onPressed: () {
-                setState(() {
-                  playerHealth[i]++;
-                });
-              }, child: Text('+')),
-              Text('Player ${i + 1} Life: ${playerHealth[i]}'),
-              ElevatedButton(onPressed: () {
-                setState(() {
-                  playerHealth[i]--;
-                });
-              }, child: Text('-')),
-            ],
-          ),
-        ),
+        children: [
+          for (int i = 0; i < playerHealth.length; i += 2)
+            Expanded(
+              child: Builder(
+                builder: (context) {
+                  Widget row = Row(
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(onPressed: () {
+                                setState(() { playerHealth[i]++; });
+                              }, child: Text('+')),
+                              Text('Player ${i + 1} Life: ${playerHealth[i]}'),
+                              ElevatedButton(onPressed: () {
+                                setState(() { playerHealth[i]--; });
+                              }, child: Text('-')),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (i + 1 < playerHealth.length)
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton(onPressed: () {
+                                  setState(() { playerHealth[i + 1]++; });
+                                }, child: Text('+')),
+                                Text('Player ${i + 2} Life: ${playerHealth[i + 1]}'),
+                                ElevatedButton(onPressed: () {
+                                  setState(() { playerHealth[i + 1]--; });
+                                }, child: Text('-')),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+
+                  if (i < playerHealth.length / 2) {
+                    return Transform.rotate(angle: pi, child: row);
+                  }
+                  return row;
+                },
+              ),
+            ),
+        ],
       ),
-  ],
-),
     );
   }
 }
