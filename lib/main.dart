@@ -45,6 +45,8 @@ class SetupScreen extends StatefulWidget {
 class _SetupScreenState extends State<SetupScreen> {
   int selectedPlayers = 2;
   int selectedLife = 20;
+  bool isCustomLife = false;
+  TextEditingController customLifeController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -90,16 +92,51 @@ class _SetupScreenState extends State<SetupScreen> {
                       onPressed: () {
                         setState(() {
                           selectedLife = life;
+                          isCustomLife = false;
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedLife == life ? Colors.blue : Colors.grey,
+                        backgroundColor: !isCustomLife && selectedLife == life ? Colors.blue : Colors.grey,
                       ),
                       child: Text('$life'),
                     ),
                   ),
+                Padding(
+                  padding: EdgeInsets.all(4),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        isCustomLife = true;
+                        selectedLife = int.tryParse(customLifeController.text) ?? 0;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isCustomLife ? Colors.blue : Colors.grey,
+                    ),
+                    child: Text('Custom'),
+                  ),
+                ),
               ],
             ),
+            if (isCustomLife)
+              Padding(
+                padding: EdgeInsets.all(8),
+                child: SizedBox(
+                  width: 100,
+                  child: TextField(
+                    controller: customLifeController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'Enter life',
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedLife = int.tryParse(value) ?? 0;
+                      });
+                    },
+                  ),
+                ),
+              ),
             SizedBox(height: 30),
             ElevatedButton(
               onPressed: () {
