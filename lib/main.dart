@@ -20,7 +20,8 @@ class CounterScreen extends StatefulWidget {
 }
 
 class _CounterScreenState extends State<CounterScreen> {
-  int health = 40;
+  int pOneHealth = 40;
+  int pTwoHealth = 40;
 
   @override
   Widget build(BuildContext context) {
@@ -29,25 +30,50 @@ class _CounterScreenState extends State<CounterScreen> {
         title: Text('Resource Tracker'),
         centerTitle: true, // Center the title in the app bar
       ),
-      body: Center(
+      body: Column(
+  children: [
+    Expanded(
+      child: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, //Align the buttons and text in the center of the screen
-          crossAxisAlignment: CrossAxisAlignment.center, //Align the buttons and text in the center of the screen
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(onPressed: () { //Increase health by 1 when the button is pressed
+            ElevatedButton(onPressed: () {
               setState(() {
-                health++;
+                pOneHealth++;
               });
             }, child: Text('+')),
-            Text('Life: $health'), //Display the current health value
-            ElevatedButton(onPressed: () { // Decrease health by 1 when the button is pressed
+            Text('Life: $pOneHealth'),
+            ElevatedButton(onPressed: () {
               setState(() {
-                health--;
+                pOneHealth--;
               });
             }, child: Text('-')),
           ],
         ),
       ),
+    ),
+    Expanded(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(onPressed: () {
+              setState(() {
+                pTwoHealth++;
+              });
+            }, child: Text('+')),
+            Text('Life: $pTwoHealth'),
+            ElevatedButton(onPressed: () {
+              setState(() {
+                pTwoHealth--;
+              });
+            }, child: Text('-')),
+          ],
+        ),
+      ),
+    ),
+  ],
+),
     );
   }
 }
