@@ -27,7 +27,7 @@ class HomeScreen extends StatelessWidget {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => CounterScreen()),
+              MaterialPageRoute(builder: (context) => SetupScreen()),
             );
           },
           child: Text('Play'),
@@ -37,14 +37,109 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+class SetupScreen extends StatefulWidget {
+  @override
+  _SetupScreenState createState() => _SetupScreenState();
+}
+
+class _SetupScreenState extends State<SetupScreen> {
+  int selectedPlayers = 2;
+  int selectedLife = 20;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Game Setup'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Number of Players'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (int i = 2; i <= 6; i++)
+                  Padding(
+                    padding: EdgeInsets.all(4),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedPlayers = i;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedPlayers == i ? Colors.blue : Colors.grey,
+                      ),
+                      child: Text('$i'),
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(height: 30),
+            Text('Starting Life'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (int life in [20, 25, 30, 40])
+                  Padding(
+                    padding: EdgeInsets.all(4),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedLife = life;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedLife == life ? Colors.blue : Colors.grey,
+                      ),
+                      child: Text('$life'),
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CounterScreen(
+                      playerCount: selectedPlayers,
+                      startingLife: selectedLife,
+                    ),
+                  ),
+                );
+              },
+              child: Text('Start Game'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class CounterScreen extends StatefulWidget {
+  final int playerCount;
+  final int startingLife;
+
+  CounterScreen({required this.playerCount, required this.startingLife});
+
   @override
   _CounterScreenState createState() => _CounterScreenState();
 }
 
 class _CounterScreenState extends State<CounterScreen> {
-  int pOneHealth = 40;
-  int pTwoHealth = 40;
+  late List<int> playerHealth;
+
+  @override
+  void initState() {
+    super.initState();
+    playerHealth = List.filled(widget.playerCount, widget.startingLife);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,13 +159,13 @@ class _CounterScreenState extends State<CounterScreen> {
             children: [
               ElevatedButton(onPressed: () {
                 setState(() {
-                  pOneHealth++;
+                  playerHealth[0]++;
                 });
               }, child: Text('+')),
-              Text('Life: $pOneHealth'),
+              Text('Life: ${playerHealth[0]}'),
               ElevatedButton(onPressed: () {
                 setState(() {
-                  pOneHealth--;
+                  playerHealth[0]--;
                 });
               }, child: Text('-')),
             ],
@@ -85,13 +180,13 @@ class _CounterScreenState extends State<CounterScreen> {
           children: [
             ElevatedButton(onPressed: () {
               setState(() {
-                pTwoHealth++;
+                playerHealth[1]++;
               });
             }, child: Text('+')),
-            Text('Life: $pTwoHealth'),
+            Text('Life: ${playerHealth[1]}'),
             ElevatedButton(onPressed: () {
               setState(() {
-                pTwoHealth--;
+                playerHealth[1]--;
               });
             }, child: Text('-')),
           ],
