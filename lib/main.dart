@@ -150,49 +150,27 @@ class _CounterScreenState extends State<CounterScreen> {
       ),
       body: Column(
   children: [
-    Expanded(
-      child: Transform.rotate(
-        angle: pi,
+    for (int i = 0; i < playerHealth.length; i++)
+      Expanded(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton(onPressed: () {
                 setState(() {
-                  playerHealth[0]++;
+                  playerHealth[i]++;
                 });
               }, child: Text('+')),
-              Text('Life: ${playerHealth[0]}'),
+              Text('Player ${i + 1} Life: ${playerHealth[i]}'),
               ElevatedButton(onPressed: () {
                 setState(() {
-                  playerHealth[0]--;
+                  playerHealth[i]--;
                 });
               }, child: Text('-')),
             ],
           ),
         ),
       ),
-    ),
-    Expanded(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(onPressed: () {
-              setState(() {
-                playerHealth[1]++;
-              });
-            }, child: Text('+')),
-            Text('Life: ${playerHealth[1]}'),
-            ElevatedButton(onPressed: () {
-              setState(() {
-                playerHealth[1]--;
-              });
-            }, child: Text('-')),
-          ],
-        ),
-      ),
-    ),
   ],
 ),
     );
