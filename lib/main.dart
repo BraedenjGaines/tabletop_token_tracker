@@ -1,5 +1,5 @@
-import "package:flutter/material.dart";
-import "dart:math";
+import 'package:flutter/material.dart';
+import 'dart:math';
 
 void main() {
   runApp(MyApp());
@@ -10,6 +10,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TableTop Token Tracker',
+      debugShowCheckedModeBanner: false,
       home: HomeScreen(),
     );
   }
@@ -46,7 +47,13 @@ class _SetupScreenState extends State<SetupScreen> {
   int selectedPlayers = 2;
   int selectedLife = 20;
   bool isCustomLife = false;
-  TextEditingController customLifeController = TextEditingController();
+  final TextEditingController customLifeController = TextEditingController();
+
+  @override
+  void dispose() {
+    customLifeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +80,8 @@ class _SetupScreenState extends State<SetupScreen> {
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedPlayers == i ? Colors.blue : Colors.grey,
+                        backgroundColor:
+                            selectedPlayers == i ? Colors.blue : Colors.grey,
                       ),
                       child: Text('$i'),
                     ),
@@ -96,7 +104,9 @@ class _SetupScreenState extends State<SetupScreen> {
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: !isCustomLife && selectedLife == life ? Colors.blue : Colors.grey,
+                        backgroundColor: !isCustomLife && selectedLife == life
+                            ? Colors.blue
+                            : Colors.grey,
                       ),
                       child: Text('$life'),
                     ),
@@ -107,7 +117,8 @@ class _SetupScreenState extends State<SetupScreen> {
                     onPressed: () {
                       setState(() {
                         isCustomLife = true;
-                        selectedLife = int.tryParse(customLifeController.text) ?? 0;
+                        selectedLife =
+                            int.tryParse(customLifeController.text) ?? 0;
                       });
                     },
                     style: ElevatedButton.styleFrom(
@@ -139,17 +150,19 @@ class _SetupScreenState extends State<SetupScreen> {
               ),
             SizedBox(height: 30),
             ElevatedButton(
-              onPressed: selectedLife >= 1 ? () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CounterScreen(
-                      playerCount: selectedPlayers,
-                      startingLife: selectedLife,
-                    ),
-                  ),
-                );
-              } : null,
+              onPressed: selectedLife >= 1
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CounterScreen(
+                            playerCount: selectedPlayers,
+                            startingLife: selectedLife,
+                          ),
+                        ),
+                      );
+                    }
+                  : null,
               child: Text('Start Game'),
             ),
           ],
@@ -162,7 +175,9 @@ class _SetupScreenState extends State<SetupScreen> {
 class CounterScreen extends StatefulWidget {
   final int playerCount;
   final int startingLife;
+
   CounterScreen({required this.playerCount, required this.startingLife});
+
   @override
   _CounterScreenState createState() => _CounterScreenState();
 }
@@ -176,7 +191,7 @@ class _CounterScreenState extends State<CounterScreen> {
     playerHealth = List.filled(widget.playerCount, widget.startingLife);
   }
 
-  bool isPlayerOnMiddleRow(int playerIndex) {
+  bool _isMiddleRow(int playerIndex) {
     final int rowCount = (playerHealth.length + 1) ~/ 2;
     if (rowCount < 3) return false;
     final int playerRow = playerIndex ~/ 2;
@@ -184,117 +199,89 @@ class _CounterScreenState extends State<CounterScreen> {
     return playerRow == middleRow;
   }
 
+  double? _getRotationAngle(int index) {
+    if (playerHealth.length == 2) return index == 0 ? pi : null;
+
+    final int rowCount = (playerHealth.length + 1) ~/ 2;
+    final int currentRow = index ~/ 2;
+    final bool isMiddle = _isMiddleRow(index);
+    final bool isTop = currentRow < (rowCount / 2).floor() && !isMiddle;
+
+    if (isTop) return pi;
+    if (isMiddle) return (index % 2 == 0) ? pi / 2 : -pi / 2;
+    return null;
+  }
+
+  Widget _buildPlayerWidget(int index) {
+    Widget content = Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton(
+            onPressed: () {
+              setState(() { playerHealth[index]++; });
+            },
+            child: Text('+'),
+          ),
+          Text('Player ${index + 1} Life: ${playerHealth[index]}'),
+          ElevatedButton(
+            onPressed: () {
+              setState(() { playerHealth[index]--; });
+            },
+            child: Text('-'),
+          ),
+        ],
+      ),
+    );
+
+    final double? angle = _getRotationAngle(index);
+    if (angle != null) {
+      content = Transform.rotate(angle: angle, child: content);
+    }
+    return content;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-      title: Text('Resource Tracker'),
-      centerTitle: true,
-      actions: [
-        IconButton(
-          icon: Icon(Icons.refresh),
-          onPressed: () {
-            setState(() {
-              playerHealth = List.filled(widget.playerCount, widget.startingLife);
-            });
-          },
-        ),
-      ],
-    ),
-      body: playerHealth.length == 2
-  ? Column(
-      children: [
-        Expanded(
-          child: Transform.rotate(
-            angle: pi,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(onPressed: () {
-                    setState(() { playerHealth[0]++; });
-                  }, child: Text('+')),
-                  Text('Player 1 Life: ${playerHealth[0]}'),
-                  ElevatedButton(onPressed: () {
-                    setState(() { playerHealth[0]--; });
-                  }, child: Text('-')),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(onPressed: () {
-                  setState(() { playerHealth[1]++; });
-                }, child: Text('+')),
-                Text('Player 2 Life: ${playerHealth[1]}'),
-                ElevatedButton(onPressed: () {
-                  setState(() { playerHealth[1]--; });
-                }, child: Text('-')),
-              ],
-            ),
-          ),
-        ),
-      ],
-    )
-      :Column(
-        children: [
-          for (int i = 0; i < playerHealth.length; i += 2)
-            Expanded(
-              child: Builder(
-                builder: (context) {
-                final int rowCount = (playerHealth.length + 1) ~/ 2;
-                final int currentRow = i ~/ 2;
-                final bool isMiddleRow = isPlayerOnMiddleRow(i);
-                final bool isTopRow = currentRow < (rowCount / 2).floor() && !isMiddleRow;
-
-                Widget playerWidget(int index, double? rotationAngle) {
-                  Widget content = Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(onPressed: () {
-                          setState(() { playerHealth[index]++; });
-                        }, child: Text('+')),
-                        Text('Player ${index + 1} Life: ${playerHealth[index]}'),
-                        ElevatedButton(onPressed: () {
-                          setState(() { playerHealth[index]--; });
-                        }, child: Text('-')),
-                      ],
-                    ),
-                  );
-                  if (rotationAngle != null) {
-                    content = Transform.rotate(angle: rotationAngle, child: content);
-                  }
-                  return content;
-                }
-                Widget row = Row(
-                  children: [
-                    Expanded(
-                      child: playerWidget(
-                        i,
-                        isTopRow ? pi : isMiddleRow ? pi / 2 : null,
-                      ),
-                    ),
-                    if (i + 1 < playerHealth.length)
-                      Expanded(
-                        child: playerWidget(
-                          i + 1,
-                          isTopRow ? pi : isMiddleRow ? -pi / 2 : null,
-                      ),
-                    ),
-                  ],
+        title: Text('Resource Tracker'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: () {
+              setState(() {
+                playerHealth = List.filled(
+                  widget.playerCount,
+                  widget.startingLife,
                 );
-                return row;
-              },
-            ),
+              });
+            },
           ),
         ],
       ),
+      body: playerHealth.length == 2
+          ? Column(
+              children: [
+                Expanded(child: _buildPlayerWidget(0)),
+                Expanded(child: _buildPlayerWidget(1)),
+              ],
+            )
+          : Column(
+              children: [
+                for (int i = 0; i < playerHealth.length; i += 2)
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildPlayerWidget(i)),
+                        if (i + 1 < playerHealth.length)
+                          Expanded(child: _buildPlayerWidget(i + 1)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 }
