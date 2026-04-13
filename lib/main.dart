@@ -27,22 +27,26 @@ class _CounterScreenState extends State<CounterScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Resource Tracker'),
+        centerTitle: true, // Center the title in the app bar
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center, //Align the buttons and text in the center of the screen
-        children: [
-          ElevatedButton(onPressed: () { //Increase health by 1 when the button is pressed
-            setState(() {
-              health++;
-            });
-          }, child: Text('+')),
-          ElevatedButton(onPressed: () { // Decrease health by 1 when the button is pressed
-            setState(() {
-              health--;
-            });
-          }, child: Text('-')),
-          Text('Life: $health'),
-        ],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, //Align the buttons and text in the center of the screen
+          crossAxisAlignment: CrossAxisAlignment.center, //Align the buttons and text in the center of the screen
+          children: [
+            ElevatedButton(onPressed: () { //Increase health by 1 when the button is pressed
+              setState(() {
+                health++;
+              });
+            }, child: Text('+')),
+            Text('Life: $health'), //Display the current health value
+            ElevatedButton(onPressed: () { // Decrease health by 1 when the button is pressed
+              setState(() {
+                health--;
+              });
+            }, child: Text('-')),
+          ],
+        ),
       ),
     );
   }
