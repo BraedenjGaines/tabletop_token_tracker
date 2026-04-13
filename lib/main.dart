@@ -20,14 +20,29 @@ class CounterScreen extends StatefulWidget {
 }
 
 class _CounterScreenState extends State<CounterScreen> {
+  int health = 40;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Resource Tracker'),
       ),
-      body: Center(
-        child: Text('You have one million health!'),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center, //Align the buttons and text in the center of the screen
+        children: [
+          ElevatedButton(onPressed: () { //Increase health by 1 when the button is pressed
+            setState(() {
+              health++;
+            });
+          }, child: Text('+')),
+          ElevatedButton(onPressed: () { // Decrease health by 1 when the button is pressed
+            setState(() {
+              health--;
+            });
+          }, child: Text('-')),
+          Text('Life: $health'),
+        ],
       ),
     );
   }
