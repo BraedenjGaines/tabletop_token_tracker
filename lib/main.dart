@@ -139,7 +139,7 @@ class _SetupScreenState extends State<SetupScreen> {
               ),
             SizedBox(height: 30),
             ElevatedButton(
-              onPressed: () {
+              onPressed: selectedLife >= 1 ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -149,7 +149,7 @@ class _SetupScreenState extends State<SetupScreen> {
                     ),
                   ),
                 );
-              },
+              } : null,
               child: Text('Start Game'),
             ),
           ],
