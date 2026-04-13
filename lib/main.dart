@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "dart:math";
 
 void main() {
   runApp(MyApp());
@@ -33,22 +34,25 @@ class _CounterScreenState extends State<CounterScreen> {
       body: Column(
   children: [
     Expanded(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(onPressed: () {
-              setState(() {
-                pOneHealth++;
-              });
-            }, child: Text('+')),
-            Text('Life: $pOneHealth'),
-            ElevatedButton(onPressed: () {
-              setState(() {
-                pOneHealth--;
-              });
-            }, child: Text('-')),
-          ],
+      child: Transform.rotate(
+        angle: pi,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(onPressed: () {
+                setState(() {
+                  pOneHealth++;
+                });
+              }, child: Text('+')),
+              Text('Life: $pOneHealth'),
+              ElevatedButton(onPressed: () {
+                setState(() {
+                  pOneHealth--;
+                });
+              }, child: Text('-')),
+            ],
+          ),
         ),
       ),
     ),
