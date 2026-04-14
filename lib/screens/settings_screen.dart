@@ -161,12 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Shows phase tracking between players (Flesh and Blood, 2 players only)',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
-              SizedBox(height: 32),
-                Text(
-                  'Tokens',
-                  style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
+              SizedBox(height: 8),
               SwitchListTile(
                 title: Text('Enable Turn Tracker'),
                 value: turnTracker,
@@ -177,6 +172,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   widget.onTurnTrackerChanged(value);
                 },
               ),
+              SizedBox(height: 32),
+                Text(
+                  'Tokens',
+                  style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+                ),
                 SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
