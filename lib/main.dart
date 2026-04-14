@@ -455,29 +455,32 @@ class _CounterScreenState extends State<CounterScreen> {
 
   Widget _buildPlayerWidget(int index) {
     Widget content = Center(
-      child: Column(
+      child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ElevatedButton(
-            onPressed: () {
-              setState(() { playerHealth[index]++; });
-            },
-            child: Text('+'),
-          ),
-          Text(
-            'Player ${index + 1} Life: ${playerHealth[index]}',
-            style: TextStyle(
-              fontFamily: widget.lifeTotalFont == 'Default'
-                  ? null
-                  : widget.lifeTotalFont,
-              fontSize: 20,
-            ),
-          ),
           ElevatedButton(
             onPressed: () {
               setState(() { playerHealth[index]--; });
             },
             child: Text('-'),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              '${playerHealth[index]}',
+              style: TextStyle(
+                fontFamily: widget.lifeTotalFont == 'Default'
+                    ? null
+                    : widget.lifeTotalFont,
+                fontSize: 32,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() { playerHealth[index]++; });
+            },
+            child: Text('+'),
           ),
         ],
       ),
@@ -490,47 +493,93 @@ class _CounterScreenState extends State<CounterScreen> {
     return content;
   }
 
+  Widget _buildPlayerGrid() {
+    if (playerHealth.length == 2) {
+      return Column(
+        children: [
+          Expanded(child: _buildPlayerWidget(0)),
+          Expanded(child: _buildPlayerWidget(1)),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        for (int i = 0; i < playerHealth.length; i += 2)
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: _buildPlayerWidget(i)),
+                if (i + 1 < playerHealth.length)
+                  Expanded(child: _buildPlayerWidget(i + 1)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Resource Tracker'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                playerHealth = List.filled(
-                  widget.playerCount,
-                  widget.startingLife,
-                );
-              });
-            },
+      body: Stack(
+        children: [
+          // Player grid takes full screen
+          _buildPlayerGrid(),
+
+          // Back button - top left
+          Positioned(
+            top: 40,
+            left: 16,
+            child: IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ),
+
+          // Reset button - top right
+          Positioned(
+            top: 40,
+            right: 16,
+            child: IconButton(
+              icon: Icon(Icons.refresh),
+              onPressed: () {
+                setState(() {
+                  playerHealth = List.filled(
+                    widget.playerCount,
+                    widget.startingLife,
+                  );
+                });
+              },
+            ),
+          ),
+
+          // Settings button - bottom right
+          Positioned(
+            bottom: 24,
+            right: 16,
+            child: IconButton(
+              icon: Icon(Icons.settings),
+              onPressed: () {
+                // TODO: navigate to settings
+              },
+            ),
+          ),
+
+          // Placeholder - bottom left
+          Positioned(
+            bottom: 24,
+            left: 16,
+            child: IconButton(
+              icon: Icon(Icons.more_horiz),
+              onPressed: () {
+                // TODO: future feature
+              },
+            ),
           ),
         ],
       ),
-      body: playerHealth.length == 2
-          ? Column(
-              children: [
-                Expanded(child: _buildPlayerWidget(0)),
-                Expanded(child: _buildPlayerWidget(1)),
-              ],
-            )
-          : Column(
-              children: [
-                for (int i = 0; i < playerHealth.length; i += 2)
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(child: _buildPlayerWidget(i)),
-                        if (i + 1 < playerHealth.length)
-                          Expanded(child: _buildPlayerWidget(i + 1)),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
     );
   }
 }
