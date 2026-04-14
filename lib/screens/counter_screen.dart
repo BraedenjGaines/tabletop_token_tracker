@@ -5,6 +5,7 @@ import 'log_screen.dart';
 import '../data/token_library.dart';
 import '../data/token_preferences.dart';
 import '../data/game_log.dart';
+import 'dart:ui';
 
 class ActiveToken {
   final String name;
@@ -38,6 +39,8 @@ class CounterScreen extends StatefulWidget {
   final Function(bool) onTurnTrackerChanged;
   final bool skipGameSelect;
   final Function(String, bool) onGameChanged;
+  final bool frostedGlass;
+  final Function(bool) onFrostedGlassChanged;
 
   CounterScreen({
     required this.playerCount,
@@ -49,6 +52,8 @@ class CounterScreen extends StatefulWidget {
     required this.onTurnTrackerChanged,
     required this.skipGameSelect,
     required this.onGameChanged,
+    required this.frostedGlass,
+    required this.onFrostedGlassChanged,
   });
 
   @override
@@ -60,6 +65,7 @@ class _CounterScreenState extends State<CounterScreen> {
   late List<List<ActiveToken>> playerTokens;
   late String currentFont;
   late bool turnTrackerEnabled;
+  late bool frostedGlass;
 
   int activePlayer = 0;
   int currentPhase = 0;
@@ -104,6 +110,7 @@ class _CounterScreenState extends State<CounterScreen> {
     playerTokens = List.generate(widget.playerCount, (_) => []);
     currentFont = widget.selectedFont;
     turnTrackerEnabled = widget.turnTrackerEnabled;
+    frostedGlass = widget.frostedGlass;
     _loadTokenPreferences();
   }
 
@@ -138,21 +145,21 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   void _advancePhase() {
-  setState(() {
-    if (currentPhase < fabPhases.length - 1) {
-      currentPhase++;
-      _logNewlyTriggering();
-      _log(activePlayer, LogEventType.phaseChange, fabPhases[currentPhase]);
-    } else {
-      _checkAutoDestroy();
-      currentPhase = 0;
-      activePlayer = activePlayer == 0 ? 1 : 0;
-      turnCount++;
-      _logNewlyTriggering();
-      _log(activePlayer, LogEventType.phaseChange, 'Turn ${turnCount + 1} - ${fabPhases[currentPhase]}');
-    }
-  });
-}
+    setState(() {
+      if (currentPhase < fabPhases.length - 1) {
+        currentPhase++;
+        _logNewlyTriggering();
+        _log(activePlayer, LogEventType.phaseChange, fabPhases[currentPhase]);
+      } else {
+        _checkAutoDestroy();
+        currentPhase = 0;
+        activePlayer = activePlayer == 0 ? 1 : 0;
+        turnCount++;
+        _logNewlyTriggering();
+        _log(activePlayer, LogEventType.phaseChange, 'Turn ${turnCount + 1} - ${fabPhases[currentPhase]}');
+      }
+    });
+  }
 
   void _logNewlyTriggering() {
     for (int playerIndex = 0; playerIndex < playerTokens.length; playerIndex++) {
@@ -249,16 +256,16 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   void _showGameLog() {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return Dialog(
-        insetPadding: EdgeInsets.all(16),
-        child: LogScreen(gameLog: gameLog),
-      );
-    },
-  );
-}
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          insetPadding: EdgeInsets.all(16),
+          child: LogScreen(gameLog: gameLog),
+        );
+      },
+    );
+  }
 
   void _showTokenPicker(int playerIndex) {
     final List<TokenData> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
@@ -453,6 +460,49 @@ class _CounterScreenState extends State<CounterScreen> {
     );
   }
 
+  Widget _buildPlayerTapHalf({
+    required int index,
+    required int delta,
+    required String label,
+    required Alignment labelAlignment,
+    required EdgeInsets labelPadding,
+    required Border? border,
+  }) {
+    final double blurSigma = frostedGlass ? 5.0 : 0.0;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            playerHealth[index] += delta;
+            _log(index, LogEventType.healthChange, 'Health', value: delta);
+          });
+        },
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                border: border,
+              ),
+              child: Align(
+                alignment: labelAlignment,
+                child: Padding(
+                  padding: labelPadding,
+                  child: Text(
+                    label,
+                    style: TextStyle(fontSize: 28, color: Colors.grey.withOpacity(0.8)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPlayerWidget(int index) {
     final bool isActive = _showTurnTracker && activePlayer == index;
 
@@ -486,6 +536,33 @@ class _CounterScreenState extends State<CounterScreen> {
           : null,
       child: Stack(
         children: [
+          // Full-size tap areas for health
+          Row(
+            children: [
+              _buildPlayerTapHalf(
+                index: index,
+                delta: -1,
+                label: '-',
+                labelAlignment: Alignment.centerRight,
+                labelPadding: EdgeInsets.only(right: 60),
+                border: Border(
+                  right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5),
+                ),
+              ),
+              _buildPlayerTapHalf(
+                index: index,
+                delta: 1,
+                label: '+',
+                labelAlignment: Alignment.centerLeft,
+                labelPadding: EdgeInsets.only(left: 60),
+                border: Border(
+                  left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5),
+                ),
+              ),
+            ],
+          ),
+
+          // Boon auras - top left
           if (boonAuras.isNotEmpty)
             Positioned(
               top: 8,
@@ -499,6 +576,7 @@ class _CounterScreenState extends State<CounterScreen> {
               ),
             ),
 
+          // Debuff auras - top right
           if (debuffAuras.isNotEmpty)
             Positioned(
               top: 8,
@@ -512,6 +590,7 @@ class _CounterScreenState extends State<CounterScreen> {
               ),
             ),
 
+          // Center content - allies, health number, items
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -524,37 +603,12 @@ class _CounterScreenState extends State<CounterScreen> {
                     ],
                   ),
                 SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          playerHealth[index]--;
-                          _log(index, LogEventType.healthChange, 'Health', value: -1);
-                        });
-                      },
-                      child: Text('-'),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(
-                        '${playerHealth[index]}',
-                        style: TextStyle(
-                          fontSize: 32,
-                        ),
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          playerHealth[index]++;
-                          _log(index, LogEventType.healthChange, 'Health', value: 1);
-                        });
-                      },
-                      child: Text('+'),
-                    ),
-                  ],
+                Text(
+                  '${playerHealth[index]}',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 SizedBox(height: 4),
                 if (items.isNotEmpty)
@@ -743,6 +797,13 @@ class _CounterScreenState extends State<CounterScreen> {
                       currentGame: widget.selectedGame,
                       skipGameSelect: widget.skipGameSelect,
                       onGameChanged: widget.onGameChanged,
+                      frostedGlass: frostedGlass,
+                      onFrostedGlassChanged: (bool enabled) {
+                        widget.onFrostedGlassChanged(enabled);
+                        setState(() {
+                          frostedGlass = enabled;
+                        });
+                      },
                     ),
                   ),
                 );

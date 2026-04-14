@@ -11,6 +11,8 @@ class HomeScreen extends StatelessWidget {
   final Function(String, bool) onGameChanged;
   final bool turnTrackerEnabled;
   final Function(bool) onTurnTrackerChanged;
+  final bool frostedGlass;
+  final Function(bool) onFrostedGlassChanged;
 
   HomeScreen({
     required this.selectedFont,
@@ -20,6 +22,8 @@ class HomeScreen extends StatelessWidget {
     required this.onGameChanged,
     required this.turnTrackerEnabled,
     required this.onTurnTrackerChanged,
+    required this.frostedGlass,
+    required this.onFrostedGlassChanged,
   });
 
   @override
@@ -47,6 +51,8 @@ class HomeScreen extends StatelessWidget {
                         onTurnTrackerChanged: onTurnTrackerChanged,
                         skipGameSelect: skipGameSelect,
                         onGameChanged: onGameChanged,
+                        frostedGlass: frostedGlass,
+                        onFrostedGlassChanged: onFrostedGlassChanged,
                       ),
                     ),
                   );
@@ -61,6 +67,8 @@ class HomeScreen extends StatelessWidget {
                         turnTrackerEnabled: turnTrackerEnabled,
                         onTurnTrackerChanged: onTurnTrackerChanged,
                         skipGameSelect: skipGameSelect,
+                        frostedGlass: frostedGlass,
+                        onFrostedGlassChanged: onFrostedGlassChanged,
                       ),
                     ),
                   );
@@ -82,6 +90,8 @@ class HomeScreen extends StatelessWidget {
                       currentGame: selectedGame,
                       skipGameSelect: skipGameSelect,
                       onGameChanged: onGameChanged,
+                      frostedGlass: frostedGlass,
+                      onFrostedGlassChanged: onFrostedGlassChanged,
                     ),
                   ),
                 );

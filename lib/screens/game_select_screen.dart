@@ -8,6 +8,8 @@ class GameSelectScreen extends StatefulWidget {
   final bool turnTrackerEnabled;
   final Function(bool) onTurnTrackerChanged;
   final bool skipGameSelect;
+  final bool frostedGlass;
+  final Function(bool) onFrostedGlassChanged;
 
   GameSelectScreen({
     required this.selectedFont,
@@ -16,6 +18,8 @@ class GameSelectScreen extends StatefulWidget {
     required this.turnTrackerEnabled,
     required this.onTurnTrackerChanged,
     required this.skipGameSelect,
+    required this.frostedGlass,
+    required this.onFrostedGlassChanged,
   });
 
   @override
@@ -105,6 +109,8 @@ class _GameSelectScreenState extends State<GameSelectScreen> {
                             onTurnTrackerChanged: widget.onTurnTrackerChanged,
                             skipGameSelect: dontAskAgain,
                             onGameChanged: widget.onGameChanged,
+                            frostedGlass: widget.frostedGlass,
+                            onFrostedGlassChanged: widget.onFrostedGlassChanged,
                           ),
                         ),
                       );

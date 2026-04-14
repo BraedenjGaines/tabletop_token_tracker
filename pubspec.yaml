@@ -67,3 +67,13 @@ flutter:
     - family: Sedan
       fonts:
         - asset: assets/fonts/Sedan-Regular.ttf
+
+  assets:
+    - assets/images/Wizard.jpg
+    - assets/images/Knight.jpg
+    - assets/images/Warlock.jpg
+    - assets/images/Rogue.jpg
+    - assets/images/Mage.jpg
+    - assets/images/Druid.jpg
+    - assets/images/Runeknight.jpg
+    - assets/images/Paladin.jpg

@@ -17,6 +17,7 @@ class _MyAppState extends State<MyApp> {
   bool skipGameSelect = false;
   bool turnTrackerEnabled = false;
   bool isLoaded = false;
+  bool frostedGlass = false;
 
   @override
   void initState() {
@@ -24,37 +25,49 @@ class _MyAppState extends State<MyApp> {
     _loadPreferences();
   }
 
-late SharedPreferences _prefs;
+  late SharedPreferences _prefs;
 
-Future<void> _loadPreferences() async {
-  _prefs = await SharedPreferences.getInstance();
-  setState(() {
-    selectedFont = _prefs.getString('selectedFont') ?? 'Sedan';
-    selectedGame = _prefs.getString('selectedGame') ?? '';
-    skipGameSelect = _prefs.getBool('skipGameSelect') ?? false;
-    turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? false;
-    isLoaded = true;
-  });
-}
+  Future<void> _loadPreferences() async {
+    _prefs = await SharedPreferences.getInstance();
+    setState(() {
+      selectedFont = _prefs.getString('selectedFont') ?? 'Sedan';
+      selectedGame = _prefs.getString('selectedGame') ?? '';
+      skipGameSelect = _prefs.getBool('skipGameSelect') ?? false;
+      turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? false;
+      frostedGlass = _prefs.getBool('frostedGlass') ?? false;
+      isLoaded = true;
+    });
+  }
 
-Future<void> _saveFont() async {
-  await _prefs.setString('selectedFont', selectedFont);
-}
+  Future<void> _saveFont() async {
+    await _prefs.setString('selectedFont', selectedFont);
+  }
 
-Future<void> _saveGamePreferences() async {
-  await _prefs.setString('selectedGame', selectedGame);
-  await _prefs.setBool('skipGameSelect', skipGameSelect);
-}
+  Future<void> _saveGamePreferences() async {
+    await _prefs.setString('selectedGame', selectedGame);
+    await _prefs.setBool('skipGameSelect', skipGameSelect);
+  }
 
-Future<void> _saveTurnTracker() async {
-  await _prefs.setBool('turnTrackerEnabled', turnTrackerEnabled);
-}
+  Future<void> _saveTurnTracker() async {
+    await _prefs.setBool('turnTrackerEnabled', turnTrackerEnabled);
+  }
+
+  Future<void> _saveFrostedGlass() async {
+    await _prefs.setBool('frostedGlass', frostedGlass);
+  }
 
   void updateFont(String newFont) {
     setState(() {
       selectedFont = newFont;
     });
     _saveFont();
+  }
+
+  void updateFrostedGlass(bool enabled) {
+    setState(() {
+      frostedGlass = enabled;
+    });
+    _saveFrostedGlass();
   }
 
   void updateGame(String newGame, bool skip) {
@@ -95,6 +108,8 @@ Future<void> _saveTurnTracker() async {
         onGameChanged: updateGame,
         turnTrackerEnabled: turnTrackerEnabled,
         onTurnTrackerChanged: updateTurnTracker,
+        frostedGlass: frostedGlass,
+        onFrostedGlassChanged: updateFrostedGlass,
       ),
     );
   }

@@ -9,6 +9,8 @@ class SettingsScreen extends StatefulWidget {
   final String currentGame;
   final bool skipGameSelect;
   final Function(String, bool) onGameChanged;
+  final bool frostedGlass;
+  final Function(bool) onFrostedGlassChanged;
 
   SettingsScreen({
     required this.currentFont,
@@ -18,6 +20,8 @@ class SettingsScreen extends StatefulWidget {
     required this.currentGame,
     required this.skipGameSelect,
     required this.onGameChanged,
+    required this.frostedGlass,
+    required this.onFrostedGlassChanged,
   });
 
   @override
@@ -29,6 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool turnTracker;
   late String selectedGame;
   late bool promptGameSelect;
+  late bool frostedGlass;
 
   final List<String> availableFonts = [
     'Sedan',
@@ -49,6 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     turnTracker = widget.turnTrackerEnabled;
     selectedGame = widget.currentGame.isEmpty ? 'fab' : widget.currentGame;
     promptGameSelect = !widget.skipGameSelect;
+    frostedGlass = widget.frostedGlass;
   }
 
   @override
@@ -173,25 +179,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               SizedBox(height: 32),
-                Text(
-                  'Tokens',
-                  style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CustomTokenScreen(
-                            currentGame: selectedGame,
-                          ),
+              Text(
+                'Visual',
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Applies a frosted glass blur effect to the player panels on the counter screen',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Frosted Glass Effect'),
+                value: frostedGlass,
+                onChanged: (bool value) {
+                  setState(() {
+                    frostedGlass = value;
+                  });
+                  widget.onFrostedGlassChanged(value);
+                },
+              ),
+              SizedBox(height: 32),
+              Text(
+                'Tokens',
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CustomTokenScreen(
+                          currentGame: selectedGame,
                         ),
-                      );
-                    },
+                      ),
+                    );
+                  },
                   child: Text('Manage Custom Tokens'),
                 ),
               ),
