@@ -67,6 +67,8 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => SetupScreen(
                       lifeTotalFont: lifeTotalFont,
+                      appFont: appFont,
+                      onFontsChanged: onFontsChanged,
                     ),
                   ),
                 );
@@ -271,8 +273,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 class SetupScreen extends StatefulWidget {
   final String lifeTotalFont;
+  final String appFont;
+  final Function(String, String) onFontsChanged;
 
-  SetupScreen({required this.lifeTotalFont});
+  SetupScreen({
+    required this.lifeTotalFont,
+    required this.appFont,
+    required this.onFontsChanged,
+  });
 
   @override
   _SetupScreenState createState() => _SetupScreenState();
@@ -394,6 +402,8 @@ class _SetupScreenState extends State<SetupScreen> {
                             playerCount: selectedPlayers,
                             startingLife: selectedLife,
                             lifeTotalFont: widget.lifeTotalFont,
+                            appFont: widget.appFont,
+                            onFontsChanged: widget.onFontsChanged,
                           ),
                         ),
                       );
@@ -412,11 +422,15 @@ class CounterScreen extends StatefulWidget {
   final int playerCount;
   final int startingLife;
   final String lifeTotalFont;
+  final String appFont;
+  final Function(String, String) onFontsChanged;
 
   CounterScreen({
     required this.playerCount,
     required this.startingLife,
     required this.lifeTotalFont,
+    required this.appFont,
+    required this.onFontsChanged,
   });
 
   @override
@@ -425,11 +439,13 @@ class CounterScreen extends StatefulWidget {
 
 class _CounterScreenState extends State<CounterScreen> {
   late List<int> playerHealth;
+  late String currentLifeFont;
 
   @override
   void initState() {
     super.initState();
     playerHealth = List.filled(widget.playerCount, widget.startingLife);
+    currentLifeFont = widget.lifeTotalFont;
   }
 
   bool _isMiddleRow(int playerIndex) {
@@ -471,7 +487,7 @@ class _CounterScreenState extends State<CounterScreen> {
               style: TextStyle(
                 fontFamily: widget.lifeTotalFont == 'Default'
                     ? null
-                    : widget.lifeTotalFont,
+                    : currentLifeFont,
                 fontSize: 32,
               ),
             ),
@@ -562,7 +578,21 @@ class _CounterScreenState extends State<CounterScreen> {
             child: IconButton(
               icon: Icon(Icons.settings),
               onPressed: () {
-                // TODO: navigate to settings
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SettingsScreen(
+                      currentLifeFont: currentLifeFont,
+                      currentAppFont: widget.appFont,
+                      onFontsChanged: (String newLifeFont, String newAppFont) {
+                        widget.onFontsChanged(newLifeFont, newAppFont);
+                        setState(() {
+                          currentLifeFont = newLifeFont;
+                        });
+                      },
+                    ),
+                  ),
+                );
               },
             ),
           ),
