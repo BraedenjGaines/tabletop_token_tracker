@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'custom_token_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String currentFont;
@@ -160,6 +161,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Shows phase tracking between players (Flesh and Blood, 2 players only)',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
+              SizedBox(height: 32),
+                Text(
+                  'Tokens',
+                  style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CustomTokenScreen(
+                            currentGame: selectedGame,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text('Manage Custom Tokens'),
+                  ),
+                ),
               SizedBox(height: 8),
               SwitchListTile(
                 title: Text('Enable Turn Tracker'),
