@@ -119,19 +119,44 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   void _advancePhase() {
-    setState(() {
-      if (currentPhase < fabPhases.length - 1) {
-        currentPhase++;
-        _checkAutoDestroy();
-      } else {
-        currentPhase = 0;
-        activePlayer = activePlayer == 0 ? 1 : 0;
-        turnCount++;
-        _checkAutoDestroy();
-      }
-    });
-  }
+  setState(() {
+    if (currentPhase < fabPhases.length - 1) {
+      currentPhase++;
+    } else {
+      _checkAutoDestroy();
+      currentPhase = 0;
+      activePlayer = activePlayer == 0 ? 1 : 0;
+      turnCount++;
+    }
+  });
+}
 
+bool _isTokenTriggering(ActiveToken token, int playerIndex) {
+  if (!_showTurnTracker || token.destroyTrigger == null) return false;
+
+  bool isActivePlayerToken = playerIndex == activePlayer;
+
+  switch (token.destroyTrigger!) {
+    case DestroyTrigger.startOfYourTurn:
+      return isActivePlayerToken &&
+          turnCount > token.turnPlayed &&
+          currentPhase >= 0;
+
+    case DestroyTrigger.startOfOpponentTurn:
+      return !isActivePlayerToken &&
+          turnCount > token.turnPlayed &&
+          currentPhase >= 0;
+
+    case DestroyTrigger.beginningOfActionPhase:
+      return isActivePlayerToken &&
+          turnCount >= token.turnPlayed &&
+          currentPhase >= 2;
+
+    case DestroyTrigger.beginningOfEndPhase:
+      return isActivePlayerToken &&
+          currentPhase >= 3;
+  }
+}
   void _retreatPhase() {
     setState(() {
       if (currentPhase > 0) {
@@ -141,37 +166,35 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   void _checkAutoDestroy() {
-    if (!_showTurnTracker) return;
+  if (!_showTurnTracker) return;
 
-    String currentPhaseName = fabPhases[currentPhase];
-
-    for (int playerIndex = 0; playerIndex < playerTokens.length; playerIndex++) {
-      playerTokens[playerIndex].removeWhere((token) {
-        if (token.destroyTrigger == null) return false;
-
-        switch (token.destroyTrigger!) {
-          case DestroyTrigger.startOfYourTurn:
-            return currentPhaseName == 'Start Phase' &&
-                playerIndex == activePlayer &&
-                turnCount > token.turnPlayed;
-
-          case DestroyTrigger.startOfOpponentTurn:
-            return currentPhaseName == 'Start Phase' &&
-                playerIndex != activePlayer &&
-                turnCount > token.turnPlayed;
-
-          case DestroyTrigger.beginningOfActionPhase:
-            return currentPhaseName == 'Action Phase' &&
-                playerIndex == activePlayer &&
-                turnCount >= token.turnPlayed;
-
-          case DestroyTrigger.beginningOfEndPhase:
-            return currentPhaseName == 'End Phase' &&
-                playerIndex == activePlayer;
-        }
-      });
-    }
+  for (int playerIndex = 0; playerIndex < playerTokens.length; playerIndex++) {
+    playerTokens[playerIndex].removeWhere((token) {
+      if (token.destroyTrigger == null) return false;
+      return token.count <= 0 || _shouldAutoRemove(token, playerIndex);
+    });
   }
+}
+
+bool _shouldAutoRemove(ActiveToken token, int playerIndex) {
+  switch (token.destroyTrigger!) {
+    case DestroyTrigger.startOfYourTurn:
+      return playerIndex == activePlayer &&
+          turnCount > token.turnPlayed;
+
+    case DestroyTrigger.startOfOpponentTurn:
+      return playerIndex != activePlayer &&
+          turnCount > token.turnPlayed;
+
+    case DestroyTrigger.beginningOfActionPhase:
+      return playerIndex == activePlayer &&
+          turnCount > token.turnPlayed;
+
+    case DestroyTrigger.beginningOfEndPhase:
+      return playerIndex == activePlayer &&
+          turnCount > token.turnPlayed;
+  }
+}
 
   Color _getTokenCategoryColor(TokenCategory category) {
   switch (category) {
@@ -309,17 +332,27 @@ class _CounterScreenState extends State<CounterScreen> {
 }
 
   Widget _buildCounterToken(ActiveToken token, int playerIndex, int tokenIndex) {
+  final bool triggering = _isTokenTriggering(token, playerIndex);
+
   return Container(
     margin: EdgeInsets.symmetric(vertical: 2),
     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
       color: _getTokenCategoryColor(token.category),
       borderRadius: BorderRadius.circular(6),
+      border: triggering
+          ? Border.all(color: Colors.amber, width: 2)
+          : null,
     ),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (triggering)
+          Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Icon(Icons.flash_on, size: 16, color: Colors.amber),
+          ),
         GestureDetector(
           onTap: () {
             setState(() {
