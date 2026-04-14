@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MyApp());
@@ -11,42 +12,65 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String lifeTotalFont = 'Default';
-  String appFont = 'Default';
+  String selectedFont = 'Default';
+  bool isLoaded = false;
 
-  void updateFonts(String newLifeFont, String newAppFont) {
+  @override
+  void initState() {
+    super.initState();
+    _loadFont();
+  }
+
+  Future<void> _loadFont() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      lifeTotalFont = newLifeFont;
-      appFont = newAppFont;
+      selectedFont = prefs.getString('selectedFont') ?? 'Default';
+      isLoaded = true;
     });
+  }
+
+  Future<void> _saveFont() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedFont', selectedFont);
+  }
+
+  void updateFont(String newFont) {
+    setState(() {
+      selectedFont = newFont;
+    });
+    _saveFont();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!isLoaded) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
     return MaterialApp(
       title: 'TableTop Token Tracker',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        fontFamily: appFont == 'Default' ? null : appFont,
+        fontFamily: selectedFont == 'Default' ? null : selectedFont,
       ),
       home: HomeScreen(
-        lifeTotalFont: lifeTotalFont,
-        appFont: appFont,
-        onFontsChanged: updateFonts,
+        selectedFont: selectedFont,
+        onFontChanged: updateFont,
       ),
     );
   }
 }
 
 class HomeScreen extends StatelessWidget {
-  final String lifeTotalFont;
-  final String appFont;
-  final Function(String, String) onFontsChanged;
+  final String selectedFont;
+  final Function(String) onFontChanged;
 
   HomeScreen({
-    required this.lifeTotalFont,
-    required this.appFont,
-    required this.onFontsChanged,
+    required this.selectedFont,
+    required this.onFontChanged,
   });
 
   @override
@@ -66,9 +90,8 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => SetupScreen(
-                      lifeTotalFont: lifeTotalFont,
-                      appFont: appFont,
-                      onFontsChanged: onFontsChanged,
+                      selectedFont: selectedFont,
+                      onFontChanged: onFontChanged,
                     ),
                   ),
                 );
@@ -82,9 +105,8 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => SettingsScreen(
-                      currentLifeFont: lifeTotalFont,
-                      currentAppFont: appFont,
-                      onFontsChanged: onFontsChanged,
+                      currentFont: selectedFont,
+                      onFontChanged: onFontChanged,
                     ),
                   ),
                 );
@@ -99,14 +121,12 @@ class HomeScreen extends StatelessWidget {
 }
 
 class SettingsScreen extends StatefulWidget {
-  final String currentLifeFont;
-  final String currentAppFont;
-  final Function(String, String) onFontsChanged;
+  final String currentFont;
+  final Function(String) onFontChanged;
 
   SettingsScreen({
-    required this.currentLifeFont,
-    required this.currentAppFont,
-    required this.onFontsChanged,
+    required this.currentFont,
+    required this.onFontChanged,
   });
 
   @override
@@ -114,9 +134,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late String selectedLifeFont;
-  late String selectedAppFont;
-  late String fontScope;
+  late String selectedFont;
 
   final List<String> availableFonts = [
     'Default',
@@ -129,9 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    selectedLifeFont = widget.currentLifeFont;
-    selectedAppFont = widget.currentAppFont;
-    fontScope = selectedAppFont != 'Default' ? 'all' : 'life';
+    selectedFont = widget.currentFont;
   }
 
   @override
@@ -147,41 +163,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Font Settings',
+              'Font',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 24),
-            Text('Apply font to:'),
-            SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<String>(
-                segments: [
-                  ButtonSegment(
-                    value: 'life',
-                    label: Text('Life Totals Only'),
-                  ),
-                  ButtonSegment(
-                    value: 'all',
-                    label: Text('Entire App'),
-                  ),
-                ],
-                selected: {fontScope},
-                onSelectionChanged: (Set<String> selection) {
-                  setState(() {
-                    fontScope = selection.first;
-                    if (fontScope == 'all') {
-                      selectedAppFont = selectedLifeFont;
-                    } else {
-                      selectedAppFont = 'Default';
-                    }
-                  });
-                },
-              ),
-            ),
-            SizedBox(height: 24),
-            Text('Choose font:'),
-            SizedBox(height: 8),
+            SizedBox(height: 16),
             Container(
               width: double.infinity,
               padding: EdgeInsets.symmetric(horizontal: 12),
@@ -190,7 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: DropdownButton<String>(
-                value: selectedLifeFont,
+                value: selectedFont,
                 isExpanded: true,
                 underline: SizedBox(),
                 items: availableFonts.map((font) {
@@ -208,10 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (String? newFont) {
                   if (newFont != null) {
                     setState(() {
-                      selectedLifeFont = newFont;
-                      if (fontScope == 'all') {
-                        selectedAppFont = newFont;
-                      }
+                      selectedFont = newFont;
                     });
                   }
                 },
@@ -227,29 +209,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
-                children: [
-                  Text(
-                    '42',
-                    style: TextStyle(
-                      fontFamily: selectedLifeFont == 'Default'
-                          ? null
-                          : selectedLifeFont,
-                      fontSize: 64,
-                      fontWeight: FontWeight.bold,
-                    ),
+              child: Center(
+                child: Text(
+                  '42',
+                  style: TextStyle(
+                    fontFamily: selectedFont == 'Default'
+                        ? null
+                        : selectedFont,
+                    fontSize: 64,
+                    fontWeight: FontWeight.bold,
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Player 1 Life',
-                    style: TextStyle(
-                      fontFamily: fontScope == 'all' && selectedLifeFont != 'Default'
-                          ? selectedLifeFont
-                          : null,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
             Spacer(),
@@ -258,7 +228,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  widget.onFontsChanged(selectedLifeFont, selectedAppFont);
+                  widget.onFontChanged(selectedFont);
                   Navigator.pop(context);
                 },
                 child: Text('Save Settings'),
@@ -272,14 +242,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class SetupScreen extends StatefulWidget {
-  final String lifeTotalFont;
-  final String appFont;
-  final Function(String, String) onFontsChanged;
+  final String selectedFont;
+  final Function(String) onFontChanged;
 
   SetupScreen({
-    required this.lifeTotalFont,
-    required this.appFont,
-    required this.onFontsChanged,
+    required this.selectedFont,
+    required this.onFontChanged,
   });
 
   @override
@@ -401,9 +369,8 @@ class _SetupScreenState extends State<SetupScreen> {
                           builder: (context) => CounterScreen(
                             playerCount: selectedPlayers,
                             startingLife: selectedLife,
-                            lifeTotalFont: widget.lifeTotalFont,
-                            appFont: widget.appFont,
-                            onFontsChanged: widget.onFontsChanged,
+                            selectedFont: widget.selectedFont,
+                            onFontChanged: widget.onFontChanged,
                           ),
                         ),
                       );
@@ -421,16 +388,14 @@ class _SetupScreenState extends State<SetupScreen> {
 class CounterScreen extends StatefulWidget {
   final int playerCount;
   final int startingLife;
-  final String lifeTotalFont;
-  final String appFont;
-  final Function(String, String) onFontsChanged;
+  final String selectedFont;
+  final Function(String) onFontChanged;
 
   CounterScreen({
     required this.playerCount,
     required this.startingLife,
-    required this.lifeTotalFont,
-    required this.appFont,
-    required this.onFontsChanged,
+    required this.selectedFont,
+    required this.onFontChanged,
   });
 
   @override
@@ -439,13 +404,13 @@ class CounterScreen extends StatefulWidget {
 
 class _CounterScreenState extends State<CounterScreen> {
   late List<int> playerHealth;
-  late String currentLifeFont;
+  late String currentFont;
 
   @override
   void initState() {
     super.initState();
     playerHealth = List.filled(widget.playerCount, widget.startingLife);
-    currentLifeFont = widget.lifeTotalFont;
+    currentFont = widget.selectedFont;
   }
 
   bool _isMiddleRow(int playerIndex) {
@@ -485,9 +450,6 @@ class _CounterScreenState extends State<CounterScreen> {
             child: Text(
               '${playerHealth[index]}',
               style: TextStyle(
-                fontFamily: widget.lifeTotalFont == 'Default'
-                    ? null
-                    : currentLifeFont,
                 fontSize: 32,
               ),
             ),
@@ -582,12 +544,11 @@ class _CounterScreenState extends State<CounterScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => SettingsScreen(
-                      currentLifeFont: currentLifeFont,
-                      currentAppFont: widget.appFont,
-                      onFontsChanged: (String newLifeFont, String newAppFont) {
-                        widget.onFontsChanged(newLifeFont, newAppFont);
+                      currentFont: currentFont,
+                      onFontChanged: (String newFont) {
+                        widget.onFontChanged(newFont);
                         setState(() {
-                          currentLifeFont = newLifeFont;
+                          currentFont = newFont;
                         });
                       },
                     ),
