@@ -4,6 +4,28 @@ import 'settings_screen.dart';
 import '../data/token_library.dart';
 import '../data/token_preferences.dart';
 
+class ActiveToken {
+  final String name;
+  final TokenCategory category;
+  final DestroyTrigger? destroyTrigger;
+  int count;
+  int? health;
+  int? maxHealth;
+  int turnPlayed;
+  int playerPlayed;
+
+  ActiveToken({
+    required this.name,
+    required this.category,
+    this.destroyTrigger,
+    this.count = 1,
+    this.health,
+    this.maxHealth,
+    this.turnPlayed = 0,
+    this.playerPlayed = 0,
+  });
+}
+
 class CounterScreen extends StatefulWidget {
   final int playerCount;
   final int startingLife;
@@ -33,12 +55,16 @@ class CounterScreen extends StatefulWidget {
 
 class _CounterScreenState extends State<CounterScreen> {
   late List<int> playerHealth;
-  late List<List<Map<String, int>>> playerTokens;
+  late List<List<ActiveToken>> playerTokens;
   late String currentFont;
   late bool turnTrackerEnabled;
 
   int activePlayer = 0;
   int currentPhase = 0;
+  int turnCount = 0;
+
+  List<String> customTokens = [];
+  List<String> favoriteTokens = [];
 
   final List<String> fabPhases = [
     'Start Phase',
@@ -52,27 +78,24 @@ class _CounterScreenState extends State<CounterScreen> {
       widget.selectedGame == 'fab' &&
       widget.playerCount == 2;
 
-  List<String> customTokens = [];
-  List<String> favoriteTokens = [];
+  @override
+  void initState() {
+    super.initState();
+    playerHealth = List.filled(widget.playerCount, widget.startingLife);
+    playerTokens = List.generate(widget.playerCount, (_) => []);
+    currentFont = widget.selectedFont;
+    turnTrackerEnabled = widget.turnTrackerEnabled;
+    _loadTokenPreferences();
+  }
 
-@override
-void initState() {
-  super.initState();
-  playerHealth = List.filled(widget.playerCount, widget.startingLife);
-  playerTokens = List.generate(widget.playerCount, (_) => []);
-  currentFont = widget.selectedFont;
-  turnTrackerEnabled = widget.turnTrackerEnabled;
-  _loadTokenPreferences();
-}
-
-Future<void> _loadTokenPreferences() async {
-  final customs = await TokenPreferences.getCustomTokens(widget.selectedGame);
-  final favs = await TokenPreferences.getFavorites(widget.selectedGame);
-  setState(() {
-    customTokens = customs;
-    favoriteTokens = favs;
-  });
-}
+  Future<void> _loadTokenPreferences() async {
+    final customs = await TokenPreferences.getCustomTokens(widget.selectedGame);
+    final favs = await TokenPreferences.getFavorites(widget.selectedGame);
+    setState(() {
+      customTokens = customs;
+      favoriteTokens = favs;
+    });
+  }
 
   bool _isMiddleRow(int playerIndex) {
     final int rowCount = (playerHealth.length + 1) ~/ 2;
@@ -99,9 +122,12 @@ Future<void> _loadTokenPreferences() async {
     setState(() {
       if (currentPhase < fabPhases.length - 1) {
         currentPhase++;
+        _checkAutoDestroy();
       } else {
         currentPhase = 0;
         activePlayer = activePlayer == 0 ? 1 : 0;
+        turnCount++;
+        _checkAutoDestroy();
       }
     });
   }
@@ -114,95 +140,292 @@ Future<void> _loadTokenPreferences() async {
     });
   }
 
-  void _showTokenPicker(int playerIndex) {
-  final List<String> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
-  final List<String> allTokens = [...libraryTokens, ...customTokens];
+  void _checkAutoDestroy() {
+    if (!_showTurnTracker) return;
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) {
-      return _TokenPickerSheet(
-        allTokens: allTokens,
-        favoriteTokens: favoriteTokens,
-        playerTokens: playerTokens[playerIndex],
-        gameId: widget.selectedGame,
-        onTokenAdded: (String tokenName) {
-          setState(() {
-            playerTokens[playerIndex].add({tokenName: 1});
-          });
-        },
-        onCustomTokenAdded: (String tokenName) {
-          setState(() {
-            customTokens.add(tokenName);
-          });
-        },
-        onFavoriteToggled: (String tokenName, List<String> updatedFavorites) {
-          setState(() {
-            favoriteTokens = updatedFavorites;
-          });
-        },
-      );
-    },
-  );
-}
+    String currentPhaseName = fabPhases[currentPhase];
+
+    for (int playerIndex = 0; playerIndex < playerTokens.length; playerIndex++) {
+      playerTokens[playerIndex].removeWhere((token) {
+        if (token.destroyTrigger == null) return false;
+
+        switch (token.destroyTrigger!) {
+          case DestroyTrigger.startOfYourTurn:
+            return currentPhaseName == 'Start Phase' &&
+                playerIndex == activePlayer &&
+                turnCount > token.turnPlayed;
+
+          case DestroyTrigger.startOfOpponentTurn:
+            return currentPhaseName == 'Start Phase' &&
+                playerIndex != activePlayer &&
+                turnCount > token.turnPlayed;
+
+          case DestroyTrigger.beginningOfActionPhase:
+            return currentPhaseName == 'Action Phase' &&
+                playerIndex == activePlayer &&
+                turnCount >= token.turnPlayed;
+
+          case DestroyTrigger.beginningOfEndPhase:
+            return currentPhaseName == 'End Phase' &&
+                playerIndex == activePlayer;
+        }
+      });
+    }
+  }
+
+  Color _getTokenStatusColor(ActiveToken token, int playerIndex) {
+    if (!_showTurnTracker || token.destroyTrigger == null) {
+      return Colors.transparent;
+    }
+
+    bool isActivePlayerToken = playerIndex == activePlayer;
+
+    switch (token.destroyTrigger!) {
+      case DestroyTrigger.startOfYourTurn:
+        if (isActivePlayerToken && currentPhase == 0) {
+          return Colors.red.withOpacity(0.3);
+        }
+        return Colors.green.withOpacity(0.3);
+
+      case DestroyTrigger.startOfOpponentTurn:
+        if (!isActivePlayerToken && currentPhase == 0) {
+          return Colors.red.withOpacity(0.3);
+        }
+        return Colors.green.withOpacity(0.3);
+
+      case DestroyTrigger.beginningOfActionPhase:
+        if (isActivePlayerToken && currentPhase <= 2) {
+          if (currentPhase == 2) return Colors.red.withOpacity(0.3);
+          return Colors.yellow.withOpacity(0.3);
+        }
+        return Colors.green.withOpacity(0.3);
+
+      case DestroyTrigger.beginningOfEndPhase:
+        if (isActivePlayerToken) {
+          if (currentPhase == 3) return Colors.red.withOpacity(0.3);
+          return Colors.yellow.withOpacity(0.3);
+        }
+        return Colors.green.withOpacity(0.3);
+    }
+  }
+
+  TokenData? _findTokenData(String name) {
+    final List<TokenData> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
+    try {
+      return libraryTokens.firstWhere((t) => t.name == name);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  void _showTokenPicker(int playerIndex) {
+    final List<TokenData> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
+
+    final List<TokenData> customTokenData = customTokens.map((name) {
+      return TokenData(name: name, category: TokenCategory.boonAura);
+    }).toList();
+
+    final List<TokenData> allTokens = [...libraryTokens, ...customTokenData];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return _TokenPickerSheet(
+          allTokens: allTokens,
+          favoriteTokens: favoriteTokens,
+          playerTokens: playerTokens[playerIndex],
+          gameId: widget.selectedGame,
+          onTokenAdded: (TokenData tokenData) {
+            setState(() {
+              if (tokenData.category == TokenCategory.ally) {
+                playerTokens[playerIndex].add(ActiveToken(
+                  name: tokenData.name,
+                  category: tokenData.category,
+                  destroyTrigger: tokenData.destroyTrigger,
+                  health: tokenData.health,
+                  maxHealth: tokenData.health,
+                  turnPlayed: turnCount,
+                  playerPlayed: playerIndex,
+                ));
+              } else {
+                playerTokens[playerIndex].add(ActiveToken(
+                  name: tokenData.name,
+                  category: tokenData.category,
+                  destroyTrigger: tokenData.destroyTrigger,
+                  turnPlayed: turnCount,
+                  playerPlayed: playerIndex,
+                ));
+              }
+            });
+          },
+          onCustomTokenAdded: (String tokenName) {
+            setState(() {
+              customTokens.add(tokenName);
+            });
+          },
+          onFavoriteToggled: (String tokenName, List<String> updatedFavorites) {
+            setState(() {
+              favoriteTokens = updatedFavorites;
+            });
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAllyToken(ActiveToken token, int playerIndex, int tokenIndex) {
+    Color statusColor = _getTokenStatusColor(token, playerIndex);
+
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: statusColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.orange, width: 1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                token.health = token.health! - 1;
+                if (token.health! <= 0) {
+                  playerTokens[playerIndex].removeAt(tokenIndex);
+                }
+              });
+            },
+            child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
+          ),
+          SizedBox(width: 4),
+          Text(
+            '${token.health}/${token.maxHealth}',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(width: 4),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                if (token.health! < token.maxHealth!) {
+                  token.health = token.health! + 1;
+                }
+              });
+            },
+            child: Icon(Icons.add_circle, size: 18, color: Colors.green),
+          ),
+          SizedBox(width: 8),
+          Text(
+            token.name,
+            style: TextStyle(fontSize: 11),
+          ),
+          SizedBox(width: 4),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                playerTokens[playerIndex].removeAt(tokenIndex);
+              });
+            },
+            child: Icon(Icons.close, size: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCounterToken(ActiveToken token, int playerIndex, int tokenIndex) {
+    Color statusColor = _getTokenStatusColor(token, playerIndex);
+
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 2),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: statusColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                token.count--;
+                if (token.count <= 0) {
+                  playerTokens[playerIndex].removeAt(tokenIndex);
+                }
+              });
+            },
+            child: Icon(Icons.remove_circle, size: 18),
+          ),
+          SizedBox(width: 4),
+          Text(
+            '${token.count}',
+            style: TextStyle(fontSize: 13),
+          ),
+          SizedBox(width: 4),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                token.count++;
+              });
+            },
+            child: Icon(Icons.add_circle, size: 18),
+          ),
+          SizedBox(width: 8),
+          Text(
+            token.name,
+            style: TextStyle(fontSize: 11),
+          ),
+          SizedBox(width: 4),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                playerTokens[playerIndex].removeAt(tokenIndex);
+              });
+            },
+            child: Icon(Icons.close, size: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildTokenList(int index) {
     if (playerTokens[index].isEmpty) return SizedBox();
 
+    final allies = <int>[];
+    final others = <int>[];
+
+    for (int t = 0; t < playerTokens[index].length; t++) {
+      if (playerTokens[index][t].category == TokenCategory.ally) {
+        allies.add(t);
+      } else {
+        others.add(t);
+      }
+    }
+
     return Column(
       children: [
-        for (int t = 0; t < playerTokens[index].length; t++)
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 2),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      final name = playerTokens[index][t].keys.first;
-                      final value = playerTokens[index][t][name]!;
-                      if (value <= 1) {
-                        playerTokens[index].removeAt(t);
-                      } else {
-                        playerTokens[index][t] = {name: value - 1};
-                      }
-                    });
-                  },
-                  child: Icon(Icons.remove_circle, size: 20),
-                ),
-                SizedBox(width: 4),
-                Text(
-                  '${playerTokens[index][t].values.first}',
-                  style: TextStyle(fontSize: 14),
-                ),
-                SizedBox(width: 4),
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      final name = playerTokens[index][t].keys.first;
-                      final value = playerTokens[index][t][name]!;
-                      playerTokens[index][t] = {name: value + 1};
-                    });
-                  },
-                  child: Icon(Icons.add_circle, size: 20),
-                ),
-                SizedBox(width: 8),
-                Text(
-                  playerTokens[index][t].keys.first,
-                  style: TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-          ),
+        for (int t in allies)
+          _buildAllyToken(playerTokens[index][t], index, t),
+        for (int t in others)
+          _buildCounterToken(playerTokens[index][t], index, t),
       ],
     );
   }
 
   Widget _buildPlayerWidget(int index) {
     final bool isActive = _showTurnTracker && activePlayer == index;
+
+    final allies = playerTokens[index]
+        .where((t) => t.category == TokenCategory.ally)
+        .toList();
+    final others = playerTokens[index]
+        .where((t) => t.category != TokenCategory.ally)
+        .toList();
 
     Widget content = Container(
       decoration: isActive
@@ -214,6 +437,17 @@ Future<void> _loadTokenPreferences() async {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Allies above health
+            if (allies.isNotEmpty)
+              Column(
+                children: [
+                  for (int i = 0; i < playerTokens[index].length; i++)
+                    if (playerTokens[index][i].category == TokenCategory.ally)
+                      _buildAllyToken(playerTokens[index][i], index, i),
+                ],
+              ),
+            SizedBox(height: 4),
+            // Health row
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -240,8 +474,16 @@ Future<void> _loadTokenPreferences() async {
                 ),
               ],
             ),
-            SizedBox(height: 8),
-            _buildTokenList(index),
+            SizedBox(height: 4),
+            // Other tokens below health
+            if (others.isNotEmpty)
+              Column(
+                children: [
+                  for (int i = 0; i < playerTokens[index].length; i++)
+                    if (playerTokens[index][i].category != TokenCategory.ally)
+                      _buildCounterToken(playerTokens[index][i], index, i),
+                ],
+              ),
             SizedBox(height: 4),
             GestureDetector(
               onTap: () => _showTokenPicker(index),
@@ -365,6 +607,7 @@ Future<void> _loadTokenPreferences() async {
                   playerTokens = List.generate(widget.playerCount, (_) => []);
                   activePlayer = 0;
                   currentPhase = 0;
+                  turnCount = 0;
                 });
               },
             ),
@@ -419,12 +662,13 @@ Future<void> _loadTokenPreferences() async {
     );
   }
 }
+
 class _TokenPickerSheet extends StatefulWidget {
-  final List<String> allTokens;
+  final List<TokenData> allTokens;
   final List<String> favoriteTokens;
-  final List<Map<String, int>> playerTokens;
+  final List<ActiveToken> playerTokens;
   final String gameId;
-  final Function(String) onTokenAdded;
+  final Function(TokenData) onTokenAdded;
   final Function(String) onCustomTokenAdded;
   final Function(String, List<String>) onFavoriteToggled;
 
@@ -444,9 +688,17 @@ class _TokenPickerSheet extends StatefulWidget {
 
 class _TokenPickerSheetState extends State<_TokenPickerSheet> {
   String searchQuery = '';
+  TokenCategory? selectedCategory;
   final TextEditingController searchController = TextEditingController();
   final TextEditingController customTokenController = TextEditingController();
   late List<String> currentFavorites;
+
+  final Map<TokenCategory, String> categoryNames = {
+    TokenCategory.ally: 'Allies',
+    TokenCategory.item: 'Items',
+    TokenCategory.boonAura: 'Boon Auras',
+    TokenCategory.debuffAura: 'Debuff Auras',
+  };
 
   @override
   void initState() {
@@ -461,23 +713,27 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
     super.dispose();
   }
 
-  List<String> _getSortedFilteredTokens() {
-    List<String> tokens = List.from(widget.allTokens);
+  List<TokenData> _getSortedFilteredTokens() {
+    List<TokenData> tokens = List.from(widget.allTokens);
+
+    if (selectedCategory != null) {
+      tokens = tokens.where((t) => t.category == selectedCategory).toList();
+    }
 
     if (searchQuery.isNotEmpty) {
       tokens = tokens
-          .where((t) => t.toLowerCase().contains(searchQuery.toLowerCase()))
+          .where((t) => t.name.toLowerCase().contains(searchQuery.toLowerCase()))
           .toList();
     }
 
-    final List<String> favs = tokens
-        .where((t) => currentFavorites.contains(t))
+    final List<TokenData> favs = tokens
+        .where((t) => currentFavorites.contains(t.name))
         .toList()
-      ..sort();
-    final List<String> nonFavs = tokens
-        .where((t) => !currentFavorites.contains(t))
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final List<TokenData> nonFavs = tokens
+        .where((t) => !currentFavorites.contains(t.name))
         .toList()
-      ..sort();
+      ..sort((a, b) => a.name.compareTo(b.name));
 
     return [...favs, ...nonFavs];
   }
@@ -506,10 +762,12 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
               onPressed: () {
                 final name = customTokenController.text.trim();
                 if (name.isNotEmpty &&
-                    !widget.allTokens.contains(name)) {
+                    !widget.allTokens.any((t) => t.name == name)) {
                   TokenPreferences.addCustomToken(widget.gameId, name);
                   widget.onCustomTokenAdded(name);
-                  widget.allTokens.add(name);
+                  widget.allTokens.add(
+                    TokenData(name: name, category: TokenCategory.boonAura),
+                  );
                 }
                 Navigator.pop(context);
                 customTokenController.clear();
@@ -521,6 +779,10 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
         );
       },
     );
+  }
+
+  String _getCategoryLabel(TokenCategory category) {
+    return categoryNames[category] ?? 'Unknown';
   }
 
   @override
@@ -563,46 +825,84 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
               });
             },
           ),
-          SizedBox(height: 12),
+          SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: FilterChip(
+                    label: Text('All'),
+                    selected: selectedCategory == null,
+                    onSelected: (_) {
+                      setState(() {
+                        selectedCategory = null;
+                      });
+                    },
+                  ),
+                ),
+                for (var category in TokenCategory.values)
+                  Padding(
+                    padding: EdgeInsets.only(right: 4),
+                    child: FilterChip(
+                      label: Text(_getCategoryLabel(category)),
+                      selected: selectedCategory == category,
+                      onSelected: (_) {
+                        setState(() {
+                          selectedCategory =
+                              selectedCategory == category ? null : category;
+                        });
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          SizedBox(height: 8),
           Expanded(
             child: sortedTokens.isEmpty
                 ? Center(child: Text('No tokens found'))
                 : ListView.builder(
                     itemCount: sortedTokens.length,
                     itemBuilder: (context, index) {
-                      final tokenName = sortedTokens[index];
+                      final tokenData = sortedTokens[index];
                       final bool alreadyAdded = widget.playerTokens
-                          .any((t) => t.keys.first == tokenName);
+                          .any((t) => t.name == tokenData.name);
                       final bool isFavorite =
-                          currentFavorites.contains(tokenName);
+                          currentFavorites.contains(tokenData.name);
 
                       return ListTile(
                         leading: GestureDetector(
                           onTap: () async {
                             await TokenPreferences.toggleFavorite(
-                                widget.gameId, tokenName);
+                                widget.gameId, tokenData.name);
                             setState(() {
                               if (isFavorite) {
-                                currentFavorites.remove(tokenName);
+                                currentFavorites.remove(tokenData.name);
                               } else {
-                                currentFavorites.add(tokenName);
+                                currentFavorites.add(tokenData.name);
                               }
                             });
                             widget.onFavoriteToggled(
-                                tokenName, List.from(currentFavorites));
+                                tokenData.name, List.from(currentFavorites));
                           },
                           child: Icon(
                             isFavorite ? Icons.star : Icons.star_border,
                             color: isFavorite ? Colors.amber : Colors.grey,
                           ),
                         ),
-                        title: Text(tokenName),
+                        title: Text(tokenData.name),
+                        subtitle: Text(
+                          _getCategoryLabel(tokenData.category),
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
                         trailing: alreadyAdded
                             ? Icon(Icons.check, color: Colors.green)
                             : Icon(Icons.add_circle_outline),
                         onTap: () {
                           if (!alreadyAdded) {
-                            widget.onTokenAdded(tokenName);
+                            widget.onTokenAdded(tokenData);
                           }
                           Navigator.pop(context);
                         },
