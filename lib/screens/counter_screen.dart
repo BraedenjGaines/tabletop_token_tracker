@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'settings_screen.dart';
 import '../data/token_library.dart';
+import '../data/token_preferences.dart';
 
 class CounterScreen extends StatefulWidget {
   final int playerCount;
@@ -51,14 +52,27 @@ class _CounterScreenState extends State<CounterScreen> {
       widget.selectedGame == 'fab' &&
       widget.playerCount == 2;
 
-  @override
-  void initState() {
-    super.initState();
-    playerHealth = List.filled(widget.playerCount, widget.startingLife);
-    playerTokens = List.generate(widget.playerCount, (_) => []);
-    currentFont = widget.selectedFont;
-    turnTrackerEnabled = widget.turnTrackerEnabled;
-  }
+  List<String> customTokens = [];
+  List<String> favoriteTokens = [];
+
+@override
+void initState() {
+  super.initState();
+  playerHealth = List.filled(widget.playerCount, widget.startingLife);
+  playerTokens = List.generate(widget.playerCount, (_) => []);
+  currentFont = widget.selectedFont;
+  turnTrackerEnabled = widget.turnTrackerEnabled;
+  _loadTokenPreferences();
+}
+
+Future<void> _loadTokenPreferences() async {
+  final customs = await TokenPreferences.getCustomTokens(widget.selectedGame);
+  final favs = await TokenPreferences.getFavorites(widget.selectedGame);
+  setState(() {
+    customTokens = customs;
+    favoriteTokens = favs;
+  });
+}
 
   bool _isMiddleRow(int playerIndex) {
     final int rowCount = (playerHealth.length + 1) ~/ 2;
@@ -101,56 +115,37 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   void _showTokenPicker(int playerIndex) {
-    final List<String> availableTokens = tokenLibrary[widget.selectedGame] ?? [];
+  final List<String> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
+  final List<String> allTokens = [...libraryTokens, ...customTokens];
 
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(16),
-          height: 400,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Add Token - Player ${playerIndex + 1}',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12),
-              Expanded(
-                child: availableTokens.isEmpty
-                    ? Center(child: Text('No tokens available for this game'))
-                    : ListView.builder(
-                        itemCount: availableTokens.length,
-                        itemBuilder: (context, index) {
-                          final tokenName = availableTokens[index];
-                          final bool alreadyAdded = playerTokens[playerIndex]
-                              .any((t) => t.keys.first == tokenName);
-
-                          return ListTile(
-                            title: Text(tokenName),
-                            trailing: alreadyAdded
-                                ? Icon(Icons.check, color: Colors.green)
-                                : Icon(Icons.add_circle_outline),
-                            onTap: () {
-                              if (!alreadyAdded) {
-                                setState(() {
-                                  playerTokens[playerIndex]
-                                      .add({tokenName: 1});
-                                });
-                              }
-                              Navigator.pop(context);
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) {
+      return _TokenPickerSheet(
+        allTokens: allTokens,
+        favoriteTokens: favoriteTokens,
+        playerTokens: playerTokens[playerIndex],
+        gameId: widget.selectedGame,
+        onTokenAdded: (String tokenName) {
+          setState(() {
+            playerTokens[playerIndex].add({tokenName: 1});
+          });
+        },
+        onCustomTokenAdded: (String tokenName) {
+          setState(() {
+            customTokens.add(tokenName);
+          });
+        },
+        onFavoriteToggled: (String tokenName, List<String> updatedFavorites) {
+          setState(() {
+            favoriteTokens = updatedFavorites;
+          });
+        },
+      );
+    },
+  );
+}
 
   Widget _buildTokenList(int index) {
     if (playerTokens[index].isEmpty) return SizedBox();
@@ -418,6 +413,202 @@ class _CounterScreenState extends State<CounterScreen> {
                 // TODO: future feature
               },
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+class _TokenPickerSheet extends StatefulWidget {
+  final List<String> allTokens;
+  final List<String> favoriteTokens;
+  final List<Map<String, int>> playerTokens;
+  final String gameId;
+  final Function(String) onTokenAdded;
+  final Function(String) onCustomTokenAdded;
+  final Function(String, List<String>) onFavoriteToggled;
+
+  _TokenPickerSheet({
+    required this.allTokens,
+    required this.favoriteTokens,
+    required this.playerTokens,
+    required this.gameId,
+    required this.onTokenAdded,
+    required this.onCustomTokenAdded,
+    required this.onFavoriteToggled,
+  });
+
+  @override
+  _TokenPickerSheetState createState() => _TokenPickerSheetState();
+}
+
+class _TokenPickerSheetState extends State<_TokenPickerSheet> {
+  String searchQuery = '';
+  final TextEditingController searchController = TextEditingController();
+  final TextEditingController customTokenController = TextEditingController();
+  late List<String> currentFavorites;
+
+  @override
+  void initState() {
+    super.initState();
+    currentFavorites = List.from(widget.favoriteTokens);
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    customTokenController.dispose();
+    super.dispose();
+  }
+
+  List<String> _getSortedFilteredTokens() {
+    List<String> tokens = List.from(widget.allTokens);
+
+    if (searchQuery.isNotEmpty) {
+      tokens = tokens
+          .where((t) => t.toLowerCase().contains(searchQuery.toLowerCase()))
+          .toList();
+    }
+
+    final List<String> favs = tokens
+        .where((t) => currentFavorites.contains(t))
+        .toList()
+      ..sort();
+    final List<String> nonFavs = tokens
+        .where((t) => !currentFavorites.contains(t))
+        .toList()
+      ..sort();
+
+    return [...favs, ...nonFavs];
+  }
+
+  void _showAddCustomDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add Custom Token'),
+          content: TextField(
+            controller: customTokenController,
+            decoration: InputDecoration(
+              hintText: 'Token name',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                customTokenController.clear();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final name = customTokenController.text.trim();
+                if (name.isNotEmpty &&
+                    !widget.allTokens.contains(name)) {
+                  TokenPreferences.addCustomToken(widget.gameId, name);
+                  widget.onCustomTokenAdded(name);
+                  widget.allTokens.add(name);
+                }
+                Navigator.pop(context);
+                customTokenController.clear();
+                setState(() {});
+              },
+              child: Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sortedTokens = _getSortedFilteredTokens();
+
+    return Container(
+      padding: EdgeInsets.all(16),
+      height: MediaQuery.of(context).size.height * 0.7,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Add Token',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              TextButton.icon(
+                onPressed: _showAddCustomDialog,
+                icon: Icon(Icons.add),
+                label: Text('Custom'),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          TextField(
+            controller: searchController,
+            decoration: InputDecoration(
+              hintText: 'Search tokens...',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onChanged: (value) {
+              setState(() {
+                searchQuery = value;
+              });
+            },
+          ),
+          SizedBox(height: 12),
+          Expanded(
+            child: sortedTokens.isEmpty
+                ? Center(child: Text('No tokens found'))
+                : ListView.builder(
+                    itemCount: sortedTokens.length,
+                    itemBuilder: (context, index) {
+                      final tokenName = sortedTokens[index];
+                      final bool alreadyAdded = widget.playerTokens
+                          .any((t) => t.keys.first == tokenName);
+                      final bool isFavorite =
+                          currentFavorites.contains(tokenName);
+
+                      return ListTile(
+                        leading: GestureDetector(
+                          onTap: () async {
+                            await TokenPreferences.toggleFavorite(
+                                widget.gameId, tokenName);
+                            setState(() {
+                              if (isFavorite) {
+                                currentFavorites.remove(tokenName);
+                              } else {
+                                currentFavorites.add(tokenName);
+                              }
+                            });
+                            widget.onFavoriteToggled(
+                                tokenName, List.from(currentFavorites));
+                          },
+                          child: Icon(
+                            isFavorite ? Icons.star : Icons.star_border,
+                            color: isFavorite ? Colors.amber : Colors.grey,
+                          ),
+                        ),
+                        title: Text(tokenName),
+                        trailing: alreadyAdded
+                            ? Icon(Icons.check, color: Colors.green)
+                            : Icon(Icons.add_circle_outline),
+                        onTap: () {
+                          if (!alreadyAdded) {
+                            widget.onTokenAdded(tokenName);
+                          }
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),
