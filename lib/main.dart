@@ -194,20 +194,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     setState(() {
                       selectedFont = newFont;
                     });
+                    widget.onFontChanged(newFont);
                   }
                 },
-              ),
-            ),
-            Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () {
-                  widget.onFontChanged(selectedFont);
-                  Navigator.pop(context);
-                },
-                child: Text('Save Settings'),
               ),
             ),
           ],
