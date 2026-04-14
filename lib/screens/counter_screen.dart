@@ -186,15 +186,6 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 }
 
-  TokenData? _findTokenData(String name) {
-    final List<TokenData> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
-    try {
-      return libraryTokens.firstWhere((t) => t.name == name);
-    } catch (e) {
-      return null;
-    }
-  }
-
   void _showTokenPicker(int playerIndex) {
   final List<TokenData> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
 
@@ -673,7 +664,6 @@ class _TokenPickerSheet extends StatefulWidget {
   final Function(TokenData) onTokenAdded;
   final Function(String) onCustomTokenAdded;
   final Function(String, List<String>) onFavoriteToggled;
-  final bool isDialog;
 
   _TokenPickerSheet({
     required this.allTokens,
@@ -683,7 +673,6 @@ class _TokenPickerSheet extends StatefulWidget {
     required this.onTokenAdded,
     required this.onCustomTokenAdded,
     required this.onFavoriteToggled,
-    this.isDialog = false,
   });
 
   @override
@@ -795,7 +784,7 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
 
       return Container(
         padding: EdgeInsets.all(16),
-        height: widget.isDialog ? MediaQuery.of(context).size.height * 0.6 : MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.6,
         child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

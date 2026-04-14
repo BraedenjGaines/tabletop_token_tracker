@@ -24,32 +24,31 @@ class _MyAppState extends State<MyApp> {
     _loadPreferences();
   }
 
-  Future<void> _loadPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      selectedFont = prefs.getString('selectedFont') ?? 'Sedan';
-      selectedGame = prefs.getString('selectedGame') ?? '';
-      skipGameSelect = prefs.getBool('skipGameSelect') ?? false;
-      turnTrackerEnabled = prefs.getBool('turnTrackerEnabled') ?? false;
-      isLoaded = true;
-    });
-  }
+late SharedPreferences _prefs;
 
-  Future<void> _saveFont() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('selectedFont', selectedFont);
-  }
+Future<void> _loadPreferences() async {
+  _prefs = await SharedPreferences.getInstance();
+  setState(() {
+    selectedFont = _prefs.getString('selectedFont') ?? 'Sedan';
+    selectedGame = _prefs.getString('selectedGame') ?? '';
+    skipGameSelect = _prefs.getBool('skipGameSelect') ?? false;
+    turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? false;
+    isLoaded = true;
+  });
+}
 
-  Future<void> _saveGamePreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('selectedGame', selectedGame);
-    await prefs.setBool('skipGameSelect', skipGameSelect);
-  }
+Future<void> _saveFont() async {
+  await _prefs.setString('selectedFont', selectedFont);
+}
 
-  Future<void> _saveTurnTracker() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('turnTrackerEnabled', turnTrackerEnabled);
-  }
+Future<void> _saveGamePreferences() async {
+  await _prefs.setString('selectedGame', selectedGame);
+  await _prefs.setBool('skipGameSelect', skipGameSelect);
+}
+
+Future<void> _saveTurnTracker() async {
+  await _prefs.setBool('turnTrackerEnabled', turnTrackerEnabled);
+}
 
   void updateFont(String newFont) {
     setState(() {

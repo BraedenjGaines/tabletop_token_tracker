@@ -167,6 +167,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Enable Turn Tracker'),
+                value: turnTracker,
+                onChanged: (bool value) {
+                  setState(() {
+                    turnTracker = value;
+                  });
+                  widget.onTurnTrackerChanged(value);
+                },
+              ),
+                SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -181,19 +192,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       );
                     },
-                    child: Text('Manage Custom Tokens'),
-                  ),
+                  child: Text('Manage Custom Tokens'),
                 ),
-              SizedBox(height: 8),
-              SwitchListTile(
-                title: Text('Enable Turn Tracker'),
-                value: turnTracker,
-                onChanged: (bool value) {
-                  setState(() {
-                    turnTracker = value;
-                  });
-                  widget.onTurnTrackerChanged(value);
-                },
               ),
             ],
           ),
