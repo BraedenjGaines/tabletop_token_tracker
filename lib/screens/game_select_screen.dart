@@ -58,9 +58,12 @@ class _GameSelectScreenState extends State<GameSelectScreen> {
                           selectedGame == game['id'] ? Colors.blue : Colors.grey,
                       alignment: Alignment.center,
                     ),
-                    child: Text(
-                      game['name']!,
-                      style: TextStyle(fontSize: 18),
+                    child: Center(
+                      child: Text(
+                        game['name']!,
+                        style: TextStyle(fontSize: 18),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ),
