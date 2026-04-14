@@ -12,7 +12,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String selectedFont = 'Default';
+  String selectedFont = 'Sedan';
   bool isLoaded = false;
 
   @override
@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> _loadFont() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      selectedFont = prefs.getString('selectedFont') ?? 'Default';
+      selectedFont = prefs.getString('selectedFont') ?? 'Sedan';
       isLoaded = true;
     });
   }
@@ -54,7 +54,7 @@ class _MyAppState extends State<MyApp> {
       title: 'TableTop Token Tracker',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        fontFamily: selectedFont == 'Default' ? null : selectedFont,
+        fontFamily: selectedFont,
       ),
       home: HomeScreen(
         selectedFont: selectedFont,
@@ -137,7 +137,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String selectedFont;
 
   final List<String> availableFonts = [
-    'Default',
     'EagleLake',
     'Jacquard12',
     'MedievalSharp',
@@ -164,7 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text(
               'Font',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 16),
             Container(
@@ -182,9 +181,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return DropdownMenuItem(
                     value: font,
                     child: Text(
-                      font == 'Default' ? 'Default' : font,
+                      font,
                       style: TextStyle(
-                        fontFamily: font == 'Default' ? null : font,
+                        fontFamily: font,
                         fontSize: 18,
                       ),
                     ),
@@ -197,29 +196,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     });
                   }
                 },
-              ),
-            ),
-            SizedBox(height: 32),
-            Text('Preview:'),
-            SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  '42',
-                  style: TextStyle(
-                    fontFamily: selectedFont == 'Default'
-                        ? null
-                        : selectedFont,
-                    fontSize: 64,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
             ),
             Spacer(),
