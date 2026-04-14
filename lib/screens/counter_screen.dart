@@ -65,7 +65,7 @@ class _CounterScreenState extends State<CounterScreen> {
   int currentPhase = 0;
   int turnCount = 0;
 
-  List<String> customTokens = [];
+  List<TokenData> customTokens = [];
   List<String> favoriteTokens = [];
 
   final GameLog gameLog = GameLog();
@@ -108,7 +108,7 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   Future<void> _loadTokenPreferences() async {
-    final customs = await TokenPreferences.getCustomTokens(widget.selectedGame);
+    final customs = await TokenPreferences.getCustomTokensFull(widget.selectedGame);
     final favs = await TokenPreferences.getFavorites(widget.selectedGame);
     setState(() {
       customTokens = customs;
@@ -263,11 +263,7 @@ class _CounterScreenState extends State<CounterScreen> {
   void _showTokenPicker(int playerIndex) {
     final List<TokenData> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
 
-    final List<TokenData> customTokenData = customTokens.map((name) {
-      return TokenData(name: name, category: TokenCategory.boonAura);
-    }).toList();
-
-    final List<TokenData> allTokens = [...libraryTokens, ...customTokenData];
+    final List<TokenData> allTokens = [...libraryTokens, ...customTokens];
 
     final double? angle = _getRotationAngle(playerIndex);
 
@@ -305,9 +301,9 @@ class _CounterScreenState extends State<CounterScreen> {
                 _log(playerIndex, LogEventType.tokenAdded, '${tokenData.name} added');
               });
             },
-            onCustomTokenAdded: (String tokenName) {
+            onCustomTokenAdded: (TokenData tokenData) {
               setState(() {
-                customTokens.add(tokenName);
+                customTokens.add(tokenData);
               });
             },
             onFavoriteToggled: (String tokenName, List<String> updatedFavorites) {
@@ -412,8 +408,12 @@ class _CounterScreenState extends State<CounterScreen> {
           GestureDetector(
             onTap: () {
               setState(() {
-                playerTokens[playerIndex].removeAt(tokenIndex);
-                _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
+                token.count--;
+                _log(playerIndex, LogEventType.tokenCountChange, '${token.name}', value: -1);
+                if (token.count <= 0) {
+                  playerTokens[playerIndex].removeAt(tokenIndex);
+                  _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
+                }
               });
             },
             child: Icon(Icons.remove_circle, size: 18),
@@ -770,7 +770,7 @@ class _TokenPickerSheet extends StatefulWidget {
   final List<ActiveToken> playerTokens;
   final String gameId;
   final Function(TokenData) onTokenAdded;
-  final Function(String) onCustomTokenAdded;
+  final Function(TokenData) onCustomTokenAdded;
   final Function(String, List<String>) onFavoriteToggled;
 
   _TokenPickerSheet({
@@ -840,43 +840,151 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
   }
 
   void _showAddCustomDialog() {
+    final nameController = TextEditingController();
+    final healthController = TextEditingController();
+    TokenCategory dialogCategory = TokenCategory.boonAura;
+    DestroyTrigger? dialogTrigger;
+
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Add Custom Token'),
-          content: TextField(
-            controller: customTokenController,
-            decoration: InputDecoration(
-              hintText: 'Token name',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                customTokenController.clear();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final name = customTokenController.text.trim();
-                if (name.isNotEmpty &&
-                    !widget.allTokens.any((t) => t.name == name)) {
-                  TokenPreferences.addCustomToken(widget.gameId, name);
-                  widget.onCustomTokenAdded(name);
-                  widget.allTokens.add(
-                    TokenData(name: name, category: TokenCategory.boonAura),
-                  );
-                }
-                Navigator.pop(context);
-                customTokenController.clear();
-                setState(() {});
-              },
-              child: Text('Add'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Add Custom Token'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        hintText: 'Token name',
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text('Category'),
+                    SizedBox(height: 8),
+                    DropdownButton<TokenCategory>(
+                      value: dialogCategory,
+                      isExpanded: true,
+                      items: TokenCategory.values.map((cat) {
+                        return DropdownMenuItem(
+                          value: cat,
+                          child: Text(_getCategoryLabel(cat)),
+                        );
+                      }).toList(),
+                      onChanged: (TokenCategory? value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            dialogCategory = value;
+                            if (value != TokenCategory.boonAura &&
+                                value != TokenCategory.debuffAura) {
+                              dialogTrigger = null;
+                            }
+                            if (value != TokenCategory.ally) {
+                              healthController.clear();
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    if (dialogCategory == TokenCategory.ally) ...[
+                      SizedBox(height: 16),
+                      Text('Health'),
+                      SizedBox(height: 8),
+                      TextField(
+                        controller: healthController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: 'Health value',
+                        ),
+                      ),
+                    ],
+                    if (dialogCategory == TokenCategory.boonAura ||
+                        dialogCategory == TokenCategory.debuffAura) ...[
+                      SizedBox(height: 16),
+                      Text('Auto-destroy'),
+                      SizedBox(height: 8),
+                      DropdownButton<DestroyTrigger?>(
+                        value: dialogTrigger,
+                        isExpanded: true,
+                        items: [
+                          DropdownMenuItem(
+                            value: null,
+                            child: Text('None (manual only)'),
+                          ),
+                          DropdownMenuItem(
+                            value: DestroyTrigger.startOfYourTurn,
+                            child: Text('Start of your turn'),
+                          ),
+                          DropdownMenuItem(
+                            value: DestroyTrigger.startOfOpponentTurn,
+                            child: Text("Start of opponent's turn"),
+                          ),
+                          DropdownMenuItem(
+                            value: DestroyTrigger.beginningOfActionPhase,
+                            child: Text('Beginning of action phase'),
+                          ),
+                          DropdownMenuItem(
+                            value: DestroyTrigger.beginningOfEndPhase,
+                            child: Text('Beginning of end phase'),
+                          ),
+                        ],
+                        onChanged: (DestroyTrigger? value) {
+                          setDialogState(() {
+                            dialogTrigger = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    nameController.dispose();
+                    healthController.dispose();
+                  },
+                  child: Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final name = nameController.text.trim();
+                    final health = int.tryParse(healthController.text);
+
+                    if (name.isNotEmpty &&
+                        !widget.allTokens.any((t) => t.name == name)) {
+                      if (dialogCategory == TokenCategory.ally &&
+                          (health == null || health <= 0)) {
+                        return;
+                      }
+
+                      final newToken = TokenData(
+                        name: name,
+                        category: dialogCategory,
+                        destroyTrigger: dialogTrigger,
+                        health: dialogCategory == TokenCategory.ally ? health : null,
+                      );
+
+                      TokenPreferences.addCustomTokenFull(widget.gameId, newToken);
+                      TokenPreferences.addCustomToken(widget.gameId, name);
+                      widget.onCustomTokenAdded(newToken);
+                      widget.allTokens.add(newToken);
+                    }
+                    Navigator.pop(context);
+                    nameController.dispose();
+                    healthController.dispose();
+                    setState(() {});
+                  },
+                  child: Text('Add'),
+                ),
+              ],
+            );
+          },
         );
       },
     );

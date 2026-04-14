@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/token_preferences.dart';
+import '../data/token_library.dart';
 
 class CustomTokenScreen extends StatefulWidget {
   final String currentGame;
@@ -11,13 +12,27 @@ class CustomTokenScreen extends StatefulWidget {
 }
 
 class _CustomTokenScreenState extends State<CustomTokenScreen> {
-  List<String> customTokens = [];
+  List<TokenData> customTokens = [];
   String selectedGame = '';
 
   final List<Map<String, String>> availableGames = [
     {'id': 'fab', 'name': 'Flesh and Blood'},
     {'id': 'mtg', 'name': 'Magic: The Gathering'},
   ];
+
+  final Map<TokenCategory, String> categoryNames = {
+    TokenCategory.ally: 'Ally',
+    TokenCategory.item: 'Item',
+    TokenCategory.boonAura: 'Boon Aura',
+    TokenCategory.debuffAura: 'Debuff Aura',
+  };
+
+  final Map<DestroyTrigger, String> triggerNames = {
+    DestroyTrigger.startOfYourTurn: 'Start of your turn',
+    DestroyTrigger.startOfOpponentTurn: "Start of opponent's turn",
+    DestroyTrigger.beginningOfActionPhase: 'Beginning of action phase',
+    DestroyTrigger.beginningOfEndPhase: 'Beginning of end phase',
+  };
 
   @override
   void initState() {
@@ -27,49 +42,162 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
   }
 
   Future<void> _loadTokens() async {
-    final tokens = await TokenPreferences.getCustomTokens(selectedGame);
+    final tokens = await TokenPreferences.getCustomTokensFull(selectedGame);
     setState(() {
       customTokens = tokens;
     });
   }
 
+  String _getSubtitle(TokenData token) {
+    String subtitle = categoryNames[token.category] ?? 'Unknown';
+    if (token.category == TokenCategory.ally && token.health != null) {
+      subtitle += ' • ${token.health} HP';
+    }
+    if (token.destroyTrigger != null) {
+      subtitle += ' • ${triggerNames[token.destroyTrigger]}';
+    }
+    return subtitle;
+  }
+
   void _showEditDialog(int index) {
-    final controller = TextEditingController(text: customTokens[index]);
+    final token = customTokens[index];
+    final nameController = TextEditingController(text: token.name);
+    final healthController = TextEditingController(
+      text: token.health?.toString() ?? '',
+    );
+    TokenCategory selectedCategory = token.category;
+    DestroyTrigger? selectedTrigger = token.destroyTrigger;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Edit Token'),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: 'Token name',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                controller.dispose();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final newName = controller.text.trim();
-                if (newName.isNotEmpty && newName != customTokens[index]) {
-                  await TokenPreferences.removeCustomToken(
-                      selectedGame, customTokens[index]);
-                  await TokenPreferences.addCustomToken(selectedGame, newName);
-                  await _loadTokens();
-                }
-                Navigator.pop(context);
-                controller.dispose();
-              },
-              child: Text('Save'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Edit Token'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(hintText: 'Token name'),
+                    ),
+                    SizedBox(height: 16),
+                    Text('Category'),
+                    SizedBox(height: 8),
+                    DropdownButton<TokenCategory>(
+                      value: selectedCategory,
+                      isExpanded: true,
+                      items: TokenCategory.values.map((cat) {
+                        return DropdownMenuItem(
+                          value: cat,
+                          child: Text(categoryNames[cat] ?? 'Unknown'),
+                        );
+                      }).toList(),
+                      onChanged: (TokenCategory? value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            selectedCategory = value;
+                            if (value != TokenCategory.boonAura &&
+                                value != TokenCategory.debuffAura) {
+                              selectedTrigger = null;
+                            }
+                            if (value != TokenCategory.ally) {
+                              healthController.clear();
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    if (selectedCategory == TokenCategory.ally) ...[
+                      SizedBox(height: 16),
+                      Text('Health'),
+                      SizedBox(height: 8),
+                      TextField(
+                        controller: healthController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(hintText: 'Health value'),
+                      ),
+                    ],
+                    if (selectedCategory == TokenCategory.boonAura ||
+                        selectedCategory == TokenCategory.debuffAura) ...[
+                      SizedBox(height: 16),
+                      Text('Auto-destroy'),
+                      SizedBox(height: 8),
+                      DropdownButton<DestroyTrigger?>(
+                        value: selectedTrigger,
+                        isExpanded: true,
+                        items: [
+                          DropdownMenuItem(
+                            value: null,
+                            child: Text('None (manual only)'),
+                          ),
+                          ...DestroyTrigger.values.map((trigger) {
+                            return DropdownMenuItem(
+                              value: trigger,
+                              child: Text(triggerNames[trigger] ?? ''),
+                            );
+                          }),
+                        ],
+                        onChanged: (DestroyTrigger? value) {
+                          setDialogState(() {
+                            selectedTrigger = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    nameController.dispose();
+                    healthController.dispose();
+                  },
+                  child: Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final newName = nameController.text.trim();
+                    final health = int.tryParse(healthController.text);
+
+                    if (newName.isNotEmpty) {
+                      if (selectedCategory == TokenCategory.ally &&
+                          (health == null || health <= 0)) {
+                        return;
+                      }
+
+                      await TokenPreferences.removeCustomToken(
+                          selectedGame, token.name);
+
+                      final newToken = TokenData(
+                        name: newName,
+                        category: selectedCategory,
+                        destroyTrigger: selectedTrigger,
+                        health: selectedCategory == TokenCategory.ally
+                            ? health
+                            : null,
+                      );
+
+                      await TokenPreferences.addCustomTokenFull(
+                          selectedGame, newToken);
+                      await TokenPreferences.addCustomToken(
+                          selectedGame, newName);
+                      await _loadTokens();
+                    }
+                    Navigator.pop(context);
+                    nameController.dispose();
+                    healthController.dispose();
+                  },
+                  child: Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -81,7 +209,7 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
       builder: (context) {
         return AlertDialog(
           title: Text('Delete Token'),
-          content: Text('Remove "${customTokens[index]}"?'),
+          content: Text('Remove "${customTokens[index].name}"?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -90,7 +218,7 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
             TextButton(
               onPressed: () async {
                 await TokenPreferences.removeCustomToken(
-                    selectedGame, customTokens[index]);
+                    selectedGame, customTokens[index].name);
                 await _loadTokens();
                 Navigator.pop(context);
               },
@@ -103,40 +231,139 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
   }
 
   void _showAddDialog() {
-    final controller = TextEditingController();
+    final nameController = TextEditingController();
+    final healthController = TextEditingController();
+    TokenCategory selectedCategory = TokenCategory.boonAura;
+    DestroyTrigger? selectedTrigger;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Add Custom Token'),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: 'Token name',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                controller.dispose();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final name = controller.text.trim();
-                if (name.isNotEmpty && !customTokens.contains(name)) {
-                  await TokenPreferences.addCustomToken(selectedGame, name);
-                  await _loadTokens();
-                }
-                Navigator.pop(context);
-                controller.dispose();
-              },
-              child: Text('Add'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Add Custom Token'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(hintText: 'Token name'),
+                    ),
+                    SizedBox(height: 16),
+                    Text('Category'),
+                    SizedBox(height: 8),
+                    DropdownButton<TokenCategory>(
+                      value: selectedCategory,
+                      isExpanded: true,
+                      items: TokenCategory.values.map((cat) {
+                        return DropdownMenuItem(
+                          value: cat,
+                          child: Text(categoryNames[cat] ?? 'Unknown'),
+                        );
+                      }).toList(),
+                      onChanged: (TokenCategory? value) {
+                        if (value != null) {
+                          setDialogState(() {
+                            selectedCategory = value;
+                            if (value != TokenCategory.boonAura &&
+                                value != TokenCategory.debuffAura) {
+                              selectedTrigger = null;
+                            }
+                            if (value != TokenCategory.ally) {
+                              healthController.clear();
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    if (selectedCategory == TokenCategory.ally) ...[
+                      SizedBox(height: 16),
+                      Text('Health'),
+                      SizedBox(height: 8),
+                      TextField(
+                        controller: healthController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(hintText: 'Health value'),
+                      ),
+                    ],
+                    if (selectedCategory == TokenCategory.boonAura ||
+                        selectedCategory == TokenCategory.debuffAura) ...[
+                      SizedBox(height: 16),
+                      Text('Auto-destroy'),
+                      SizedBox(height: 8),
+                      DropdownButton<DestroyTrigger?>(
+                        value: selectedTrigger,
+                        isExpanded: true,
+                        items: [
+                          DropdownMenuItem(
+                            value: null,
+                            child: Text('None (manual only)'),
+                          ),
+                          ...DestroyTrigger.values.map((trigger) {
+                            return DropdownMenuItem(
+                              value: trigger,
+                              child: Text(triggerNames[trigger] ?? ''),
+                            );
+                          }),
+                        ],
+                        onChanged: (DestroyTrigger? value) {
+                          setDialogState(() {
+                            selectedTrigger = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    nameController.dispose();
+                    healthController.dispose();
+                  },
+                  child: Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    final health = int.tryParse(healthController.text);
+
+                    if (name.isNotEmpty &&
+                        !customTokens.any((t) => t.name == name)) {
+                      if (selectedCategory == TokenCategory.ally &&
+                          (health == null || health <= 0)) {
+                        return;
+                      }
+
+                      final newToken = TokenData(
+                        name: name,
+                        category: selectedCategory,
+                        destroyTrigger: selectedTrigger,
+                        health: selectedCategory == TokenCategory.ally
+                            ? health
+                            : null,
+                      );
+
+                      await TokenPreferences.addCustomTokenFull(
+                          selectedGame, newToken);
+                      await TokenPreferences.addCustomToken(
+                          selectedGame, name);
+                      await _loadTokens();
+                    }
+                    Navigator.pop(context);
+                    nameController.dispose();
+                    healthController.dispose();
+                  },
+                  child: Text('Add'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -211,7 +438,11 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
                       itemCount: customTokens.length,
                       itemBuilder: (context, index) {
                         return ListTile(
-                          title: Text(customTokens[index]),
+                          title: Text(customTokens[index].name),
+                          subtitle: Text(
+                            _getSubtitle(customTokens[index]),
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
