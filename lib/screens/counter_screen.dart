@@ -681,21 +681,41 @@ class _CounterScreenState extends State<CounterScreen> {
             child: IconButton(
               icon: Icon(Icons.refresh),
               onPressed: () {
-                setState(() {
-                  playerHealth = List.filled(
-                    widget.playerCount,
-                    widget.startingLife,
-                  );
-                  playerTokens = List.generate(widget.playerCount, (_) => []);
-                  activePlayer = 0;
-                  currentPhase = 0;
-                  turnCount = 0;
-                  gameLog.clear();
-                });
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: Text('Reset Game'),
+                      content: Text('This will reset all health, tokens, and the game log. Are you sure?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              playerHealth = List.filled(
+                                widget.playerCount,
+                                widget.startingLife,
+                              );
+                              playerTokens = List.generate(widget.playerCount, (_) => []);
+                              activePlayer = 0;
+                              currentPhase = 0;
+                              turnCount = 0;
+                              gameLog.clear();
+                            });
+                            Navigator.pop(context);
+                          },
+                          child: Text('Reset', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
             ),
           ),
-
           Positioned(
             bottom: 24,
             right: 16,
