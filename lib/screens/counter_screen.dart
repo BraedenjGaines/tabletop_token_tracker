@@ -7,12 +7,14 @@ class CounterScreen extends StatefulWidget {
   final int startingLife;
   final String selectedFont;
   final Function(String) onFontChanged;
+  final String selectedGame;
 
   CounterScreen({
     required this.playerCount,
     required this.startingLife,
     required this.selectedFont,
     required this.onFontChanged,
+    required this.selectedGame,
   });
 
   @override
@@ -133,16 +135,11 @@ class _CounterScreenState extends State<CounterScreen> {
 
           Positioned(
             top: 40,
-            right: 16,
+            left: 16,
             child: IconButton(
-              icon: Icon(Icons.refresh),
+              icon: Icon(Icons.home),
               onPressed: () {
-                setState(() {
-                  playerHealth = List.filled(
-                    widget.playerCount,
-                    widget.startingLife,
-                  );
-                });
+                Navigator.popUntil(context, (route) => route.isFirst);
               },
             ),
           ),

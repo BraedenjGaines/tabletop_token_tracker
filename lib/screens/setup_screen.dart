@@ -4,10 +4,12 @@ import 'counter_screen.dart';
 class SetupScreen extends StatefulWidget {
   final String selectedFont;
   final Function(String) onFontChanged;
+  final String selectedGame;
 
   SetupScreen({
     required this.selectedFont,
     required this.onFontChanged,
+    required this.selectedGame,
   });
 
   @override
@@ -131,6 +133,7 @@ class _SetupScreenState extends State<SetupScreen> {
                             startingLife: selectedLife,
                             selectedFont: widget.selectedFont,
                             onFontChanged: widget.onFontChanged,
+                            selectedGame: widget.selectedGame,
                           ),
                         ),
                       );

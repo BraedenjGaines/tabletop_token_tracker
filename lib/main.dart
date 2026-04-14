@@ -13,18 +13,22 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String selectedFont = 'Sedan';
+  String selectedGame = '';
+  bool skipGameSelect = false;
   bool isLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    _loadFont();
+    _loadPreferences();
   }
 
-  Future<void> _loadFont() async {
+  Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       selectedFont = prefs.getString('selectedFont') ?? 'Sedan';
+      selectedGame = prefs.getString('selectedGame') ?? '';
+      skipGameSelect = prefs.getBool('skipGameSelect') ?? false;
       isLoaded = true;
     });
   }
@@ -34,11 +38,25 @@ class _MyAppState extends State<MyApp> {
     await prefs.setString('selectedFont', selectedFont);
   }
 
+  Future<void> _saveGamePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedGame', selectedGame);
+    await prefs.setBool('skipGameSelect', skipGameSelect);
+  }
+
   void updateFont(String newFont) {
     setState(() {
       selectedFont = newFont;
     });
     _saveFont();
+  }
+
+  void updateGame(String newGame, bool skip) {
+    setState(() {
+      selectedGame = newGame;
+      skipGameSelect = skip;
+    });
+    _saveGamePreferences();
   }
 
   @override
@@ -59,6 +77,9 @@ class _MyAppState extends State<MyApp> {
       home: HomeScreen(
         selectedFont: selectedFont,
         onFontChanged: updateFont,
+        selectedGame: selectedGame,
+        skipGameSelect: skipGameSelect,
+        onGameChanged: updateGame,
       ),
     );
   }
