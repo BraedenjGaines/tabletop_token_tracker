@@ -5,11 +5,15 @@ class GameSelectScreen extends StatefulWidget {
   final String selectedFont;
   final Function(String) onFontChanged;
   final Function(String, bool) onGameChanged;
+  final bool turnTrackerEnabled;
+  final Function(bool) onTurnTrackerChanged;
 
   GameSelectScreen({
     required this.selectedFont,
     required this.onFontChanged,
     required this.onGameChanged,
+    required this.turnTrackerEnabled,
+    required this.onTurnTrackerChanged,
   });
 
   @override
@@ -95,6 +99,8 @@ class _GameSelectScreenState extends State<GameSelectScreen> {
                             selectedFont: widget.selectedFont,
                             onFontChanged: widget.onFontChanged,
                             selectedGame: selectedGame,
+                            turnTrackerEnabled: widget.turnTrackerEnabled,
+                            onTurnTrackerChanged: widget.onTurnTrackerChanged,
                           ),
                         ),
                       );

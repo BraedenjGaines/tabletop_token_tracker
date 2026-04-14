@@ -9,6 +9,8 @@ class CounterScreen extends StatefulWidget {
   final String selectedFont;
   final Function(String) onFontChanged;
   final String selectedGame;
+  final bool turnTrackerEnabled;
+  final Function(bool) onTurnTrackerChanged;
 
   CounterScreen({
     required this.playerCount,
@@ -16,6 +18,8 @@ class CounterScreen extends StatefulWidget {
     required this.selectedFont,
     required this.onFontChanged,
     required this.selectedGame,
+    required this.turnTrackerEnabled,
+    required this.onTurnTrackerChanged,
   });
 
   @override
@@ -26,6 +30,22 @@ class _CounterScreenState extends State<CounterScreen> {
   late List<int> playerHealth;
   late List<List<Map<String, int>>> playerTokens;
   late String currentFont;
+  late bool turnTrackerEnabled;
+
+  int activePlayer = 0;
+  int currentPhase = 0;
+
+  final List<String> fabPhases = [
+    'Start Phase',
+    'Draw Phase',
+    'Action Phase',
+    'End Phase',
+  ];
+
+  bool get _showTurnTracker =>
+      turnTrackerEnabled &&
+      widget.selectedGame == 'fab' &&
+      widget.playerCount == 2;
 
   @override
   void initState() {
@@ -33,6 +53,7 @@ class _CounterScreenState extends State<CounterScreen> {
     playerHealth = List.filled(widget.playerCount, widget.startingLife);
     playerTokens = List.generate(widget.playerCount, (_) => []);
     currentFont = widget.selectedFont;
+    turnTrackerEnabled = widget.turnTrackerEnabled;
   }
 
   bool _isMiddleRow(int playerIndex) {
@@ -54,6 +75,25 @@ class _CounterScreenState extends State<CounterScreen> {
     if (isTop) return pi;
     if (isMiddle) return (index % 2 == 0) ? pi / 2 : -pi / 2;
     return null;
+  }
+
+  void _advancePhase() {
+    setState(() {
+      if (currentPhase < fabPhases.length - 1) {
+        currentPhase++;
+      } else {
+        currentPhase = 0;
+        activePlayer = activePlayer == 0 ? 1 : 0;
+      }
+    });
+  }
+
+  void _retreatPhase() {
+    setState(() {
+      if (currentPhase > 0) {
+        currentPhase--;
+      }
+    });
   }
 
   void _showTokenPicker(int playerIndex) {
@@ -163,44 +203,53 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   Widget _buildPlayerWidget(int index) {
-    Widget content = Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  setState(() { playerHealth[index]--; });
-                },
-                child: Text('-'),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  '${playerHealth[index]}',
-                  style: TextStyle(
-                    fontSize: 32,
+    final bool isActive = _showTurnTracker && activePlayer == index;
+
+    Widget content = Container(
+      decoration: isActive
+          ? BoxDecoration(
+              border: Border.all(color: Colors.blue, width: 3),
+            )
+          : null,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() { playerHealth[index]--; });
+                  },
+                  child: Text('-'),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    '${playerHealth[index]}',
+                    style: TextStyle(
+                      fontSize: 32,
+                    ),
                   ),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() { playerHealth[index]++; });
-                },
-                child: Text('+'),
-              ),
-            ],
-          ),
-          SizedBox(height: 8),
-          _buildTokenList(index),
-          SizedBox(height: 4),
-          GestureDetector(
-            onTap: () => _showTokenPicker(index),
-            child: Icon(Icons.add_box, size: 24),
-          ),
-        ],
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() { playerHealth[index]++; });
+                  },
+                  child: Text('+'),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            _buildTokenList(index),
+            SizedBox(height: 4),
+            GestureDetector(
+              onTap: () => _showTokenPicker(index),
+              child: Icon(Icons.add_box, size: 24),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -211,8 +260,57 @@ class _CounterScreenState extends State<CounterScreen> {
     return content;
   }
 
+  Widget _buildTurnTrackerPanel() {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: Icon(Icons.arrow_left),
+            onPressed: _retreatPhase,
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Player ${activePlayer + 1}\'s Turn',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                fabPhases[currentPhase],
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          IconButton(
+            icon: Icon(Icons.arrow_right),
+            onPressed: _advancePhase,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPlayerGrid() {
     if (playerHealth.length == 2) {
+      if (_showTurnTracker) {
+        return Column(
+          children: [
+            Expanded(child: _buildPlayerWidget(0)),
+            _buildTurnTrackerPanel(),
+            Expanded(child: _buildPlayerWidget(1)),
+          ],
+        );
+      }
       return Column(
         children: [
           Expanded(child: _buildPlayerWidget(0)),
@@ -266,6 +364,8 @@ class _CounterScreenState extends State<CounterScreen> {
                     widget.startingLife,
                   );
                   playerTokens = List.generate(widget.playerCount, (_) => []);
+                  activePlayer = 0;
+                  currentPhase = 0;
                 });
               },
             ),
@@ -286,6 +386,13 @@ class _CounterScreenState extends State<CounterScreen> {
                         widget.onFontChanged(newFont);
                         setState(() {
                           currentFont = newFont;
+                        });
+                      },
+                      turnTrackerEnabled: turnTrackerEnabled,
+                      onTurnTrackerChanged: (bool enabled) {
+                        widget.onTurnTrackerChanged(enabled);
+                        setState(() {
+                          turnTrackerEnabled = enabled;
                         });
                       },
                     ),

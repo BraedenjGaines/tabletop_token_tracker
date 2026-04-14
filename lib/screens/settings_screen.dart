@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 class SettingsScreen extends StatefulWidget {
   final String currentFont;
   final Function(String) onFontChanged;
+  final bool turnTrackerEnabled;
+  final Function(bool) onTurnTrackerChanged;
 
   SettingsScreen({
     required this.currentFont,
     required this.onFontChanged,
+    required this.turnTrackerEnabled,
+    required this.onTurnTrackerChanged,
   });
 
   @override
@@ -15,6 +19,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late String selectedFont;
+  late bool turnTracker;
 
   final List<String> availableFonts = [
     'Sedan',
@@ -27,6 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     selectedFont = widget.currentFont;
+    turnTracker = widget.turnTrackerEnabled;
   }
 
   @override
@@ -78,6 +84,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
                 },
               ),
+            ),
+            SizedBox(height: 32),
+            Text(
+              'Turn Tracker',
+              style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Shows phase tracking between players (Flesh and Blood, 2 players only)',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            SizedBox(height: 8),
+            SwitchListTile(
+              title: Text('Enable Turn Tracker'),
+              value: turnTracker,
+              onChanged: (bool value) {
+                setState(() {
+                  turnTracker = value;
+                });
+                widget.onTurnTrackerChanged(value);
+              },
             ),
           ],
         ),

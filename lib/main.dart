@@ -15,6 +15,7 @@ class _MyAppState extends State<MyApp> {
   String selectedFont = 'Sedan';
   String selectedGame = '';
   bool skipGameSelect = false;
+  bool turnTrackerEnabled = false;
   bool isLoaded = false;
 
   @override
@@ -29,6 +30,7 @@ class _MyAppState extends State<MyApp> {
       selectedFont = prefs.getString('selectedFont') ?? 'Sedan';
       selectedGame = prefs.getString('selectedGame') ?? '';
       skipGameSelect = prefs.getBool('skipGameSelect') ?? false;
+      turnTrackerEnabled = prefs.getBool('turnTrackerEnabled') ?? false;
       isLoaded = true;
     });
   }
@@ -44,6 +46,11 @@ class _MyAppState extends State<MyApp> {
     await prefs.setBool('skipGameSelect', skipGameSelect);
   }
 
+  Future<void> _saveTurnTracker() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('turnTrackerEnabled', turnTrackerEnabled);
+  }
+
   void updateFont(String newFont) {
     setState(() {
       selectedFont = newFont;
@@ -57,6 +64,13 @@ class _MyAppState extends State<MyApp> {
       skipGameSelect = skip;
     });
     _saveGamePreferences();
+  }
+
+  void updateTurnTracker(bool enabled) {
+    setState(() {
+      turnTrackerEnabled = enabled;
+    });
+    _saveTurnTracker();
   }
 
   @override
@@ -80,6 +94,8 @@ class _MyAppState extends State<MyApp> {
         selectedGame: selectedGame,
         skipGameSelect: skipGameSelect,
         onGameChanged: updateGame,
+        turnTrackerEnabled: turnTrackerEnabled,
+        onTurnTrackerChanged: updateTurnTracker,
       ),
     );
   }

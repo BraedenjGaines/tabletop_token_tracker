@@ -9,6 +9,8 @@ class HomeScreen extends StatelessWidget {
   final String selectedGame;
   final bool skipGameSelect;
   final Function(String, bool) onGameChanged;
+  final bool turnTrackerEnabled;
+  final Function(bool) onTurnTrackerChanged;
 
   HomeScreen({
     required this.selectedFont,
@@ -16,6 +18,8 @@ class HomeScreen extends StatelessWidget {
     required this.selectedGame,
     required this.skipGameSelect,
     required this.onGameChanged,
+    required this.turnTrackerEnabled,
+    required this.onTurnTrackerChanged,
   });
 
   @override
@@ -39,6 +43,8 @@ class HomeScreen extends StatelessWidget {
                         selectedFont: selectedFont,
                         onFontChanged: onFontChanged,
                         selectedGame: selectedGame,
+                        turnTrackerEnabled: turnTrackerEnabled,
+                        onTurnTrackerChanged: onTurnTrackerChanged,
                       ),
                     ),
                   );
@@ -50,6 +56,8 @@ class HomeScreen extends StatelessWidget {
                         selectedFont: selectedFont,
                         onFontChanged: onFontChanged,
                         onGameChanged: onGameChanged,
+                        turnTrackerEnabled: turnTrackerEnabled,
+                        onTurnTrackerChanged: onTurnTrackerChanged,
                       ),
                     ),
                   );
@@ -66,6 +74,8 @@ class HomeScreen extends StatelessWidget {
                     builder: (context) => SettingsScreen(
                       currentFont: selectedFont,
                       onFontChanged: onFontChanged,
+                      turnTrackerEnabled: turnTrackerEnabled,
+                      onTurnTrackerChanged: onTurnTrackerChanged,
                     ),
                   ),
                 );
