@@ -7,6 +7,8 @@ class SetupScreen extends StatefulWidget {
   final String selectedGame;
   final bool turnTrackerEnabled;
   final Function(bool) onTurnTrackerChanged;
+  final bool skipGameSelect;
+  final Function(String, bool) onGameChanged;
 
   SetupScreen({
     required this.selectedFont,
@@ -14,8 +16,9 @@ class SetupScreen extends StatefulWidget {
     required this.selectedGame,
     required this.turnTrackerEnabled,
     required this.onTurnTrackerChanged,
+    required this.skipGameSelect,
+    required this.onGameChanged,
   });
-
   @override
   _SetupScreenState createState() => _SetupScreenState();
 }
@@ -140,6 +143,8 @@ class _SetupScreenState extends State<SetupScreen> {
                             selectedGame: widget.selectedGame,
                             turnTrackerEnabled: widget.turnTrackerEnabled,
                             onTurnTrackerChanged: widget.onTurnTrackerChanged,
+                            skipGameSelect: widget.skipGameSelect,
+                            onGameChanged: widget.onGameChanged,
                           ),
                         ),
                       );

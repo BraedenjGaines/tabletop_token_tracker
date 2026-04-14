@@ -11,6 +11,8 @@ class CounterScreen extends StatefulWidget {
   final String selectedGame;
   final bool turnTrackerEnabled;
   final Function(bool) onTurnTrackerChanged;
+  final bool skipGameSelect;
+  final Function(String, bool) onGameChanged;
 
   CounterScreen({
     required this.playerCount,
@@ -20,6 +22,8 @@ class CounterScreen extends StatefulWidget {
     required this.selectedGame,
     required this.turnTrackerEnabled,
     required this.onTurnTrackerChanged,
+    required this.skipGameSelect,
+    required this.onGameChanged,
   });
 
   @override
@@ -395,6 +399,9 @@ class _CounterScreenState extends State<CounterScreen> {
                           turnTrackerEnabled = enabled;
                         });
                       },
+                      currentGame: widget.selectedGame,
+                      skipGameSelect: widget.skipGameSelect,
+                      onGameChanged: widget.onGameChanged,
                     ),
                   ),
                 );

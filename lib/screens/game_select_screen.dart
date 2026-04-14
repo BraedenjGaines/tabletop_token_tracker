@@ -7,6 +7,7 @@ class GameSelectScreen extends StatefulWidget {
   final Function(String, bool) onGameChanged;
   final bool turnTrackerEnabled;
   final Function(bool) onTurnTrackerChanged;
+  final bool skipGameSelect;
 
   GameSelectScreen({
     required this.selectedFont,
@@ -14,6 +15,7 @@ class GameSelectScreen extends StatefulWidget {
     required this.onGameChanged,
     required this.turnTrackerEnabled,
     required this.onTurnTrackerChanged,
+    required this.skipGameSelect,
   });
 
   @override
@@ -101,6 +103,8 @@ class _GameSelectScreenState extends State<GameSelectScreen> {
                             selectedGame: selectedGame,
                             turnTrackerEnabled: widget.turnTrackerEnabled,
                             onTurnTrackerChanged: widget.onTurnTrackerChanged,
+                            skipGameSelect: dontAskAgain,
+                            onGameChanged: widget.onGameChanged,
                           ),
                         ),
                       );

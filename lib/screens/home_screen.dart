@@ -45,6 +45,8 @@ class HomeScreen extends StatelessWidget {
                         selectedGame: selectedGame,
                         turnTrackerEnabled: turnTrackerEnabled,
                         onTurnTrackerChanged: onTurnTrackerChanged,
+                        skipGameSelect: skipGameSelect,
+                        onGameChanged: onGameChanged,
                       ),
                     ),
                   );
@@ -58,6 +60,7 @@ class HomeScreen extends StatelessWidget {
                         onGameChanged: onGameChanged,
                         turnTrackerEnabled: turnTrackerEnabled,
                         onTurnTrackerChanged: onTurnTrackerChanged,
+                        skipGameSelect: skipGameSelect,
                       ),
                     ),
                   );
@@ -76,6 +79,9 @@ class HomeScreen extends StatelessWidget {
                       onFontChanged: onFontChanged,
                       turnTrackerEnabled: turnTrackerEnabled,
                       onTurnTrackerChanged: onTurnTrackerChanged,
+                      currentGame: selectedGame,
+                      skipGameSelect: skipGameSelect,
+                      onGameChanged: onGameChanged,
                     ),
                   ),
                 );
