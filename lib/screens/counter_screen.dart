@@ -32,6 +32,7 @@ class ActiveToken {
 class CounterScreen extends StatefulWidget {
   final int playerCount;
   final int startingLife;
+  final List<String> playerHeroes;
   final String selectedFont;
   final Function(String) onFontChanged;
   final String selectedGame;
@@ -45,6 +46,7 @@ class CounterScreen extends StatefulWidget {
   CounterScreen({
     required this.playerCount,
     required this.startingLife,
+    required this.playerHeroes,
     required this.selectedFont,
     required this.onFontChanged,
     required this.selectedGame,
@@ -590,7 +592,7 @@ class _CounterScreenState extends State<CounterScreen> {
               ),
             ),
 
-          // Center content - allies, health number, items
+          // Center content - allies, hero name, health number, items
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -602,6 +604,13 @@ class _CounterScreenState extends State<CounterScreen> {
                         _buildAllyToken(playerTokens[index][i], index, i),
                     ],
                   ),
+                Text(
+                  widget.playerHeroes[index],
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
                 SizedBox(height: 4),
                 Text(
                   '${playerHealth[index]}',
@@ -1007,8 +1016,6 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    nameController.dispose();
-                    healthController.dispose();
                   },
                   child: Text('Cancel'),
                 ),
@@ -1037,9 +1044,6 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
                       widget.allTokens.add(newToken);
                     }
                     Navigator.pop(context);
-                    nameController.dispose();
-                    healthController.dispose();
-                    setState(() {});
                   },
                   child: Text('Add'),
                 ),

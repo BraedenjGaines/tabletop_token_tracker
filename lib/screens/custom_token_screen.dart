@@ -155,8 +155,6 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    nameController.dispose();
-                    healthController.dispose();
                   },
                   child: Text('Cancel'),
                 ),
@@ -190,8 +188,6 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
                       await _loadTokens();
                     }
                     Navigator.pop(context);
-                    nameController.dispose();
-                    healthController.dispose();
                   },
                   child: Text('Save'),
                 ),
@@ -323,8 +319,6 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    nameController.dispose();
-                    healthController.dispose();
                   },
                   child: Text('Cancel'),
                 ),
@@ -356,8 +350,6 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
                       await _loadTokens();
                     }
                     Navigator.pop(context);
-                    nameController.dispose();
-                    healthController.dispose();
                   },
                   child: Text('Add'),
                 ),
