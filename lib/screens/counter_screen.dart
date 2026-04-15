@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
 import 'settings_screen.dart';
 import 'log_screen.dart';
 import '../data/token_library.dart';
@@ -133,16 +132,16 @@ class _CounterScreenState extends State<CounterScreen> {
     return playerRow == middleRow;
   }
 
-  double? _getRotationAngle(int index) {
-    if (playerHealth.length == 2) return index == 0 ? pi : null;
+  int? _getQuarterTurns(int index) {
+    if (playerHealth.length == 2) return index == 0 ? 2 : null;
 
     final int rowCount = (playerHealth.length + 1) ~/ 2;
     final int currentRow = index ~/ 2;
     final bool isMiddle = _isMiddleRow(index);
     final bool isTop = currentRow < (rowCount / 2).floor() && !isMiddle;
 
-    if (isTop) return pi;
-    if (isMiddle) return (index % 2 == 0) ? pi / 2 : -pi / 2;
+    if (isTop) return 2;       // 180°
+    if (isMiddle) return (index % 2 == 0) ? 1 : 3;  // 90° left, 90° right
     return null;
   }
 
@@ -274,7 +273,7 @@ class _CounterScreenState extends State<CounterScreen> {
 
     final List<TokenData> allTokens = [...libraryTokens, ...customTokens];
 
-    final double? angle = _getRotationAngle(playerIndex);
+    final int? quarterTurns = _getQuarterTurns(playerIndex);
 
     showDialog(
       context: context,
@@ -323,8 +322,8 @@ class _CounterScreenState extends State<CounterScreen> {
           ),
         );
 
-        if (angle != null) {
-          return Transform.rotate(angle: angle, child: picker);
+        if (quarterTurns != null) {
+          return RotatedBox(quarterTurns: quarterTurns, child: picker);
         }
         return picker;
       },
@@ -538,7 +537,7 @@ class _CounterScreenState extends State<CounterScreen> {
           : null,
       child: Stack(
         children: [
-          // Hero background image
+          // Hero background image - fills the entire player panel
           Positioned.fill(
             child: Image.asset(
               'assets/images/${widget.playerHeroes[index]}.jpg',
@@ -548,7 +547,8 @@ class _CounterScreenState extends State<CounterScreen> {
               },
             ),
           ),
-          // Full-size tap areas for health
+
+          // Full-size tap areas for health (overlays on top of hero image)
           Row(
             children: [
               _buildPlayerTapHalf(
@@ -602,7 +602,7 @@ class _CounterScreenState extends State<CounterScreen> {
               ),
             ),
 
-          // Center content - allies, hero name, health number, items
+          // Center content - allies, health number, items
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -642,9 +642,9 @@ class _CounterScreenState extends State<CounterScreen> {
       ),
     );
 
-    final double? angle = _getRotationAngle(index);
-    if (angle != null) {
-      content = Transform.rotate(angle: angle, child: content);
+    final int? quarterTurns = _getQuarterTurns(index);
+    if (quarterTurns != null) {
+      content = RotatedBox(quarterTurns: quarterTurns, child: content);
     }
     return content;
   }
@@ -726,6 +726,7 @@ class _CounterScreenState extends State<CounterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           _buildPlayerGrid(),
