@@ -538,6 +538,16 @@ class _CounterScreenState extends State<CounterScreen> {
           : null,
       child: Stack(
         children: [
+          // Hero background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/${widget.playerHeroes[index]}.jpg',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(color: Colors.grey[900]);
+              },
+            ),
+          ),
           // Full-size tap areas for health
           Row(
             children: [
@@ -604,13 +614,6 @@ class _CounterScreenState extends State<CounterScreen> {
                         _buildAllyToken(playerTokens[index][i], index, i),
                     ],
                   ),
-                Text(
-                  widget.playerHeroes[index],
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
                 SizedBox(height: 4),
                 Text(
                   '${playerHealth[index]}',
