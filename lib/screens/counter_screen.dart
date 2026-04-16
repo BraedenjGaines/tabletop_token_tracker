@@ -419,7 +419,7 @@ class _CounterScreenState extends State<CounterScreen> {
             child: Icon(Icons.add_circle, size: 18, color: Colors.green),
           ),
           SizedBox(width: 8),
-          Text(token.name, style: TextStyle(fontSize: 11, color: Colors.white)),
+          Text(token.name, style: TextStyle(fontSize: 11, color: Colors.black)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
@@ -481,7 +481,7 @@ class _CounterScreenState extends State<CounterScreen> {
             child: Icon(Icons.add_circle, size: 18),
           ),
           SizedBox(width: 8),
-          Text(token.name, style: TextStyle(fontSize: 11, color: Colors.white)),
+          Text(token.name, style: TextStyle(fontSize: 11, color: Colors.black)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
@@ -529,7 +529,7 @@ class _CounterScreenState extends State<CounterScreen> {
                   padding: labelPadding,
                   child: Text(
                     label,
-                    style: TextStyle(fontSize: 28, color: Colors.white.withOpacity(0.6)),
+                    style: TextStyle(fontSize: 28, color: Colors.black.withOpacity(0.6)),
                   ),
                 ),
               ),
@@ -624,7 +624,7 @@ class _CounterScreenState extends State<CounterScreen> {
                   Column(children: [for (int i in allies) _buildAllyToken(playerTokens[index][i], index, i)]),
                 SizedBox(height: 4),
                 Text('${playerHealth[index]}',
-                    style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white)),
+                    style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black)),
                 SizedBox(height: 4),
                 if (items.isNotEmpty)
                   Column(children: [for (int i in items) _buildCounterToken(playerTokens[index][i], index, i)]),
@@ -662,9 +662,9 @@ class _CounterScreenState extends State<CounterScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Player ${activePlayer + 1}\'s Turn',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
               SizedBox(height: 4),
-              Text(fabPhases[currentPhase], style: TextStyle(fontSize: 16)),
+              Text(fabPhases[currentPhase], style: TextStyle(fontSize: 16, color: Colors.black87)),
             ],
           ),
           IconButton(icon: Icon(Icons.arrow_right), onPressed: _advancePhase),
