@@ -3,21 +3,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
   _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
   String selectedFont = 'Sedan';
-  String selectedGame = '';
-  bool skipGameSelect = false;
+  String selectedGame = 'fab'; // Defaulted to FaB; MTG removed for now
   bool turnTrackerEnabled = false;
   bool isLoaded = false;
   bool frostedGlass = false;
+  ThemeMode themeMode = ThemeMode.system;
+  int matchTimerMinutes = 50;
+  bool showPlayerCount = true;
 
   @override
   void initState() {
@@ -31,10 +35,12 @@ class _MyAppState extends State<MyApp> {
     _prefs = await SharedPreferences.getInstance();
     setState(() {
       selectedFont = _prefs.getString('selectedFont') ?? 'Sedan';
-      selectedGame = _prefs.getString('selectedGame') ?? '';
-      skipGameSelect = _prefs.getBool('skipGameSelect') ?? false;
+      selectedGame = _prefs.getString('selectedGame') ?? 'fab';
       turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? false;
       frostedGlass = _prefs.getBool('frostedGlass') ?? false;
+      themeMode = ThemeMode.values[_prefs.getInt('themeMode') ?? 0];
+      matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;
+      showPlayerCount = _prefs.getBool('showPlayerCount') ?? true;
       isLoaded = true;
     });
   }
@@ -43,17 +49,31 @@ class _MyAppState extends State<MyApp> {
     await _prefs.setString('selectedFont', selectedFont);
   }
 
-  Future<void> _saveGamePreferences() async {
-    await _prefs.setString('selectedGame', selectedGame);
-    await _prefs.setBool('skipGameSelect', skipGameSelect);
-  }
-
   Future<void> _saveTurnTracker() async {
     await _prefs.setBool('turnTrackerEnabled', turnTrackerEnabled);
   }
 
   Future<void> _saveFrostedGlass() async {
     await _prefs.setBool('frostedGlass', frostedGlass);
+  }
+
+  Future<void> _saveThemeMode() async {
+    await _prefs.setInt('themeMode', themeMode.index);
+  }
+
+  Future<void> _saveMatchTimer() async {
+    await _prefs.setInt('matchTimerMinutes', matchTimerMinutes);
+  }
+
+  Future<void> _saveShowPlayerCount() async {
+    await _prefs.setBool('showPlayerCount', showPlayerCount);
+  }
+
+  void updateShowPlayerCount(bool value) {
+    setState(() {
+      showPlayerCount = value;
+    });
+    _saveShowPlayerCount();
   }
 
   void updateFont(String newFont) {
@@ -70,12 +90,11 @@ class _MyAppState extends State<MyApp> {
     _saveFrostedGlass();
   }
 
-  void updateGame(String newGame, bool skip) {
+  void updateThemeMode(ThemeMode mode) {
     setState(() {
-      selectedGame = newGame;
-      skipGameSelect = skip;
+      themeMode = mode;
     });
-    _saveGamePreferences();
+    _saveThemeMode();
   }
 
   void updateTurnTracker(bool enabled) {
@@ -83,6 +102,13 @@ class _MyAppState extends State<MyApp> {
       turnTrackerEnabled = enabled;
     });
     _saveTurnTracker();
+  }
+
+  void updateMatchTimer(int minutes) {
+    setState(() {
+      matchTimerMinutes = minutes;
+    });
+    _saveMatchTimer();
   }
 
   @override
@@ -97,20 +123,32 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'TableTop Token Tracker',
       debugShowCheckedModeBanner: false,
+      themeMode: themeMode,
       theme: ThemeData(
         fontFamily: selectedFont,
+        brightness: Brightness.light,
+        colorSchemeSeed: Colors.blue,
+      ),
+      darkTheme: ThemeData(
+        fontFamily: selectedFont,
+        brightness: Brightness.dark,
+        colorSchemeSeed: Colors.blue,
       ),
       home: HomeScreen(
         selectedFont: selectedFont,
         onFontChanged: updateFont,
         selectedGame: selectedGame,
-        skipGameSelect: skipGameSelect,
-        onGameChanged: updateGame,
         turnTrackerEnabled: turnTrackerEnabled,
         onTurnTrackerChanged: updateTurnTracker,
         frostedGlass: frostedGlass,
         onFrostedGlassChanged: updateFrostedGlass,
+        themeMode: themeMode,
+        onThemeModeChanged: updateThemeMode,
+        matchTimerMinutes: matchTimerMinutes,
+        onMatchTimerChanged: updateMatchTimer,
+        showPlayerCount: showPlayerCount,
+        onShowPlayerCountChanged: updateShowPlayerCount,
       ),
-    );
+      );
   }
 }

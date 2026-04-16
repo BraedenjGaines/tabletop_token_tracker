@@ -5,7 +5,7 @@ import '../data/token_library.dart';
 class CustomTokenScreen extends StatefulWidget {
   final String currentGame;
 
-  CustomTokenScreen({required this.currentGame});
+  const CustomTokenScreen({super.key, required this.currentGame});
 
   @override
   _CustomTokenScreenState createState() => _CustomTokenScreenState();

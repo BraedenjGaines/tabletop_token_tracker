@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'settings_screen.dart';
 import 'log_screen.dart';
 import '../data/token_library.dart';
@@ -37,12 +38,15 @@ class CounterScreen extends StatefulWidget {
   final String selectedGame;
   final bool turnTrackerEnabled;
   final Function(bool) onTurnTrackerChanged;
-  final bool skipGameSelect;
-  final Function(String, bool) onGameChanged;
   final bool frostedGlass;
   final Function(bool) onFrostedGlassChanged;
+  final ThemeMode themeMode;
+  final Function(ThemeMode) onThemeModeChanged;
+  final int matchTimerMinutes;
+  final Function(int) onMatchTimerChanged;
 
-  CounterScreen({
+  const CounterScreen({
+    super.key,
     required this.playerCount,
     required this.startingLife,
     required this.playerHeroes,
@@ -51,10 +55,12 @@ class CounterScreen extends StatefulWidget {
     required this.selectedGame,
     required this.turnTrackerEnabled,
     required this.onTurnTrackerChanged,
-    required this.skipGameSelect,
-    required this.onGameChanged,
     required this.frostedGlass,
     required this.onFrostedGlassChanged,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+    required this.matchTimerMinutes,
+    required this.onMatchTimerChanged,
   });
 
   @override
@@ -77,6 +83,11 @@ class _CounterScreenState extends State<CounterScreen> {
 
   final GameLog gameLog = GameLog();
 
+  // Match timer state
+  late int _timerSecondsRemaining;
+  Timer? _timer;
+  bool _timerRunning = false;
+
   final List<String> fabPhases = [
     'Start Phase',
     'Draw Phase',
@@ -93,12 +104,15 @@ class _CounterScreenState extends State<CounterScreen> {
       _showTurnTracker ? fabPhases[currentPhase] : null;
 
   void _log(int playerIndex, LogEventType type, String description, {int value = 0}) {
+    final int minutes = _timerSecondsRemaining ~/ 60;
+    final int seconds = _timerSecondsRemaining % 60;
+    final String timerStamp = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
     gameLog.addEntry(LogEntry(
       playerIndex: playerIndex,
       type: type,
       description: description,
       value: value,
-      timestamp: DateTime.now().toString(),
+      timestamp: timerStamp,
       turn: _showTurnTracker ? turnCount : null,
       phase: _currentPhaseName,
     ));
@@ -112,8 +126,62 @@ class _CounterScreenState extends State<CounterScreen> {
     currentFont = widget.selectedFont;
     turnTrackerEnabled = widget.turnTrackerEnabled;
     frostedGlass = widget.frostedGlass;
+    _timerSecondsRemaining = widget.matchTimerMinutes * 60;
     _loadTokenPreferences();
   }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  // --- Timer methods ---
+
+  void _startTimer() {
+    if (_timerRunning || _timerSecondsRemaining <= 0) return;
+    _timerRunning = true;
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_timerSecondsRemaining > 0) {
+          _timerSecondsRemaining--;
+        } else {
+          _timer?.cancel();
+          _timerRunning = false;
+        }
+      });
+    });
+    setState(() {});
+  }
+
+  void _pauseTimer() {
+    _timer?.cancel();
+    setState(() {
+      _timerRunning = false;
+    });
+  }
+
+  void _resetTimer() {
+    _timer?.cancel();
+    setState(() {
+      _timerRunning = false;
+      _timerSecondsRemaining = widget.matchTimerMinutes * 60;
+    });
+  }
+
+  String _formatTimer() {
+    final int minutes = _timerSecondsRemaining ~/ 60;
+    final int seconds = _timerSecondsRemaining % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  Color _timerColor() {
+    if (_timerSecondsRemaining <= 0) return Colors.red;
+    if (_timerSecondsRemaining <= 300) return Colors.orange; // 5 min warning
+    return Colors.white;
+  }
+
+  // --- Token preferences ---
 
   Future<void> _loadTokenPreferences() async {
     final customs = await TokenPreferences.getCustomTokensFull(widget.selectedGame);
@@ -140,8 +208,8 @@ class _CounterScreenState extends State<CounterScreen> {
     final bool isMiddle = _isMiddleRow(index);
     final bool isTop = currentRow < (rowCount / 2).floor() && !isMiddle;
 
-    if (isTop) return 2;       // 180°
-    if (isMiddle) return (index % 2 == 0) ? 1 : 3;  // 90° left, 90° right
+    if (isTop) return 2;
+    if (isMiddle) return (index % 2 == 0) ? 1 : 3;
     return null;
   }
 
@@ -199,20 +267,13 @@ class _CounterScreenState extends State<CounterScreen> {
   bool _shouldAutoRemove(ActiveToken token, int playerIndex) {
     switch (token.destroyTrigger!) {
       case DestroyTrigger.startOfYourTurn:
-        return playerIndex == activePlayer &&
-            turnCount > token.turnPlayed;
-
+        return playerIndex == activePlayer && turnCount > token.turnPlayed;
       case DestroyTrigger.startOfOpponentTurn:
-        return playerIndex != activePlayer &&
-            turnCount > token.turnPlayed;
-
+        return playerIndex != activePlayer && turnCount > token.turnPlayed;
       case DestroyTrigger.beginningOfActionPhase:
-        return playerIndex == activePlayer &&
-            turnCount > token.turnPlayed;
-
+        return playerIndex == activePlayer && turnCount > token.turnPlayed;
       case DestroyTrigger.beginningOfEndPhase:
-        return playerIndex == activePlayer &&
-            turnCount > token.turnPlayed;
+        return playerIndex == activePlayer && turnCount > token.turnPlayed;
     }
   }
 
@@ -223,23 +284,13 @@ class _CounterScreenState extends State<CounterScreen> {
 
     switch (token.destroyTrigger!) {
       case DestroyTrigger.startOfYourTurn:
-        return isActivePlayerToken &&
-            turnCount > token.turnPlayed &&
-            currentPhase >= 0;
-
+        return isActivePlayerToken && turnCount > token.turnPlayed && currentPhase >= 0;
       case DestroyTrigger.startOfOpponentTurn:
-        return !isActivePlayerToken &&
-            turnCount > token.turnPlayed &&
-            currentPhase >= 0;
-
+        return !isActivePlayerToken && turnCount > token.turnPlayed && currentPhase >= 0;
       case DestroyTrigger.beginningOfActionPhase:
-        return isActivePlayerToken &&
-            turnCount >= token.turnPlayed &&
-            currentPhase >= 2;
-
+        return isActivePlayerToken && turnCount >= token.turnPlayed && currentPhase >= 2;
       case DestroyTrigger.beginningOfEndPhase:
-        return isActivePlayerToken &&
-            currentPhase >= 3;
+        return isActivePlayerToken && currentPhase >= 3;
     }
   }
 
@@ -270,9 +321,7 @@ class _CounterScreenState extends State<CounterScreen> {
 
   void _showTokenPicker(int playerIndex) {
     final List<TokenData> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
-
     final List<TokenData> allTokens = [...libraryTokens, ...customTokens];
-
     final int? quarterTurns = _getQuarterTurns(playerIndex);
 
     showDialog(
@@ -344,23 +393,21 @@ class _CounterScreenState extends State<CounterScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           GestureDetector(
-              onTap: () {
-                setState(() {
-                  token.health = token.health! - 1;
-                  _log(playerIndex, LogEventType.allyHealthChange, '${token.name} health', value: -1);
-                  if (token.health! <= 0) {
-                    playerTokens[playerIndex].removeAt(tokenIndex);
-                    _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
-                  }
-                });
-              },
-              child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
-            ),
-          SizedBox(width: 4),
-          Text(
-            '${token.health}/${token.maxHealth}',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            onTap: () {
+              setState(() {
+                token.health = token.health! - 1;
+                _log(playerIndex, LogEventType.allyHealthChange, '${token.name} health', value: -1);
+                if (token.health! <= 0) {
+                  playerTokens[playerIndex].removeAt(tokenIndex);
+                  _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
+                }
+              });
+            },
+            child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
           ),
+          SizedBox(width: 4),
+          Text('${token.health}/${token.maxHealth}',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
@@ -372,10 +419,7 @@ class _CounterScreenState extends State<CounterScreen> {
             child: Icon(Icons.add_circle, size: 18, color: Colors.green),
           ),
           SizedBox(width: 8),
-          Text(
-            token.name,
-            style: TextStyle(fontSize: 11),
-          ),
+          Text(token.name, style: TextStyle(fontSize: 11)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
@@ -400,9 +444,7 @@ class _CounterScreenState extends State<CounterScreen> {
       decoration: BoxDecoration(
         color: _getTokenCategoryColor(token.category),
         borderRadius: BorderRadius.circular(6),
-        border: triggering
-            ? Border.all(color: Colors.amber, width: 2)
-            : null,
+        border: triggering ? Border.all(color: Colors.amber, width: 2) : null,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -417,7 +459,7 @@ class _CounterScreenState extends State<CounterScreen> {
             onTap: () {
               setState(() {
                 token.count--;
-                _log(playerIndex, LogEventType.tokenCountChange, '${token.name}', value: -1);
+                _log(playerIndex, LogEventType.tokenCountChange, token.name, value: -1);
                 if (token.count <= 0) {
                   playerTokens[playerIndex].removeAt(tokenIndex);
                   _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
@@ -427,25 +469,19 @@ class _CounterScreenState extends State<CounterScreen> {
             child: Icon(Icons.remove_circle, size: 18),
           ),
           SizedBox(width: 4),
-          Text(
-            '${token.count}',
-            style: TextStyle(fontSize: 13),
-          ),
+          Text('${token.count}', style: TextStyle(fontSize: 13)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
               setState(() {
                 token.count++;
-                _log(playerIndex, LogEventType.tokenCountChange, '${token.name}', value: 1);
+                _log(playerIndex, LogEventType.tokenCountChange, token.name, value: 1);
               });
             },
             child: Icon(Icons.add_circle, size: 18),
           ),
           SizedBox(width: 8),
-          Text(
-            token.name,
-            style: TextStyle(fontSize: 11),
-          ),
+          Text(token.name, style: TextStyle(fontSize: 11)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
@@ -531,13 +567,10 @@ class _CounterScreenState extends State<CounterScreen> {
 
     Widget content = Container(
       decoration: isActive
-          ? BoxDecoration(
-              border: Border.all(color: Colors.blue, width: 3),
-            )
+          ? BoxDecoration(border: Border.all(color: Colors.blue, width: 3))
           : null,
       child: Stack(
         children: [
-          // Hero background image - fills the entire player panel
           Positioned.fill(
             child: Image.asset(
               'assets/images/${widget.playerHeroes[index]}.jpg',
@@ -547,8 +580,6 @@ class _CounterScreenState extends State<CounterScreen> {
               },
             ),
           ),
-
-          // Full-size tap areas for health (overlays on top of hero image)
           Row(
             children: [
               _buildPlayerTapHalf(
@@ -557,9 +588,7 @@ class _CounterScreenState extends State<CounterScreen> {
                 label: '-',
                 labelAlignment: Alignment.centerRight,
                 labelPadding: EdgeInsets.only(right: 60),
-                border: Border(
-                  right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5),
-                ),
+                border: Border(right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5)),
               ),
               _buildPlayerTapHalf(
                 index: index,
@@ -567,69 +596,38 @@ class _CounterScreenState extends State<CounterScreen> {
                 label: '+',
                 labelAlignment: Alignment.centerLeft,
                 labelPadding: EdgeInsets.only(left: 60),
-                border: Border(
-                  left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5),
-                ),
+                border: Border(left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5)),
               ),
             ],
           ),
-
-          // Boon auras - top left
           if (boonAuras.isNotEmpty)
             Positioned(
-              top: 8,
-              left: 8,
+              top: 8, left: 8,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (int i in boonAuras)
-                    _buildCounterToken(playerTokens[index][i], index, i),
-                ],
+                children: [for (int i in boonAuras) _buildCounterToken(playerTokens[index][i], index, i)],
               ),
             ),
-
-          // Debuff auras - top right
           if (debuffAuras.isNotEmpty)
             Positioned(
-              top: 8,
-              right: 8,
+              top: 8, right: 8,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  for (int i in debuffAuras)
-                    _buildCounterToken(playerTokens[index][i], index, i),
-                ],
+                children: [for (int i in debuffAuras) _buildCounterToken(playerTokens[index][i], index, i)],
               ),
             ),
-
-          // Center content - allies, health number, items
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (allies.isNotEmpty)
-                  Column(
-                    children: [
-                      for (int i in allies)
-                        _buildAllyToken(playerTokens[index][i], index, i),
-                    ],
-                  ),
+                  Column(children: [for (int i in allies) _buildAllyToken(playerTokens[index][i], index, i)]),
                 SizedBox(height: 4),
-                Text(
-                  '${playerHealth[index]}',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text('${playerHealth[index]}',
+                    style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
                 SizedBox(height: 4),
                 if (items.isNotEmpty)
-                  Column(
-                    children: [
-                      for (int i in items)
-                        _buildCounterToken(playerTokens[index][i], index, i),
-                    ],
-                  ),
+                  Column(children: [for (int i in items) _buildCounterToken(playerTokens[index][i], index, i)]),
                 SizedBox(height: 4),
                 GestureDetector(
                   onTap: () => _showTokenPicker(index),
@@ -659,30 +657,54 @@ class _CounterScreenState extends State<CounterScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(
-            icon: Icon(Icons.arrow_left),
-            onPressed: _retreatPhase,
-          ),
+          IconButton(icon: Icon(Icons.arrow_left), onPressed: _retreatPhase),
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Player ${activePlayer + 1}\'s Turn',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Player ${activePlayer + 1}\'s Turn',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
               SizedBox(height: 4),
-              Text(
-                fabPhases[currentPhase],
-                style: TextStyle(fontSize: 16),
-              ),
+              Text(fabPhases[currentPhase], style: TextStyle(fontSize: 16)),
             ],
           ),
-          IconButton(
-            icon: Icon(Icons.arrow_right),
-            onPressed: _advancePhase,
+          IconButton(icon: Icon(Icons.arrow_right), onPressed: _advancePhase),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimerDisplay() {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: _resetTimer,
+            child: Icon(Icons.replay, color: Colors.white, size: 18),
+          ),
+          SizedBox(width: 8),
+          Text(
+            _formatTimer(),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: _timerColor(),
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          SizedBox(width: 8),
+          GestureDetector(
+            onTap: _timerRunning ? _pauseTimer : _startTimer,
+            child: Icon(
+              _timerRunning ? Icons.pause : Icons.play_arrow,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ],
       ),
@@ -725,35 +747,48 @@ class _CounterScreenState extends State<CounterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
         children: [
           _buildPlayerGrid(),
 
+          // Timer - top center
+          Positioned(
+            top: 40,
+            left: 0,
+            right: 0,
+            child: Center(child: _buildTimerDisplay()),
+          ),
+
+          // Home button - top left
           Positioned(
             top: 40,
             left: 16,
             child: IconButton(
-              icon: Icon(Icons.home),
+              icon: Icon(Icons.home, color: Colors.white),
               onPressed: () {
+                _timer?.cancel();
                 Navigator.popUntil(context, (route) => route.isFirst);
               },
             ),
           ),
 
+          // Reset button - top right
           Positioned(
             top: 40,
             right: 16,
             child: IconButton(
-              icon: Icon(Icons.refresh),
+              icon: Icon(Icons.refresh, color: Colors.white),
               onPressed: () {
                 showDialog(
                   context: context,
                   builder: (context) {
                     return AlertDialog(
                       title: Text('Reset Game'),
-                      content: Text('This will reset all health, tokens, and the game log. Are you sure?'),
+                      content: Text('This will reset all health, tokens, the timer, and the game log. Are you sure?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
@@ -762,16 +797,14 @@ class _CounterScreenState extends State<CounterScreen> {
                         TextButton(
                           onPressed: () {
                             setState(() {
-                              playerHealth = List.filled(
-                                widget.playerCount,
-                                widget.startingLife,
-                              );
+                              playerHealth = List.filled(widget.playerCount, widget.startingLife);
                               playerTokens = List.generate(widget.playerCount, (_) => []);
                               activePlayer = 0;
                               currentPhase = 0;
                               turnCount = 0;
                               gameLog.clear();
                             });
+                            _resetTimer();
                             Navigator.pop(context);
                           },
                           child: Text('Reset', style: TextStyle(color: Colors.red)),
@@ -783,11 +816,13 @@ class _CounterScreenState extends State<CounterScreen> {
               },
             ),
           ),
+
+          // Settings button - bottom right
           Positioned(
             bottom: 24,
             right: 16,
             child: IconButton(
-              icon: Icon(Icons.settings),
+              icon: Icon(Icons.settings, color: Colors.white),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -796,27 +831,24 @@ class _CounterScreenState extends State<CounterScreen> {
                       currentFont: currentFont,
                       onFontChanged: (String newFont) {
                         widget.onFontChanged(newFont);
-                        setState(() {
-                          currentFont = newFont;
-                        });
+                        setState(() { currentFont = newFont; });
                       },
                       turnTrackerEnabled: turnTrackerEnabled,
                       onTurnTrackerChanged: (bool enabled) {
                         widget.onTurnTrackerChanged(enabled);
-                        setState(() {
-                          turnTrackerEnabled = enabled;
-                        });
+                        setState(() { turnTrackerEnabled = enabled; });
                       },
-                      currentGame: widget.selectedGame,
-                      skipGameSelect: widget.skipGameSelect,
-                      onGameChanged: widget.onGameChanged,
                       frostedGlass: frostedGlass,
                       onFrostedGlassChanged: (bool enabled) {
                         widget.onFrostedGlassChanged(enabled);
-                        setState(() {
-                          frostedGlass = enabled;
-                        });
+                        setState(() { frostedGlass = enabled; });
                       },
+                      themeMode: widget.themeMode,
+                      onThemeModeChanged: widget.onThemeModeChanged,
+                      matchTimerMinutes: widget.matchTimerMinutes,
+                      onMatchTimerChanged: widget.onMatchTimerChanged,
+                      showPlayerCount: true,
+                      onShowPlayerCountChanged: (_) {},
                     ),
                   ),
                 );
@@ -824,15 +856,17 @@ class _CounterScreenState extends State<CounterScreen> {
             ),
           ),
 
+          // Log button - bottom left
           Positioned(
             bottom: 24,
             left: 16,
             child: IconButton(
-              icon: Icon(Icons.list_alt),
+              icon: Icon(Icons.list_alt, color: Colors.white),
               onPressed: _showGameLog,
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -847,7 +881,7 @@ class _TokenPickerSheet extends StatefulWidget {
   final Function(TokenData) onCustomTokenAdded;
   final Function(String, List<String>) onFavoriteToggled;
 
-  _TokenPickerSheet({
+  const _TokenPickerSheet({
     required this.allTokens,
     required this.favoriteTokens,
     required this.playerTokens,
@@ -890,26 +924,14 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
 
   List<TokenData> _getSortedFilteredTokens() {
     List<TokenData> tokens = List.from(widget.allTokens);
-
     if (selectedCategory != null) {
       tokens = tokens.where((t) => t.category == selectedCategory).toList();
     }
-
     if (searchQuery.isNotEmpty) {
-      tokens = tokens
-          .where((t) => t.name.toLowerCase().contains(searchQuery.toLowerCase()))
-          .toList();
+      tokens = tokens.where((t) => t.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
     }
-
-    final List<TokenData> favs = tokens
-        .where((t) => currentFavorites.contains(t.name))
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
-    final List<TokenData> nonFavs = tokens
-        .where((t) => !currentFavorites.contains(t.name))
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
-
+    final favs = tokens.where((t) => currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
+    final nonFavs = tokens.where((t) => !currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
     return [...favs, ...nonFavs];
   }
 
@@ -931,117 +953,54 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: nameController,
-                      decoration: InputDecoration(
-                        hintText: 'Token name',
-                      ),
-                    ),
+                    TextField(controller: nameController, decoration: InputDecoration(hintText: 'Token name')),
                     SizedBox(height: 16),
                     Text('Category'),
                     SizedBox(height: 8),
                     DropdownButton<TokenCategory>(
                       value: dialogCategory,
                       isExpanded: true,
-                      items: TokenCategory.values.map((cat) {
-                        return DropdownMenuItem(
-                          value: cat,
-                          child: Text(_getCategoryLabel(cat)),
-                        );
-                      }).toList(),
-                      onChanged: (TokenCategory? value) {
+                      items: TokenCategory.values.map((cat) => DropdownMenuItem(value: cat, child: Text(_getCategoryLabel(cat)))).toList(),
+                      onChanged: (value) {
                         if (value != null) {
                           setDialogState(() {
                             dialogCategory = value;
-                            if (value != TokenCategory.boonAura &&
-                                value != TokenCategory.debuffAura) {
-                              dialogTrigger = null;
-                            }
-                            if (value != TokenCategory.ally) {
-                              healthController.clear();
-                            }
+                            if (value != TokenCategory.boonAura && value != TokenCategory.debuffAura) dialogTrigger = null;
+                            if (value != TokenCategory.ally) healthController.clear();
                           });
                         }
                       },
                     ),
                     if (dialogCategory == TokenCategory.ally) ...[
-                      SizedBox(height: 16),
-                      Text('Health'),
-                      SizedBox(height: 8),
-                      TextField(
-                        controller: healthController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: 'Health value',
-                        ),
-                      ),
+                      SizedBox(height: 16), Text('Health'), SizedBox(height: 8),
+                      TextField(controller: healthController, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'Health value')),
                     ],
-                    if (dialogCategory == TokenCategory.boonAura ||
-                        dialogCategory == TokenCategory.debuffAura) ...[
-                      SizedBox(height: 16),
-                      Text('Auto-destroy'),
-                      SizedBox(height: 8),
+                    if (dialogCategory == TokenCategory.boonAura || dialogCategory == TokenCategory.debuffAura) ...[
+                      SizedBox(height: 16), Text('Auto-destroy'), SizedBox(height: 8),
                       DropdownButton<DestroyTrigger?>(
-                        value: dialogTrigger,
-                        isExpanded: true,
+                        value: dialogTrigger, isExpanded: true,
                         items: [
-                          DropdownMenuItem(
-                            value: null,
-                            child: Text('None (manual only)'),
-                          ),
-                          DropdownMenuItem(
-                            value: DestroyTrigger.startOfYourTurn,
-                            child: Text('Start of your turn'),
-                          ),
-                          DropdownMenuItem(
-                            value: DestroyTrigger.startOfOpponentTurn,
-                            child: Text("Start of opponent's turn"),
-                          ),
-                          DropdownMenuItem(
-                            value: DestroyTrigger.beginningOfActionPhase,
-                            child: Text('Beginning of action phase'),
-                          ),
-                          DropdownMenuItem(
-                            value: DestroyTrigger.beginningOfEndPhase,
-                            child: Text('Beginning of end phase'),
-                          ),
+                          DropdownMenuItem(value: null, child: Text('None (manual only)')),
+                          DropdownMenuItem(value: DestroyTrigger.startOfYourTurn, child: Text('Start of your turn')),
+                          DropdownMenuItem(value: DestroyTrigger.startOfOpponentTurn, child: Text("Start of opponent's turn")),
+                          DropdownMenuItem(value: DestroyTrigger.beginningOfActionPhase, child: Text('Beginning of action phase')),
+                          DropdownMenuItem(value: DestroyTrigger.beginningOfEndPhase, child: Text('Beginning of end phase')),
                         ],
-                        onChanged: (DestroyTrigger? value) {
-                          setDialogState(() {
-                            dialogTrigger = value;
-                          });
-                        },
+                        onChanged: (value) { setDialogState(() { dialogTrigger = value; }); },
                       ),
                     ],
                   ],
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text('Cancel'),
-                ),
+                TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
                 TextButton(
                   onPressed: () {
                     final name = nameController.text.trim();
                     final health = int.tryParse(healthController.text);
-
-                    if (name.isNotEmpty &&
-                        !widget.allTokens.any((t) => t.name == name)) {
-                      if (dialogCategory == TokenCategory.ally &&
-                          (health == null || health <= 0)) {
-                        return;
-                      }
-
-                      final newToken = TokenData(
-                        name: name,
-                        category: dialogCategory,
-                        destroyTrigger: dialogTrigger,
-                        health: dialogCategory == TokenCategory.ally ? health : null,
-                      );
-
+                    if (name.isNotEmpty && !widget.allTokens.any((t) => t.name == name)) {
+                      if (dialogCategory == TokenCategory.ally && (health == null || health <= 0)) return;
+                      final newToken = TokenData(name: name, category: dialogCategory, destroyTrigger: dialogTrigger, health: dialogCategory == TokenCategory.ally ? health : null);
                       TokenPreferences.addCustomTokenFull(widget.gameId, newToken);
                       TokenPreferences.addCustomToken(widget.gameId, name);
                       widget.onCustomTokenAdded(newToken);
@@ -1059,14 +1018,11 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
     );
   }
 
-  String _getCategoryLabel(TokenCategory category) {
-    return categoryNames[category] ?? 'Unknown';
-  }
+  String _getCategoryLabel(TokenCategory category) => categoryNames[category] ?? 'Unknown';
 
   @override
   Widget build(BuildContext context) {
     final sortedTokens = _getSortedFilteredTokens();
-
     return Container(
       padding: EdgeInsets.all(16),
       height: MediaQuery.of(context).size.height * 0.6,
@@ -1076,66 +1032,24 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Add Token',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              TextButton.icon(
-                onPressed: _showAddCustomDialog,
-                icon: Icon(Icons.add),
-                label: Text('Custom'),
-              ),
+              Text('Add Token', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              TextButton.icon(onPressed: _showAddCustomDialog, icon: Icon(Icons.add), label: Text('Custom')),
             ],
           ),
           SizedBox(height: 8),
           TextField(
             controller: searchController,
-            decoration: InputDecoration(
-              hintText: 'Search tokens...',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onChanged: (value) {
-              setState(() {
-                searchQuery = value;
-              });
-            },
+            decoration: InputDecoration(hintText: 'Search tokens...', prefixIcon: Icon(Icons.search), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
+            onChanged: (value) { setState(() { searchQuery = value; }); },
           ),
           SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(right: 4),
-                  child: FilterChip(
-                    label: Text('All'),
-                    selected: selectedCategory == null,
-                    onSelected: (_) {
-                      setState(() {
-                        selectedCategory = null;
-                      });
-                    },
-                  ),
-                ),
-                for (var category in TokenCategory.values)
-                  Padding(
-                    padding: EdgeInsets.only(right: 4),
-                    child: FilterChip(
-                      label: Text(_getCategoryLabel(category)),
-                      selected: selectedCategory == category,
-                      onSelected: (_) {
-                        setState(() {
-                          selectedCategory =
-                              selectedCategory == category ? null : category;
-                        });
-                      },
-                    ),
-                  ),
-              ],
-            ),
+            child: Row(children: [
+              Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text('All'), selected: selectedCategory == null, onSelected: (_) { setState(() { selectedCategory = null; }); })),
+              for (var category in TokenCategory.values)
+                Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text(_getCategoryLabel(category)), selected: selectedCategory == category, onSelected: (_) { setState(() { selectedCategory = selectedCategory == category ? null : category; }); })),
+            ]),
           ),
           SizedBox(height: 8),
           Expanded(
@@ -1145,45 +1059,21 @@ class _TokenPickerSheetState extends State<_TokenPickerSheet> {
                     itemCount: sortedTokens.length,
                     itemBuilder: (context, index) {
                       final tokenData = sortedTokens[index];
-                      final bool alreadyAdded = widget.playerTokens
-                          .any((t) => t.name == tokenData.name);
-                      final bool isFavorite =
-                          currentFavorites.contains(tokenData.name);
-
+                      final alreadyAdded = widget.playerTokens.any((t) => t.name == tokenData.name);
+                      final isFavorite = currentFavorites.contains(tokenData.name);
                       return ListTile(
                         leading: GestureDetector(
                           onTap: () async {
-                            await TokenPreferences.toggleFavorite(
-                                widget.gameId, tokenData.name);
-                            setState(() {
-                              if (isFavorite) {
-                                currentFavorites.remove(tokenData.name);
-                              } else {
-                                currentFavorites.add(tokenData.name);
-                              }
-                            });
-                            widget.onFavoriteToggled(
-                                tokenData.name, List.from(currentFavorites));
+                            await TokenPreferences.toggleFavorite(widget.gameId, tokenData.name);
+                            setState(() { isFavorite ? currentFavorites.remove(tokenData.name) : currentFavorites.add(tokenData.name); });
+                            widget.onFavoriteToggled(tokenData.name, List.from(currentFavorites));
                           },
-                          child: Icon(
-                            isFavorite ? Icons.star : Icons.star_border,
-                            color: isFavorite ? Colors.amber : Colors.grey,
-                          ),
+                          child: Icon(isFavorite ? Icons.star : Icons.star_border, color: isFavorite ? Colors.amber : Colors.grey),
                         ),
                         title: Text(tokenData.name),
-                        subtitle: Text(
-                          _getCategoryLabel(tokenData.category),
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        trailing: alreadyAdded
-                            ? Icon(Icons.check, color: Colors.green)
-                            : Icon(Icons.add_circle_outline),
-                        onTap: () {
-                          if (!alreadyAdded) {
-                            widget.onTokenAdded(tokenData);
-                          }
-                          Navigator.pop(context);
-                        },
+                        subtitle: Text(_getCategoryLabel(tokenData.category), style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        trailing: alreadyAdded ? Icon(Icons.check, color: Colors.green) : Icon(Icons.add_circle_outline),
+                        onTap: () { if (!alreadyAdded) widget.onTokenAdded(tokenData); Navigator.pop(context); },
                       );
                     },
                   ),

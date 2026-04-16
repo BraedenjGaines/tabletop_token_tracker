@@ -7,21 +7,28 @@ class SetupScreen extends StatefulWidget {
   final String selectedGame;
   final bool turnTrackerEnabled;
   final Function(bool) onTurnTrackerChanged;
-  final bool skipGameSelect;
-  final Function(String, bool) onGameChanged;
   final bool frostedGlass;
   final Function(bool) onFrostedGlassChanged;
+  final ThemeMode themeMode;
+  final Function(ThemeMode) onThemeModeChanged;
+  final int matchTimerMinutes;
+  final Function(int) onMatchTimerChanged;
+  final bool showPlayerCount;
 
-  SetupScreen({
+  const SetupScreen({
+    super.key,
     required this.selectedFont,
     required this.onFontChanged,
     required this.selectedGame,
     required this.turnTrackerEnabled,
     required this.onTurnTrackerChanged,
-    required this.skipGameSelect,
-    required this.onGameChanged,
     required this.frostedGlass,
     required this.onFrostedGlassChanged,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+    required this.matchTimerMinutes,
+    required this.onMatchTimerChanged,
+    required this.showPlayerCount,
   });
 
   @override
@@ -46,6 +53,8 @@ class _SetupScreenState extends State<SetupScreen> {
   ];
 
   late List<String> playerHeroes;
+  late int matchTimerMinutes;
+  late TextEditingController timerController;
 
   @override
   void initState() {
@@ -54,11 +63,14 @@ class _SetupScreenState extends State<SetupScreen> {
       6,
       (i) => heroArchetypes[i % heroArchetypes.length],
     );
+    matchTimerMinutes = widget.matchTimerMinutes;
+    timerController = TextEditingController(text: matchTimerMinutes.toString());
   }
 
   @override
   void dispose() {
     customLifeController.dispose();
+    timerController.dispose();
     super.dispose();
   }
 
@@ -76,29 +88,31 @@ class _SetupScreenState extends State<SetupScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Number of Players'),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (int i = 2; i <= 6; i++)
-                      Padding(
-                        padding: EdgeInsets.all(4),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              selectedPlayers = i;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                selectedPlayers == i ? Colors.blue : Colors.grey,
+                if (widget.showPlayerCount) ...[
+                  Text('Number of Players'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (int i = 2; i <= 6; i++)
+                        Padding(
+                          padding: EdgeInsets.all(4),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                selectedPlayers = i;
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  selectedPlayers == i ? Colors.blue : Colors.grey,
+                            ),
+                            child: Text('$i'),
                           ),
-                          child: Text('$i'),
                         ),
-                      ),
-                  ],
-                ),
-                SizedBox(height: 30),
+                    ],
+                  ),
+                  SizedBox(height: 30),
+                ],
                 Text('Starting Life'),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -225,6 +239,58 @@ class _SetupScreenState extends State<SetupScreen> {
                       ],
                     ),
                   ),
+                  SizedBox(height: 30),
+                Text(
+                  'Match Timer',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Minutes: ', style: TextStyle(fontSize: 16)),
+                    SizedBox(width: 8),
+                    SizedBox(
+                      width: 80,
+                      child: TextField(
+                        controller: timerController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        onChanged: (value) {
+                          final parsed = int.tryParse(value);
+                          if (parsed != null && parsed > 0) {
+                            setState(() {
+                              matchTimerMinutes = parsed;
+                            });
+                            widget.onMatchTimerChanged(parsed);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (int preset in [30, 50, 60, 90])
+                      ChoiceChip(
+                        label: Text('$preset'),
+                        selected: matchTimerMinutes == preset,
+                        onSelected: (_) {
+                          setState(() {
+                            matchTimerMinutes = preset;
+                            timerController.text = preset.toString();
+                          });
+                          widget.onMatchTimerChanged(preset);
+                        },
+                      ),
+                  ],
+                ),
                 SizedBox(height: 30),
                 ElevatedButton(
                   onPressed: selectedLife >= 1
@@ -241,10 +307,12 @@ class _SetupScreenState extends State<SetupScreen> {
                                 selectedGame: widget.selectedGame,
                                 turnTrackerEnabled: widget.turnTrackerEnabled,
                                 onTurnTrackerChanged: widget.onTurnTrackerChanged,
-                                skipGameSelect: widget.skipGameSelect,
-                                onGameChanged: widget.onGameChanged,
                                 frostedGlass: widget.frostedGlass,
                                 onFrostedGlassChanged: widget.onFrostedGlassChanged,
+                                themeMode: widget.themeMode,
+                                onThemeModeChanged: widget.onThemeModeChanged,
+                                matchTimerMinutes: matchTimerMinutes,
+                                onMatchTimerChanged: widget.onMatchTimerChanged,
                               ),
                             ),
                           );

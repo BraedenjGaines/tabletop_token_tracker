@@ -6,22 +6,29 @@ class SettingsScreen extends StatefulWidget {
   final Function(String) onFontChanged;
   final bool turnTrackerEnabled;
   final Function(bool) onTurnTrackerChanged;
-  final String currentGame;
-  final bool skipGameSelect;
-  final Function(String, bool) onGameChanged;
   final bool frostedGlass;
   final Function(bool) onFrostedGlassChanged;
+  final ThemeMode themeMode;
+  final Function(ThemeMode) onThemeModeChanged;
+  final int matchTimerMinutes;
+  final Function(int) onMatchTimerChanged;
+  final bool showPlayerCount;
+  final Function(bool) onShowPlayerCountChanged;
 
-  SettingsScreen({
+  const SettingsScreen({
+    super.key,
     required this.currentFont,
     required this.onFontChanged,
     required this.turnTrackerEnabled,
     required this.onTurnTrackerChanged,
-    required this.currentGame,
-    required this.skipGameSelect,
-    required this.onGameChanged,
     required this.frostedGlass,
     required this.onFrostedGlassChanged,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+    required this.matchTimerMinutes,
+    required this.onMatchTimerChanged,
+    required this.showPlayerCount,
+    required this.onShowPlayerCountChanged,
   });
 
   @override
@@ -31,9 +38,9 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late String selectedFont;
   late bool turnTracker;
-  late String selectedGame;
-  late bool promptGameSelect;
   late bool frostedGlass;
+  late ThemeMode currentThemeMode;
+  late bool showPlayerCount;
 
   final List<String> availableFonts = [
     'Sedan',
@@ -42,19 +49,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'MedievalSharp',
   ];
 
-  final List<Map<String, String>> availableGames = [
-    {'id': 'fab', 'name': 'Flesh and Blood'},
-    {'id': 'mtg', 'name': 'Magic: The Gathering'},
-  ];
-
   @override
   void initState() {
     super.initState();
     selectedFont = widget.currentFont;
     turnTracker = widget.turnTrackerEnabled;
-    selectedGame = widget.currentGame.isEmpty ? 'fab' : widget.currentGame;
-    promptGameSelect = !widget.skipGameSelect;
     frostedGlass = widget.frostedGlass;
+    currentThemeMode = widget.themeMode;
+    showPlayerCount = widget.showPlayerCount;
   }
 
   @override
@@ -70,6 +72,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // --- Font ---
               Text(
                 'Font',
                 style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
@@ -108,55 +111,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
               ),
-              SizedBox(height: 32),
-              Text(
-                'Game',
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButton<String>(
-                  value: selectedGame,
-                  isExpanded: true,
-                  underline: SizedBox(),
-                  items: availableGames.map((game) {
-                    return DropdownMenuItem(
-                      value: game['id'],
-                      child: Text(
-                        game['name']!,
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (String? newGame) {
-                    if (newGame != null) {
-                      setState(() {
-                        selectedGame = newGame;
-                      });
-                      widget.onGameChanged(selectedGame, !promptGameSelect);
-                    }
-                  },
-                ),
-              ),
-              SizedBox(height: 8),
-              CheckboxListTile(
-                title: Text('Ask which game before each session'),
-                value: promptGameSelect,
-                onChanged: (bool? value) {
-                  setState(() {
-                    promptGameSelect = value ?? true;
-                  });
-                  widget.onGameChanged(selectedGame, !promptGameSelect);
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-              ),
+
+              // --- Turn Tracker ---
               SizedBox(height: 32),
               Text(
                 'Turn Tracker',
@@ -178,6 +134,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   widget.onTurnTrackerChanged(value);
                 },
               ),
+
+              // --- Game Setup ---
+              SizedBox(height: 32),
+              Text(
+                'Game Setup',
+                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Show Player Count Selection'),
+                subtitle: Text('Toggle player count chooser on the setup screen'),
+                value: showPlayerCount,
+                onChanged: (bool value) {
+                  setState(() {
+                    showPlayerCount = value;
+                  });
+                  widget.onShowPlayerCountChanged(value);
+                },
+              ),
+
+              // --- Visual ---
               SizedBox(height: 32),
               Text(
                 'Visual',
@@ -199,6 +176,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   widget.onFrostedGlassChanged(value);
                 },
               ),
+              SizedBox(height: 16),
+              Text(
+                'Theme',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              SegmentedButton<ThemeMode>(
+                segments: [
+                  ButtonSegment(
+                    value: ThemeMode.system,
+                    label: Text('System'),
+                    icon: Icon(Icons.settings_brightness),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.light,
+                    label: Text('Light'),
+                    icon: Icon(Icons.light_mode),
+                  ),
+                  ButtonSegment(
+                    value: ThemeMode.dark,
+                    label: Text('Dark'),
+                    icon: Icon(Icons.dark_mode),
+                  ),
+                ],
+                selected: {currentThemeMode},
+                onSelectionChanged: (Set<ThemeMode> selection) {
+                  setState(() {
+                    currentThemeMode = selection.first;
+                  });
+                  widget.onThemeModeChanged(selection.first);
+                },
+              ),
+
+              // --- Tokens ---
               SizedBox(height: 32),
               Text(
                 'Tokens',
@@ -214,7 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => CustomTokenScreen(
-                          currentGame: selectedGame,
+                          currentGame: 'fab',
                         ),
                       ),
                     );

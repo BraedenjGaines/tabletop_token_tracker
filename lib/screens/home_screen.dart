@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'game_select_screen.dart';
 import 'setup_screen.dart';
 import 'settings_screen.dart';
 
@@ -7,23 +6,32 @@ class HomeScreen extends StatelessWidget {
   final String selectedFont;
   final Function(String) onFontChanged;
   final String selectedGame;
-  final bool skipGameSelect;
-  final Function(String, bool) onGameChanged;
   final bool turnTrackerEnabled;
   final Function(bool) onTurnTrackerChanged;
   final bool frostedGlass;
   final Function(bool) onFrostedGlassChanged;
+  final ThemeMode themeMode;
+  final Function(ThemeMode) onThemeModeChanged;
+  final int matchTimerMinutes;
+  final Function(int) onMatchTimerChanged;
+  final bool showPlayerCount;
+  final Function(bool) onShowPlayerCountChanged;
 
-  HomeScreen({
+  const HomeScreen({
+    super.key,
     required this.selectedFont,
     required this.onFontChanged,
     required this.selectedGame,
-    required this.skipGameSelect,
-    required this.onGameChanged,
     required this.turnTrackerEnabled,
     required this.onTurnTrackerChanged,
     required this.frostedGlass,
     required this.onFrostedGlassChanged,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+    required this.matchTimerMinutes,
+    required this.onMatchTimerChanged,
+    required this.showPlayerCount,
+    required this.onShowPlayerCountChanged,
   });
 
   @override
@@ -39,40 +47,25 @@ class HomeScreen extends StatelessWidget {
           children: [
             ElevatedButton(
               onPressed: () {
-                if (skipGameSelect && selectedGame.isNotEmpty) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SetupScreen(
-                        selectedFont: selectedFont,
-                        onFontChanged: onFontChanged,
-                        selectedGame: selectedGame,
-                        turnTrackerEnabled: turnTrackerEnabled,
-                        onTurnTrackerChanged: onTurnTrackerChanged,
-                        skipGameSelect: skipGameSelect,
-                        onGameChanged: onGameChanged,
-                        frostedGlass: frostedGlass,
-                        onFrostedGlassChanged: onFrostedGlassChanged,
-                      ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SetupScreen(
+                      selectedFont: selectedFont,
+                      onFontChanged: onFontChanged,
+                      selectedGame: selectedGame,
+                      turnTrackerEnabled: turnTrackerEnabled,
+                      onTurnTrackerChanged: onTurnTrackerChanged,
+                      frostedGlass: frostedGlass,
+                      onFrostedGlassChanged: onFrostedGlassChanged,
+                      themeMode: themeMode,
+                      onThemeModeChanged: onThemeModeChanged,
+                      matchTimerMinutes: matchTimerMinutes,
+                      onMatchTimerChanged: onMatchTimerChanged,
+                      showPlayerCount: showPlayerCount,
                     ),
-                  );
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => GameSelectScreen(
-                        selectedFont: selectedFont,
-                        onFontChanged: onFontChanged,
-                        onGameChanged: onGameChanged,
-                        turnTrackerEnabled: turnTrackerEnabled,
-                        onTurnTrackerChanged: onTurnTrackerChanged,
-                        skipGameSelect: skipGameSelect,
-                        frostedGlass: frostedGlass,
-                        onFrostedGlassChanged: onFrostedGlassChanged,
-                      ),
-                    ),
-                  );
-                }
+                  ),
+                );
               },
               child: Text('Play'),
             ),
@@ -87,11 +80,14 @@ class HomeScreen extends StatelessWidget {
                       onFontChanged: onFontChanged,
                       turnTrackerEnabled: turnTrackerEnabled,
                       onTurnTrackerChanged: onTurnTrackerChanged,
-                      currentGame: selectedGame,
-                      skipGameSelect: skipGameSelect,
-                      onGameChanged: onGameChanged,
                       frostedGlass: frostedGlass,
                       onFrostedGlassChanged: onFrostedGlassChanged,
+                      themeMode: themeMode,
+                      onThemeModeChanged: onThemeModeChanged,
+                      matchTimerMinutes: matchTimerMinutes,
+                      onMatchTimerChanged: onMatchTimerChanged,
+                      showPlayerCount: showPlayerCount,
+                      onShowPlayerCountChanged: onShowPlayerCountChanged,
                     ),
                   ),
                 );

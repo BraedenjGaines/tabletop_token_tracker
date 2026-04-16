@@ -5,7 +5,7 @@ class LogScreen extends StatelessWidget {
   final GameLog gameLog;
   final double? rotationAngle;
 
-  LogScreen({
+  const LogScreen({super.key, 
     required this.gameLog,
     this.rotationAngle,
   });
@@ -61,6 +61,10 @@ class LogScreen extends StatelessWidget {
     return '';
   }
 
+  String _formatTimestamp(String timestamp) {
+    return timestamp;
+  }
+
   @override
   Widget build(BuildContext context) {
     final reversedEntries = gameLog.entries.reversed.toList();
@@ -106,7 +110,7 @@ class LogScreen extends StatelessWidget {
                           style: TextStyle(fontSize: 14),
                         ),
                         subtitle: Text(
-                          '${_getPlayerLabel(entry.playerIndex)}${entry.phase != null ? ' • ${entry.phase}' : ''}',
+                          '${_formatTimestamp(entry.timestamp)} • ${_getPlayerLabel(entry.playerIndex)}${entry.phase != null ? ' • ${entry.phase}' : ''}',
                           style: TextStyle(fontSize: 11, color: Colors.grey),
                         ),
                         trailing: valueText.isNotEmpty
