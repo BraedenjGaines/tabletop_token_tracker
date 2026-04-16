@@ -755,9 +755,22 @@ class _CounterScreenState extends State<CounterScreen> {
         children: [
           _buildPlayerGrid(),
 
-          // Timer - top center
+          // Timer - top (rotated for player 1)
           Positioned(
             top: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: RotatedBox(
+                quarterTurns: 2,
+                child: _buildTimerDisplay(),
+              ),
+            ),
+          ),
+
+          // Timer - bottom (right-side-up for player 2)
+          Positioned(
+            bottom: 60,
             left: 0,
             right: 0,
             child: Center(child: _buildTimerDisplay()),
@@ -770,8 +783,34 @@ class _CounterScreenState extends State<CounterScreen> {
             child: IconButton(
               icon: Icon(Icons.home, color: Colors.white),
               onPressed: () {
-                _timer?.cancel();
-                Navigator.popUntil(context, (route) => route.isFirst);
+                if (gameLog.entries.isNotEmpty) {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: Text('Leave Game'),
+                        content: Text('A game is in progress. Are you sure you want to return to the home screen?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              _timer?.cancel();
+                              Navigator.pop(context);
+                              Navigator.popUntil(context, (route) => route.isFirst);
+                            },
+                            child: Text('Leave', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                } else {
+                  _timer?.cancel();
+                  Navigator.popUntil(context, (route) => route.isFirst);
+                }
               },
             ),
           ),
