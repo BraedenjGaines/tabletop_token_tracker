@@ -135,23 +135,23 @@ class _SetupScreenState extends State<SetupScreen> {
                           child: Text('$life'),
                         ),
                       ),
-                    Padding(
-                      padding: EdgeInsets.all(4),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            isCustomLife = true;
-                            selectedLife =
-                                int.tryParse(customLifeController.text) ?? 0;
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isCustomLife ? Colors.blue : Colors.grey,
-                        ),
-                        child: Text('Custom'),
-                      ),
-                    ),
                   ],
+                ),
+                Padding(
+                  padding: EdgeInsets.all(4),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        isCustomLife = true;
+                        selectedLife =
+                            int.tryParse(customLifeController.text) ?? 0;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isCustomLife ? Colors.blue : Colors.grey,
+                    ),
+                    child: Text('Custom'),
+                  ),
                 ),
                 if (isCustomLife)
                   Padding(

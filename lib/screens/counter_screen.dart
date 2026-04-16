@@ -407,7 +407,7 @@ class _CounterScreenState extends State<CounterScreen> {
           ),
           SizedBox(width: 4),
           Text('${token.health}/${token.maxHealth}',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
@@ -419,7 +419,7 @@ class _CounterScreenState extends State<CounterScreen> {
             child: Icon(Icons.add_circle, size: 18, color: Colors.green),
           ),
           SizedBox(width: 8),
-          Text(token.name, style: TextStyle(fontSize: 11)),
+          Text(token.name, style: TextStyle(fontSize: 11, color: Colors.white)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
@@ -469,7 +469,7 @@ class _CounterScreenState extends State<CounterScreen> {
             child: Icon(Icons.remove_circle, size: 18),
           ),
           SizedBox(width: 4),
-          Text('${token.count}', style: TextStyle(fontSize: 13)),
+          Text('${token.count}', style: TextStyle(fontSize: 13, color: Colors.white)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
@@ -481,7 +481,7 @@ class _CounterScreenState extends State<CounterScreen> {
             child: Icon(Icons.add_circle, size: 18),
           ),
           SizedBox(width: 8),
-          Text(token.name, style: TextStyle(fontSize: 11)),
+          Text(token.name, style: TextStyle(fontSize: 11, color: Colors.white)),
           SizedBox(width: 4),
           GestureDetector(
             onTap: () {
@@ -529,7 +529,7 @@ class _CounterScreenState extends State<CounterScreen> {
                   padding: labelPadding,
                   child: Text(
                     label,
-                    style: TextStyle(fontSize: 28, color: Colors.grey.withOpacity(0.8)),
+                    style: TextStyle(fontSize: 28, color: Colors.white.withOpacity(0.6)),
                   ),
                 ),
               ),
@@ -624,14 +624,14 @@ class _CounterScreenState extends State<CounterScreen> {
                   Column(children: [for (int i in allies) _buildAllyToken(playerTokens[index][i], index, i)]),
                 SizedBox(height: 4),
                 Text('${playerHealth[index]}',
-                    style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
+                    style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white)),
                 SizedBox(height: 4),
                 if (items.isNotEmpty)
                   Column(children: [for (int i in items) _buildCounterToken(playerTokens[index][i], index, i)]),
                 SizedBox(height: 4),
                 GestureDetector(
                   onTap: () => _showTokenPicker(index),
-                  child: Icon(Icons.add_box, size: 24),
+                  child: Icon(Icons.add_box, size: 24, color: Colors.white),
                 ),
               ],
             ),
