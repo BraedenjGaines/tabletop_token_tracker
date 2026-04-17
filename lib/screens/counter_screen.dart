@@ -567,13 +567,13 @@ class _CounterScreenState extends State<CounterScreen> {
       padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        IconButton(icon: Icon(Icons.arrow_left), onPressed: _retreatPhase),
+        IconButton(icon: Icon(Icons.arrow_left, color: Colors.black), onPressed: _retreatPhase),
         Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
           SizedBox(height: 4),
-          Text(fabPhases[currentPhase], style: TextStyle(fontSize: 16)),
+          Text(fabPhases[currentPhase], style: TextStyle(fontSize: 16, color: Colors.black)),
         ]),
-        IconButton(icon: Icon(Icons.arrow_right), onPressed: _advancePhase),
+        IconButton(icon: Icon(Icons.arrow_right, color: Colors.black), onPressed: _advancePhase),
       ]),
     );
   }

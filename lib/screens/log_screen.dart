@@ -106,7 +106,7 @@ class LogScreen extends StatelessWidget {
                           style: TextStyle(fontSize: 14),
                         ),
                         subtitle: Text(
-                          '${_getPlayerLabel(entry.playerIndex)}${entry.phase != null ? ' • ${entry.phase}' : ''}',
+                          '${entry.timestamp} • ${_getPlayerLabel(entry.playerIndex)}${entry.phase != null ? ' • ${entry.phase}' : ''}',
                           style: TextStyle(fontSize: 11, color: Colors.grey),
                         ),
                         trailing: valueText.isNotEmpty
