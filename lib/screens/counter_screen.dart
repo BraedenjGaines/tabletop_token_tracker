@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:math';
 import 'settings_screen.dart';
 import 'log_screen.dart';
 import '../data/token_library.dart';
@@ -44,6 +45,8 @@ class CounterScreen extends StatefulWidget {
   final Function(ThemeMode) onThemeModeChanged;
   final int matchTimerMinutes;
   final Function(int) onMatchTimerChanged;
+  final int firstTurnSetting;
+  final Function(int) onFirstTurnSettingChanged;
 
   const CounterScreen({
     super.key,
@@ -61,6 +64,8 @@ class CounterScreen extends StatefulWidget {
     required this.onThemeModeChanged,
     required this.matchTimerMinutes,
     required this.onMatchTimerChanged,
+    required this.firstTurnSetting,
+    required this.onFirstTurnSettingChanged,
   });
 
   @override
@@ -83,22 +88,43 @@ class _CounterScreenState extends State<CounterScreen> {
 
   final GameLog gameLog = GameLog();
 
-  // Match timer state
+  // Match timer
   late int _timerSecondsRemaining;
   Timer? _timer;
   bool _timerRunning = false;
 
-  final List<String> fabPhases = [
-    'Start Phase',
-    'Draw Phase',
-    'Action Phase',
-    'End Phase',
-  ];
+  // Dice roll overlay
+  bool _showDiceOverlay = false;
+  bool _diceRolling = false;
+  bool _diceFinished = false;
+  bool _showChoicePrompt = false;
+  List<int> _p1Dice = [1, 1];
+  List<int> _p2Dice = [1, 1];
+  int _diceWinner = 0;
+  Timer? _diceTimer;
+  final _random = Random();
+
+  // Per-player overlay state: -1 = none, -2 = add token picker, 0-3 = category index
+  List<int> _playerOverlay = [];
+
+  final List<String> fabPhases = ['Start Phase', 'Draw Phase', 'Action Phase', 'End Phase'];
+
+  final Map<TokenCategory, String> _categoryNames = {
+    TokenCategory.ally: 'Allies',
+    TokenCategory.item: 'Items',
+    TokenCategory.boonAura: 'Boons',
+    TokenCategory.debuffAura: 'Debuffs',
+  };
+
+  final Map<TokenCategory, Color> _categoryColors = {
+    TokenCategory.ally: Colors.orange,
+    TokenCategory.boonAura: Colors.green,
+    TokenCategory.debuffAura: Colors.red,
+    TokenCategory.item: Colors.blue,
+  };
 
   bool get _showTurnTracker =>
-      turnTrackerEnabled &&
-      widget.selectedGame == 'fab' &&
-      widget.playerCount == 2;
+      turnTrackerEnabled && widget.selectedGame == 'fab' && widget.playerCount == 2;
 
   String? get _currentPhaseName =>
       _showTurnTracker ? fabPhases[currentPhase] : null;
@@ -108,13 +134,9 @@ class _CounterScreenState extends State<CounterScreen> {
     final int seconds = _timerSecondsRemaining % 60;
     final String timerStamp = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
     gameLog.addEntry(LogEntry(
-      playerIndex: playerIndex,
-      type: type,
-      description: description,
-      value: value,
-      timestamp: timerStamp,
-      turn: _showTurnTracker ? turnCount : null,
-      phase: _currentPhaseName,
+      playerIndex: playerIndex, type: type, description: description,
+      value: value, timestamp: timerStamp,
+      turn: _showTurnTracker ? turnCount : null, phase: _currentPhaseName,
     ));
   }
 
@@ -123,795 +145,548 @@ class _CounterScreenState extends State<CounterScreen> {
     super.initState();
     playerHealth = List.filled(widget.playerCount, widget.startingLife);
     playerTokens = List.generate(widget.playerCount, (_) => []);
+    _playerOverlay = List.filled(widget.playerCount, -1);
     currentFont = widget.selectedFont;
     turnTrackerEnabled = widget.turnTrackerEnabled;
     frostedGlass = widget.frostedGlass;
     _timerSecondsRemaining = widget.matchTimerMinutes * 60;
     _loadTokenPreferences();
+    _handleFirstTurn();
+  }
+
+  void _handleFirstTurn() {
+    if (widget.playerCount != 2) return;
+    switch (widget.firstTurnSetting) {
+      case 0: activePlayer = 0; break;
+      case 1: activePlayer = 1; break;
+      case 2:
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() { _showDiceOverlay = true; });
+          _startDiceRoll();
+        });
+        break;
+    }
+  }
+
+  void _startDiceRoll() {
+    setState(() { _diceRolling = true; _diceFinished = false; _showChoicePrompt = false; });
+    int tickCount = 0;
+    _diceTimer = Timer.periodic(Duration(milliseconds: 80), (timer) {
+      setState(() {
+        _p1Dice = [_random.nextInt(6) + 1, _random.nextInt(6) + 1];
+        _p2Dice = [_random.nextInt(6) + 1, _random.nextInt(6) + 1];
+      });
+      tickCount++;
+      if (tickCount >= 25) { timer.cancel(); _finalizeDiceRoll(); }
+    });
+  }
+
+  void _finalizeDiceRoll() {
+    int p1Total, p2Total;
+    do {
+      _p1Dice = [_random.nextInt(6) + 1, _random.nextInt(6) + 1];
+      _p2Dice = [_random.nextInt(6) + 1, _random.nextInt(6) + 1];
+      p1Total = _p1Dice[0] + _p1Dice[1];
+      p2Total = _p2Dice[0] + _p2Dice[1];
+    } while (p1Total == p2Total);
+    setState(() { _diceRolling = false; _diceFinished = true; _diceWinner = p1Total > p2Total ? 0 : 1; });
+    Future.delayed(Duration(milliseconds: 800), () { if (mounted) setState(() { _showChoicePrompt = true; }); });
+  }
+
+  void _onFirstTurnChoice(bool goFirst) {
+    setState(() {
+      activePlayer = goFirst ? _diceWinner : (_diceWinner == 0 ? 1 : 0);
+      _showDiceOverlay = false; _showChoicePrompt = false; _diceFinished = false;
+    });
+  }
+
+  IconData _dieIcon(int value) {
+    switch (value) {
+      case 1: return Icons.looks_one; case 2: return Icons.looks_two; case 3: return Icons.looks_3;
+      case 4: return Icons.looks_4; case 5: return Icons.looks_5; case 6: return Icons.looks_6;
+      default: return Icons.casino;
+    }
   }
 
   @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+  void dispose() { _timer?.cancel(); _diceTimer?.cancel(); super.dispose(); }
 
-  // --- Timer methods ---
-
+  // --- Timer ---
   void _startTimer() {
     if (_timerRunning || _timerSecondsRemaining <= 0) return;
     _timerRunning = true;
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_timerSecondsRemaining > 0) {
-          _timerSecondsRemaining--;
-        } else {
-          _timer?.cancel();
-          _timerRunning = false;
-        }
-      });
+      setState(() { if (_timerSecondsRemaining > 0) _timerSecondsRemaining--; else { _timer?.cancel(); _timerRunning = false; } });
     });
     setState(() {});
   }
-
-  void _pauseTimer() {
-    _timer?.cancel();
-    setState(() {
-      _timerRunning = false;
-    });
-  }
-
-  void _resetTimer() {
-    _timer?.cancel();
-    setState(() {
-      _timerRunning = false;
-      _timerSecondsRemaining = widget.matchTimerMinutes * 60;
-    });
-  }
-
+  void _pauseTimer() { _timer?.cancel(); setState(() { _timerRunning = false; }); }
+  void _resetTimer() { _timer?.cancel(); setState(() { _timerRunning = false; _timerSecondsRemaining = widget.matchTimerMinutes * 60; }); }
   String _formatTimer() {
-    final int minutes = _timerSecondsRemaining ~/ 60;
-    final int seconds = _timerSecondsRemaining % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final m = _timerSecondsRemaining ~/ 60; final s = _timerSecondsRemaining % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
-
   Color _timerColor() {
     if (_timerSecondsRemaining <= 0) return Colors.red;
-    if (_timerSecondsRemaining <= 300) return Colors.orange; // 5 min warning
+    if (_timerSecondsRemaining <= 300) return Colors.orange;
     return Colors.white;
   }
 
-  // --- Token preferences ---
-
+  // --- Token prefs ---
   Future<void> _loadTokenPreferences() async {
     final customs = await TokenPreferences.getCustomTokensFull(widget.selectedGame);
     final favs = await TokenPreferences.getFavorites(widget.selectedGame);
-    setState(() {
-      customTokens = customs;
-      favoriteTokens = favs;
-    });
+    setState(() { customTokens = customs; favoriteTokens = favs; });
   }
 
-  bool _isMiddleRow(int playerIndex) {
-    final int rowCount = (playerHealth.length + 1) ~/ 2;
-    if (rowCount < 3) return false;
-    final int playerRow = playerIndex ~/ 2;
-    final int middleRow = rowCount ~/ 2;
-    return playerRow == middleRow;
+  // --- Layout helpers ---
+  bool _isMiddleRow(int pi) {
+    final rc = (playerHealth.length + 1) ~/ 2;
+    if (rc < 3) return false;
+    return (pi ~/ 2) == (rc ~/ 2);
   }
 
   int? _getQuarterTurns(int index) {
     if (playerHealth.length == 2) return index == 0 ? 2 : null;
-
-    final int rowCount = (playerHealth.length + 1) ~/ 2;
-    final int currentRow = index ~/ 2;
-    final bool isMiddle = _isMiddleRow(index);
-    final bool isTop = currentRow < (rowCount / 2).floor() && !isMiddle;
-
+    final rc = (playerHealth.length + 1) ~/ 2;
+    final cr = index ~/ 2;
+    final isMiddle = _isMiddleRow(index);
+    final isTop = cr < (rc / 2).floor() && !isMiddle;
     if (isTop) return 2;
     if (isMiddle) return (index % 2 == 0) ? 1 : 3;
     return null;
   }
 
+  // --- Phase / turn ---
   void _advancePhase() {
     setState(() {
-      if (currentPhase < fabPhases.length - 1) {
-        currentPhase++;
-        _logNewlyTriggering();
-        _log(activePlayer, LogEventType.phaseChange, fabPhases[currentPhase]);
-      } else {
-        _checkAutoDestroy();
-        currentPhase = 0;
-        activePlayer = activePlayer == 0 ? 1 : 0;
-        turnCount++;
-        _logNewlyTriggering();
-        _log(activePlayer, LogEventType.phaseChange, 'Turn ${turnCount + 1} - ${fabPhases[currentPhase]}');
-      }
+      if (currentPhase < fabPhases.length - 1) { currentPhase++; _logNewlyTriggering(); _log(activePlayer, LogEventType.phaseChange, fabPhases[currentPhase]); }
+      else { _checkAutoDestroy(); currentPhase = 0; activePlayer = activePlayer == 0 ? 1 : 0; turnCount++; _logNewlyTriggering(); _log(activePlayer, LogEventType.phaseChange, 'Turn ${turnCount + 1} - ${fabPhases[currentPhase]}'); }
     });
   }
-
-  void _logNewlyTriggering() {
-    for (int playerIndex = 0; playerIndex < playerTokens.length; playerIndex++) {
-      for (var token in playerTokens[playerIndex]) {
-        if (_isTokenTriggering(token, playerIndex)) {
-          _log(playerIndex, LogEventType.tokenActivated, '${token.name} active');
-        }
-      }
-    }
-  }
-
-  void _retreatPhase() {
-    setState(() {
-      if (currentPhase > 0) {
-        currentPhase--;
-        _log(activePlayer, LogEventType.phaseChange, 'Back to ${fabPhases[currentPhase]}');
-      }
-    });
-  }
+  void _logNewlyTriggering() { for (int pi = 0; pi < playerTokens.length; pi++) for (var t in playerTokens[pi]) if (_isTokenTriggering(t, pi)) _log(pi, LogEventType.tokenActivated, '${t.name} active'); }
+  void _retreatPhase() { setState(() { if (currentPhase > 0) { currentPhase--; _log(activePlayer, LogEventType.phaseChange, 'Back to ${fabPhases[currentPhase]}'); } }); }
 
   void _checkAutoDestroy() {
     if (!_showTurnTracker) return;
-
-    for (int playerIndex = 0; playerIndex < playerTokens.length; playerIndex++) {
-      playerTokens[playerIndex].removeWhere((token) {
-        if (token.destroyTrigger == null) return false;
-        bool shouldRemove = token.count <= 0 || _shouldAutoRemove(token, playerIndex);
-        if (shouldRemove) {
-          _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
-        }
-        return shouldRemove;
+    for (int pi = 0; pi < playerTokens.length; pi++) {
+      playerTokens[pi].removeWhere((t) {
+        if (t.destroyTrigger == null) return false;
+        bool r = t.count <= 0 || _shouldAutoRemove(t, pi);
+        if (r) _log(pi, LogEventType.tokenDestroyed, '${t.name} destroyed');
+        return r;
       });
     }
   }
 
-  bool _shouldAutoRemove(ActiveToken token, int playerIndex) {
-    switch (token.destroyTrigger!) {
-      case DestroyTrigger.startOfYourTurn:
-        return playerIndex == activePlayer && turnCount > token.turnPlayed;
-      case DestroyTrigger.startOfOpponentTurn:
-        return playerIndex != activePlayer && turnCount > token.turnPlayed;
-      case DestroyTrigger.beginningOfActionPhase:
-        return playerIndex == activePlayer && turnCount > token.turnPlayed;
-      case DestroyTrigger.beginningOfEndPhase:
-        return playerIndex == activePlayer && turnCount > token.turnPlayed;
+  bool _shouldAutoRemove(ActiveToken t, int pi) {
+    switch (t.destroyTrigger!) {
+      case DestroyTrigger.startOfYourTurn: return pi == activePlayer && turnCount > t.turnPlayed;
+      case DestroyTrigger.startOfOpponentTurn: return pi != activePlayer && turnCount > t.turnPlayed;
+      case DestroyTrigger.beginningOfActionPhase: return pi == activePlayer && turnCount > t.turnPlayed;
+      case DestroyTrigger.beginningOfEndPhase: return pi == activePlayer && turnCount > t.turnPlayed;
     }
   }
 
-  bool _isTokenTriggering(ActiveToken token, int playerIndex) {
-    if (!_showTurnTracker || token.destroyTrigger == null) return false;
-
-    bool isActivePlayerToken = playerIndex == activePlayer;
-
-    switch (token.destroyTrigger!) {
-      case DestroyTrigger.startOfYourTurn:
-        return isActivePlayerToken && turnCount > token.turnPlayed && currentPhase >= 0;
-      case DestroyTrigger.startOfOpponentTurn:
-        return !isActivePlayerToken && turnCount > token.turnPlayed && currentPhase >= 0;
-      case DestroyTrigger.beginningOfActionPhase:
-        return isActivePlayerToken && turnCount >= token.turnPlayed && currentPhase >= 2;
-      case DestroyTrigger.beginningOfEndPhase:
-        return isActivePlayerToken && currentPhase >= 3;
+  bool _isTokenTriggering(ActiveToken t, int pi) {
+    if (!_showTurnTracker || t.destroyTrigger == null) return false;
+    bool isAct = pi == activePlayer;
+    switch (t.destroyTrigger!) {
+      case DestroyTrigger.startOfYourTurn: return isAct && turnCount > t.turnPlayed && currentPhase >= 0;
+      case DestroyTrigger.startOfOpponentTurn: return !isAct && turnCount > t.turnPlayed && currentPhase >= 0;
+      case DestroyTrigger.beginningOfActionPhase: return isAct && turnCount >= t.turnPlayed && currentPhase >= 2;
+      case DestroyTrigger.beginningOfEndPhase: return isAct && currentPhase >= 3;
     }
   }
 
-  Color _getTokenCategoryColor(TokenCategory category) {
-    switch (category) {
-      case TokenCategory.ally:
-        return Colors.orange.withOpacity(0.3);
-      case TokenCategory.boonAura:
-        return Colors.green.withOpacity(0.3);
-      case TokenCategory.debuffAura:
-        return Colors.red.withOpacity(0.3);
-      case TokenCategory.item:
-        return Colors.blue.withOpacity(0.3);
+  // --- Token category chips ---
+  Map<TokenCategory, List<int>> _getTokensByCategory(int playerIndex) {
+    final result = <TokenCategory, List<int>>{};
+    for (int i = 0; i < playerTokens[playerIndex].length; i++) {
+      final cat = playerTokens[playerIndex][i].category;
+      result.putIfAbsent(cat, () => []);
+      result[cat]!.add(i);
     }
+    return result;
   }
 
-  void _showGameLog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          insetPadding: EdgeInsets.all(16),
-          child: LogScreen(gameLog: gameLog),
-        );
-      },
-    );
-  }
+  Widget _buildCategoryChip(TokenCategory cat, int count, int playerIndex) {
+    final bool hasTriggering = playerTokens[playerIndex]
+        .where((t) => t.category == cat)
+        .any((t) => _isTokenTriggering(t, playerIndex));
 
-  void _showTokenPicker(int playerIndex) {
-    final List<TokenData> libraryTokens = tokenLibrary[widget.selectedGame] ?? [];
-    final List<TokenData> allTokens = [...libraryTokens, ...customTokens];
-    final int? quarterTurns = _getQuarterTurns(playerIndex);
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        Widget picker = Dialog(
-          insetPadding: EdgeInsets.all(16),
-          child: _TokenPickerSheet(
-            allTokens: allTokens,
-            favoriteTokens: favoriteTokens,
-            playerTokens: playerTokens[playerIndex],
-            gameId: widget.selectedGame,
-            onTokenAdded: (TokenData tokenData) {
-              setState(() {
-                if (tokenData.category == TokenCategory.ally) {
-                  playerTokens[playerIndex].add(ActiveToken(
-                    name: tokenData.name,
-                    category: tokenData.category,
-                    destroyTrigger: tokenData.destroyTrigger,
-                    health: tokenData.health,
-                    maxHealth: tokenData.health,
-                    turnPlayed: turnCount,
-                    playerPlayed: playerIndex,
-                  ));
-                } else {
-                  playerTokens[playerIndex].add(ActiveToken(
-                    name: tokenData.name,
-                    category: tokenData.category,
-                    destroyTrigger: tokenData.destroyTrigger,
-                    turnPlayed: turnCount,
-                    playerPlayed: playerIndex,
-                  ));
-                }
-                _log(playerIndex, LogEventType.tokenAdded, '${tokenData.name} added');
-              });
-            },
-            onCustomTokenAdded: (TokenData tokenData) {
-              setState(() {
-                customTokens.add(tokenData);
-              });
-            },
-            onFavoriteToggled: (String tokenName, List<String> updatedFavorites) {
-              setState(() {
-                favoriteTokens = updatedFavorites;
-              });
-            },
-          ),
-        );
-
-        if (quarterTurns != null) {
-          return RotatedBox(quarterTurns: quarterTurns, child: picker);
-        }
-        return picker;
-      },
-    );
-  }
-
-  Widget _buildAllyToken(ActiveToken token, int playerIndex, int tokenIndex) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 2),
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: _getTokenCategoryColor(token.category),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.orange, width: 1),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                token.health = token.health! - 1;
-                _log(playerIndex, LogEventType.allyHealthChange, '${token.name} health', value: -1);
-                if (token.health! <= 0) {
-                  playerTokens[playerIndex].removeAt(tokenIndex);
-                  _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
-                }
-              });
-            },
-            child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
-          ),
-          SizedBox(width: 4),
-          Text('${token.health}/${token.maxHealth}',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-          SizedBox(width: 4),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                token.health = token.health! + 1;
-                _log(playerIndex, LogEventType.allyHealthChange, '${token.name} health', value: 1);
-              });
-            },
-            child: Icon(Icons.add_circle, size: 18, color: Colors.green),
-          ),
-          SizedBox(width: 8),
-          Text(token.name, style: TextStyle(fontSize: 11, color: Colors.black)),
-          SizedBox(width: 4),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                playerTokens[playerIndex].removeAt(tokenIndex);
-                _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
-              });
-            },
-            child: Icon(Icons.close, size: 16, color: Colors.grey),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () { setState(() { _playerOverlay[playerIndex] = cat.index; }); },
+      child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 3),
+        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: _categoryColors[cat]!.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(4),
+          border: hasTriggering ? Border.all(color: Colors.amber, width: 2) : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (hasTriggering) Padding(padding: EdgeInsets.only(right: 3), child: Icon(Icons.flash_on, size: 12, color: Colors.amber)),
+            Text('${_categoryNames[cat]}: $count', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCounterToken(ActiveToken token, int playerIndex, int tokenIndex) {
-    final bool triggering = _isTokenTriggering(token, playerIndex);
+  Widget _buildTokenChips(int playerIndex) {
+    final byCategory = _getTokensByCategory(playerIndex);
+    if (byCategory.isEmpty) return SizedBox.shrink();
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (var cat in TokenCategory.values)
+          if (byCategory.containsKey(cat))
+            _buildCategoryChip(cat, byCategory[cat]!.length, playerIndex),
+      ],
+    );
+  }
+
+  // --- Category management overlay (within player half) ---
+  Widget _buildCategoryOverlay(int playerIndex, TokenCategory cat) {
+    final tokens = <int>[];
+    for (int i = 0; i < playerTokens[playerIndex].length; i++) {
+      if (playerTokens[playerIndex][i].category == cat) tokens.add(i);
+    }
 
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 2),
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: _getTokenCategoryColor(token.category),
-        borderRadius: BorderRadius.circular(6),
-        border: triggering ? Border.all(color: Colors.amber, width: 2) : null,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (triggering)
-            Padding(
-              padding: EdgeInsets.only(right: 4),
-              child: Icon(Icons.flash_on, size: 16, color: Colors.amber),
-            ),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                token.count--;
-                _log(playerIndex, LogEventType.tokenCountChange, token.name, value: -1);
-                if (token.count <= 0) {
-                  playerTokens[playerIndex].removeAt(tokenIndex);
-                  _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
-                }
-              });
-            },
-            child: Icon(Icons.remove_circle, size: 18),
+      color: Colors.black.withOpacity(0.8),
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.all(16),
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(12),
           ),
-          SizedBox(width: 4),
-          Text('${token.count}', style: TextStyle(fontSize: 13, color: Colors.white)),
-          SizedBox(width: 4),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                token.count++;
-                _log(playerIndex, LogEventType.tokenCountChange, token.name, value: 1);
-              });
-            },
-            child: Icon(Icons.add_circle, size: 18),
-          ),
-          SizedBox(width: 8),
-          Text(token.name, style: TextStyle(fontSize: 11, color: Colors.black)),
-          SizedBox(width: 4),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                playerTokens[playerIndex].removeAt(tokenIndex);
-                _log(playerIndex, LogEventType.tokenDestroyed, '${token.name} destroyed');
-              });
-            },
-            child: Icon(Icons.close, size: 16, color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlayerTapHalf({
-    required int index,
-    required int delta,
-    required String label,
-    required Alignment labelAlignment,
-    required EdgeInsets labelPadding,
-    required Border? border,
-  }) {
-    final double blurSigma = frostedGlass ? 5.0 : 0.0;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            playerHealth[index] += delta;
-            _log(index, LogEventType.healthChange, 'Health', value: delta);
-          });
-        },
-        child: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                border: border,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(_categoryNames[cat] ?? '', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  GestureDetector(
+                    onTap: () { setState(() { _playerOverlay[playerIndex] = -1; }); },
+                    child: Icon(Icons.close, color: Colors.white, size: 22),
+                  ),
+                ],
               ),
-              child: Align(
-                alignment: labelAlignment,
-                child: Padding(
-                  padding: labelPadding,
-                  child: Text(
-                    label,
-                    style: TextStyle(fontSize: 28, color: Colors.black.withOpacity(0.6)),
+              SizedBox(height: 8),
+              if (tokens.isEmpty)
+                Padding(padding: EdgeInsets.all(16), child: Text('No ${_categoryNames[cat]?.toLowerCase()} in play', style: TextStyle(color: Colors.grey)))
+              else
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: 200),
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: [
+                      for (int ti in tokens)
+                        _buildTokenManageRow(playerTokens[playerIndex][ti], playerIndex, ti),
+                    ],
                   ),
                 ),
+              SizedBox(height: 8),
+              GestureDetector(
+                onTap: () { setState(() { _playerOverlay[playerIndex] = -2; }); },
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(color: _categoryColors[cat], borderRadius: BorderRadius.circular(8)),
+                  child: Text('+ Add ${_categoryNames[cat]}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
+  Widget _buildTokenManageRow(ActiveToken token, int pi, int ti) {
+    final bool triggering = _isTokenTriggering(token, pi);
+    final bool isAlly = token.category == TokenCategory.ally;
+
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: _categoryColors[token.category]!.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: triggering ? Border.all(color: Colors.amber, width: 2) : null,
+      ),
+      child: Row(
+        children: [
+          if (triggering) Padding(padding: EdgeInsets.only(right: 4), child: Icon(Icons.flash_on, size: 14, color: Colors.amber)),
+          Expanded(child: Text(token.name, style: TextStyle(fontSize: 13, color: Colors.white))),
+          if (isAlly) ...[
+            GestureDetector(
+              onTap: () { setState(() { token.health = token.health! - 1; _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: -1); if (token.health! <= 0) { playerTokens[pi].removeAt(ti); _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed'); _playerOverlay[pi] = -1; } }); },
+              child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
+            ),
+            Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Text('${token.health}/${token.maxHealth}', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold))),
+            GestureDetector(
+              onTap: () { setState(() { token.health = token.health! + 1; _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: 1); }); },
+              child: Icon(Icons.add_circle, size: 18, color: Colors.green),
+            ),
+          ] else ...[
+            GestureDetector(
+              onTap: () { setState(() { token.count--; _log(pi, LogEventType.tokenCountChange, token.name, value: -1); if (token.count <= 0) { playerTokens[pi].removeAt(ti); _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed'); _playerOverlay[pi] = -1; } }); },
+              child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
+            ),
+            Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Text('${token.count}', style: TextStyle(fontSize: 13, color: Colors.white))),
+            GestureDetector(
+              onTap: () { setState(() { token.count++; _log(pi, LogEventType.tokenCountChange, token.name, value: 1); }); },
+              child: Icon(Icons.add_circle, size: 18, color: Colors.green),
+            ),
+          ],
+          SizedBox(width: 6),
+          GestureDetector(
+            onTap: () { setState(() { playerTokens[pi].removeAt(ti); _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed'); if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1; }); },
+            child: Icon(Icons.delete, size: 16, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Add token picker overlay (within player half) ---
+  Widget _buildAddTokenOverlay(int playerIndex) {
+    final List<TokenData> allTokens = [...(tokenLibrary[widget.selectedGame] ?? []), ...customTokens];
+
+    return Container(
+      color: Colors.black.withOpacity(0.8),
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.all(16),
+          padding: EdgeInsets.all(12),
+          constraints: BoxConstraints(maxHeight: 350),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: _InlineTokenPicker(
+            allTokens: allTokens,
+            favoriteTokens: favoriteTokens,
+            playerTokens: playerTokens[playerIndex],
+            gameId: widget.selectedGame,
+            onTokenAdded: (TokenData td) {
+              setState(() {
+                playerTokens[playerIndex].add(ActiveToken(
+                  name: td.name, category: td.category, destroyTrigger: td.destroyTrigger,
+                  health: td.category == TokenCategory.ally ? td.health : null,
+                  maxHealth: td.category == TokenCategory.ally ? td.health : null,
+                  turnPlayed: turnCount, playerPlayed: playerIndex,
+                ));
+                _log(playerIndex, LogEventType.tokenAdded, '${td.name} added');
+                _playerOverlay[playerIndex] = -1;
+              });
+            },
+            onCustomTokenAdded: (TokenData td) { setState(() { customTokens.add(td); }); },
+            onFavoriteToggled: (name, faves) { setState(() { favoriteTokens = faves; }); },
+            onClose: () { setState(() { _playerOverlay[playerIndex] = -1; }); },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- Player tap halves ---
+  Widget _buildPlayerTapHalf({required int index, required int delta, required String label, required Alignment labelAlignment, required EdgeInsets labelPadding, required Border? border}) {
+    final double blurSigma = frostedGlass ? 5.0 : 0.0;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () { setState(() { playerHealth[index] += delta; _log(index, LogEventType.healthChange, 'Health', value: delta); }); },
+        child: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+          child: Container(decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), border: border),
+            child: Align(alignment: labelAlignment, child: Padding(padding: labelPadding, child: Text(label, style: TextStyle(fontSize: 28, color: Colors.black.withOpacity(0.4))))),
+          ),
+        )),
+      ),
+    );
+  }
+
+  // --- Player widget ---
   Widget _buildPlayerWidget(int index) {
     final bool isActive = _showTurnTracker && activePlayer == index;
-
-    final allies = <int>[];
-    final boonAuras = <int>[];
-    final debuffAuras = <int>[];
-    final items = <int>[];
-
-    for (int i = 0; i < playerTokens[index].length; i++) {
-      switch (playerTokens[index][i].category) {
-        case TokenCategory.ally:
-          allies.add(i);
-          break;
-        case TokenCategory.boonAura:
-          boonAuras.add(i);
-          break;
-        case TokenCategory.debuffAura:
-          debuffAuras.add(i);
-          break;
-        case TokenCategory.item:
-          items.add(i);
-          break;
-      }
-    }
+    final int overlay = _playerOverlay[index];
 
     Widget content = Container(
-      decoration: isActive
-          ? BoxDecoration(border: Border.all(color: Colors.blue, width: 3))
-          : null,
+      decoration: isActive ? BoxDecoration(border: Border.all(color: Colors.blue, width: 3)) : null,
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/${widget.playerHeroes[index]}.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(color: Colors.grey[900]);
-              },
-            ),
-          ),
-          Row(
-            children: [
-              _buildPlayerTapHalf(
-                index: index,
-                delta: -1,
-                label: '-',
-                labelAlignment: Alignment.centerRight,
-                labelPadding: EdgeInsets.only(right: 60),
-                border: Border(right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5)),
-              ),
-              _buildPlayerTapHalf(
-                index: index,
-                delta: 1,
-                label: '+',
-                labelAlignment: Alignment.centerLeft,
-                labelPadding: EdgeInsets.only(left: 60),
-                border: Border(left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5)),
-              ),
-            ],
-          ),
-          if (boonAuras.isNotEmpty)
-            Positioned(
-              top: 8, left: 8,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [for (int i in boonAuras) _buildCounterToken(playerTokens[index][i], index, i)],
-              ),
-            ),
-          if (debuffAuras.isNotEmpty)
-            Positioned(
-              top: 8, right: 8,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [for (int i in debuffAuras) _buildCounterToken(playerTokens[index][i], index, i)],
-              ),
-            ),
+          // Hero background
+          Positioned.fill(child: Image.asset('assets/images/${widget.playerHeroes[index]}.jpg', fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(color: Colors.grey[900]))),
+          // Tap halves
+          Row(children: [
+            _buildPlayerTapHalf(index: index, delta: -1, label: '-', labelAlignment: Alignment.centerRight, labelPadding: EdgeInsets.only(right: 60), border: Border(right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5))),
+            _buildPlayerTapHalf(index: index, delta: 1, label: '+', labelAlignment: Alignment.centerLeft, labelPadding: EdgeInsets.only(left: 60), border: Border(left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5))),
+          ]),
+          // Center: health + token chips + add button
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (allies.isNotEmpty)
-                  Column(children: [for (int i in allies) _buildAllyToken(playerTokens[index][i], index, i)]),
+                _buildTokenChips(index),
                 SizedBox(height: 4),
-                Text('${playerHealth[index]}',
-                    style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black)),
-                SizedBox(height: 4),
-                if (items.isNotEmpty)
-                  Column(children: [for (int i in items) _buildCounterToken(playerTokens[index][i], index, i)]),
+                Text('${playerHealth[index]}', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black)),
                 SizedBox(height: 4),
                 GestureDetector(
-                  onTap: () => _showTokenPicker(index),
-                  child: Icon(Icons.add_box, size: 24, color: Colors.white),
+                  onTap: () { setState(() { _playerOverlay[index] = -2; }); },
+                  child: Icon(Icons.add_box, size: 24, color: Colors.black),
                 ),
               ],
             ),
           ),
+          // Overlay: category manager or add token picker
+          if (overlay >= 0 && overlay < TokenCategory.values.length)
+            Positioned.fill(child: _buildCategoryOverlay(index, TokenCategory.values[overlay])),
+          if (overlay == -2)
+            Positioned.fill(child: _buildAddTokenOverlay(index)),
         ],
       ),
     );
 
-    final int? quarterTurns = _getQuarterTurns(index);
-    if (quarterTurns != null) {
-      content = RotatedBox(quarterTurns: quarterTurns, child: content);
-    }
+    final int? qt = _getQuarterTurns(index);
+    if (qt != null) content = RotatedBox(quarterTurns: qt, child: content);
     return content;
   }
 
+  // --- Turn tracker ---
   Widget _buildTurnTrackerPanel() {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(icon: Icon(Icons.arrow_left), onPressed: _retreatPhase),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Player ${activePlayer + 1}\'s Turn',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
-              SizedBox(height: 4),
-              Text(fabPhases[currentPhase], style: TextStyle(fontSize: 16, color: Colors.black87)),
-            ],
-          ),
-          IconButton(icon: Icon(Icons.arrow_right), onPressed: _advancePhase),
-        ],
-      ),
+      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        IconButton(icon: Icon(Icons.arrow_left), onPressed: _retreatPhase),
+        Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          SizedBox(height: 4),
+          Text(fabPhases[currentPhase], style: TextStyle(fontSize: 16)),
+        ]),
+        IconButton(icon: Icon(Icons.arrow_right), onPressed: _advancePhase),
+      ]),
     );
   }
 
+  // --- Timer display ---
   Widget _buildTimerDisplay() {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: _resetTimer,
-            child: Icon(Icons.replay, color: Colors.white, size: 18),
-          ),
-          SizedBox(width: 8),
-          Text(
-            _formatTimer(),
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: _timerColor(),
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
-          ),
-          SizedBox(width: 8),
-          GestureDetector(
-            onTap: _timerRunning ? _pauseTimer : _startTimer,
-            child: Icon(
-              _timerRunning ? Icons.pause : Icons.play_arrow,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(8)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        GestureDetector(onTap: _resetTimer, child: Icon(Icons.replay, color: Colors.white, size: 18)),
+        SizedBox(width: 8),
+        Text(_formatTimer(), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _timerColor(), fontFeatures: [FontFeature.tabularFigures()])),
+        SizedBox(width: 8),
+        GestureDetector(onTap: _timerRunning ? _pauseTimer : _startTimer, child: Icon(_timerRunning ? Icons.pause : Icons.play_arrow, color: Colors.white, size: 20)),
+      ]),
     );
   }
 
-  Widget _buildPlayerGrid() {
-    if (playerHealth.length == 2) {
-      if (_showTurnTracker) {
-        return Column(
-          children: [
-            Expanded(child: _buildPlayerWidget(0)),
-            _buildTurnTrackerPanel(),
-            Expanded(child: _buildPlayerWidget(1)),
-          ],
-        );
-      }
-      return Column(
-        children: [
-          Expanded(child: _buildPlayerWidget(0)),
-          Expanded(child: _buildPlayerWidget(1)),
-        ],
-      );
-    }
-    return Column(
+  // --- Dice overlay ---
+  Widget _buildDiceOverlay() {
+    Widget choiceButtons = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (int i = 0; i < playerHealth.length; i += 2)
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(child: _buildPlayerWidget(i)),
-                if (i + 1 < playerHealth.length)
-                  Expanded(child: _buildPlayerWidget(i + 1)),
-              ],
-            ),
-          ),
+        ElevatedButton(onPressed: () => _onFirstTurnChoice(true), style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12)), child: Text('Go First', style: TextStyle(fontSize: 18, color: Colors.white))),
+        SizedBox(width: 24),
+        ElevatedButton(onPressed: () => _onFirstTurnChoice(false), style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12)), child: Text('Go Second', style: TextStyle(fontSize: 18, color: Colors.white))),
       ],
     );
+
+    return Container(
+      color: Colors.black.withOpacity(0.85),
+      child: Column(children: [
+        Expanded(child: RotatedBox(quarterTurns: 2, child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('Player 1', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          SizedBox(height: 12),
+          Row(mainAxisSize: MainAxisSize.min, children: [Icon(_dieIcon(_p1Dice[0]), size: 64, color: Colors.white), SizedBox(width: 16), Icon(_dieIcon(_p1Dice[1]), size: 64, color: Colors.white)]),
+          SizedBox(height: 8),
+          Text('Total: ${_p1Dice[0] + _p1Dice[1]}', style: TextStyle(color: Colors.white70, fontSize: 18)),
+          if (_diceFinished && !_diceRolling) ...[SizedBox(height: 8), Text(_diceWinner == 0 ? 'WINNER!' : '', style: TextStyle(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold))],
+          if (_showChoicePrompt && _diceWinner == 0) ...[SizedBox(height: 16), choiceButtons],
+        ])))),
+        Container(height: 2, color: Colors.white24),
+        Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('Player 2', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          SizedBox(height: 12),
+          Row(mainAxisSize: MainAxisSize.min, children: [Icon(_dieIcon(_p2Dice[0]), size: 64, color: Colors.white), SizedBox(width: 16), Icon(_dieIcon(_p2Dice[1]), size: 64, color: Colors.white)]),
+          SizedBox(height: 8),
+          Text('Total: ${_p2Dice[0] + _p2Dice[1]}', style: TextStyle(color: Colors.white70, fontSize: 18)),
+          if (_diceFinished && !_diceRolling) ...[SizedBox(height: 8), Text(_diceWinner == 1 ? 'WINNER!' : '', style: TextStyle(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold))],
+          if (_showChoicePrompt && _diceWinner == 1) ...[SizedBox(height: 16), choiceButtons],
+        ]))),
+      ]),
+    );
   }
 
+  // --- Grid ---
+  Widget _buildPlayerGrid() {
+    if (playerHealth.length == 2) {
+      if (_showTurnTracker) return Column(children: [Expanded(child: _buildPlayerWidget(0)), _buildTurnTrackerPanel(), Expanded(child: _buildPlayerWidget(1))]);
+      return Column(children: [Expanded(child: _buildPlayerWidget(0)), Expanded(child: _buildPlayerWidget(1))]);
+    }
+    return Column(children: [
+      for (int i = 0; i < playerHealth.length; i += 2)
+        Expanded(child: Row(children: [Expanded(child: _buildPlayerWidget(i)), if (i + 1 < playerHealth.length) Expanded(child: _buildPlayerWidget(i + 1))])),
+    ]);
+  }
+
+  // --- Main build ---
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Stack(
-        children: [
+        body: Stack(children: [
           _buildPlayerGrid(),
-
-          // Timer - top (rotated for player 1)
-          Positioned(
-            top: 40,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: RotatedBox(
-                quarterTurns: 2,
-                child: _buildTimerDisplay(),
-              ),
-            ),
-          ),
-
-          // Timer - bottom (right-side-up for player 2)
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Center(child: _buildTimerDisplay()),
-          ),
-
-          // Home button - top left
-          Positioned(
-            top: 40,
-            left: 16,
-            child: IconButton(
-              icon: Icon(Icons.home, color: Colors.white),
-              onPressed: () {
-                if (gameLog.entries.isNotEmpty) {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: Text('Leave Game'),
-                        content: Text('A game is in progress. Are you sure you want to return to the home screen?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              _timer?.cancel();
-                              Navigator.pop(context);
-                              Navigator.popUntil(context, (route) => route.isFirst);
-                            },
-                            child: Text('Leave', style: TextStyle(color: Colors.red)),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                } else {
-                  _timer?.cancel();
-                  Navigator.popUntil(context, (route) => route.isFirst);
-                }
-              },
-            ),
-          ),
-
-          // Reset button - top right
-          Positioned(
-            top: 40,
-            right: 16,
-            child: IconButton(
-              icon: Icon(Icons.refresh, color: Colors.white),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) {
-                    return AlertDialog(
-                      title: Text('Reset Game'),
-                      content: Text('This will reset all health, tokens, the timer, and the game log. Are you sure?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              playerHealth = List.filled(widget.playerCount, widget.startingLife);
-                              playerTokens = List.generate(widget.playerCount, (_) => []);
-                              activePlayer = 0;
-                              currentPhase = 0;
-                              turnCount = 0;
-                              gameLog.clear();
-                            });
-                            _resetTimer();
-                            Navigator.pop(context);
-                          },
-                          child: Text('Reset', style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-
-          // Settings button - bottom right
-          Positioned(
-            bottom: 24,
-            right: 16,
-            child: IconButton(
-              icon: Icon(Icons.settings, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SettingsScreen(
-                      currentFont: currentFont,
-                      onFontChanged: (String newFont) {
-                        widget.onFontChanged(newFont);
-                        setState(() { currentFont = newFont; });
-                      },
-                      turnTrackerEnabled: turnTrackerEnabled,
-                      onTurnTrackerChanged: (bool enabled) {
-                        widget.onTurnTrackerChanged(enabled);
-                        setState(() { turnTrackerEnabled = enabled; });
-                      },
-                      frostedGlass: frostedGlass,
-                      onFrostedGlassChanged: (bool enabled) {
-                        widget.onFrostedGlassChanged(enabled);
-                        setState(() { frostedGlass = enabled; });
-                      },
-                      themeMode: widget.themeMode,
-                      onThemeModeChanged: widget.onThemeModeChanged,
-                      matchTimerMinutes: widget.matchTimerMinutes,
-                      onMatchTimerChanged: widget.onMatchTimerChanged,
-                      showPlayerCount: true,
-                      onShowPlayerCountChanged: (_) {},
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          // Log button - bottom left
-          Positioned(
-            bottom: 24,
-            left: 16,
-            child: IconButton(
-              icon: Icon(Icons.list_alt, color: Colors.white),
-              onPressed: _showGameLog,
-            ),
-          ),
-        ],
-      ),
+          Positioned(top: 40, left: 0, right: 0, child: Center(child: RotatedBox(quarterTurns: 2, child: _buildTimerDisplay()))),
+          Positioned(bottom: 60, left: 0, right: 0, child: Center(child: _buildTimerDisplay())),
+          Positioned(top: 40, left: 16, child: IconButton(icon: Icon(Icons.home, color: Colors.white), onPressed: () {
+            if (gameLog.entries.isNotEmpty) {
+              showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Leave Game'), content: Text('A game is in progress. Are you sure you want to return to the home screen?'), actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+                TextButton(onPressed: () { _timer?.cancel(); Navigator.pop(ctx); Navigator.popUntil(context, (r) => r.isFirst); }, child: Text('Leave', style: TextStyle(color: Colors.red))),
+              ]));
+            } else { _timer?.cancel(); Navigator.popUntil(context, (r) => r.isFirst); }
+          })),
+          Positioned(top: 40, right: 16, child: IconButton(icon: Icon(Icons.refresh, color: Colors.white), onPressed: () {
+            showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Reset Game'), content: Text('Reset all health, tokens, timer, and log?'), actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+              TextButton(onPressed: () { setState(() { playerHealth = List.filled(widget.playerCount, widget.startingLife); playerTokens = List.generate(widget.playerCount, (_) => []); _playerOverlay = List.filled(widget.playerCount, -1); activePlayer = 0; currentPhase = 0; turnCount = 0; gameLog.clear(); }); _resetTimer(); Navigator.pop(ctx); }, child: Text('Reset', style: TextStyle(color: Colors.red))),
+            ]));
+          })),
+          Positioned(bottom: 24, right: 16, child: IconButton(icon: Icon(Icons.settings, color: Colors.white), onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen(
+              currentFont: currentFont, onFontChanged: (f) { widget.onFontChanged(f); setState(() { currentFont = f; }); },
+              turnTrackerEnabled: turnTrackerEnabled, onTurnTrackerChanged: (e) { widget.onTurnTrackerChanged(e); setState(() { turnTrackerEnabled = e; }); },
+              frostedGlass: frostedGlass, onFrostedGlassChanged: (e) { widget.onFrostedGlassChanged(e); setState(() { frostedGlass = e; }); },
+              themeMode: widget.themeMode, onThemeModeChanged: widget.onThemeModeChanged,
+              matchTimerMinutes: widget.matchTimerMinutes, onMatchTimerChanged: widget.onMatchTimerChanged,
+              firstTurnSetting: widget.firstTurnSetting, onFirstTurnSettingChanged: widget.onFirstTurnSettingChanged,
+            )));
+          })),
+          Positioned(bottom: 24, left: 16, child: IconButton(icon: Icon(Icons.list_alt, color: Colors.white), onPressed: () { showDialog(context: context, builder: (ctx) => Dialog(insetPadding: EdgeInsets.all(16), child: LogScreen(gameLog: gameLog))); })),
+          if (_showDiceOverlay) Positioned.fill(child: _buildDiceOverlay()),
+        ]),
       ),
     );
   }
 }
 
-class _TokenPickerSheet extends StatefulWidget {
+// --- Inline token picker (used inside player half) ---
+class _InlineTokenPicker extends StatefulWidget {
   final List<TokenData> allTokens;
   final List<String> favoriteTokens;
   final List<ActiveToken> playerTokens;
@@ -919,206 +694,96 @@ class _TokenPickerSheet extends StatefulWidget {
   final Function(TokenData) onTokenAdded;
   final Function(TokenData) onCustomTokenAdded;
   final Function(String, List<String>) onFavoriteToggled;
+  final VoidCallback onClose;
 
-  const _TokenPickerSheet({
-    required this.allTokens,
-    required this.favoriteTokens,
-    required this.playerTokens,
-    required this.gameId,
-    required this.onTokenAdded,
-    required this.onCustomTokenAdded,
-    required this.onFavoriteToggled,
-  });
+  const _InlineTokenPicker({required this.allTokens, required this.favoriteTokens, required this.playerTokens, required this.gameId, required this.onTokenAdded, required this.onCustomTokenAdded, required this.onFavoriteToggled, required this.onClose});
 
   @override
-  _TokenPickerSheetState createState() => _TokenPickerSheetState();
+  _InlineTokenPickerState createState() => _InlineTokenPickerState();
 }
 
-class _TokenPickerSheetState extends State<_TokenPickerSheet> {
+class _InlineTokenPickerState extends State<_InlineTokenPicker> {
   String searchQuery = '';
   TokenCategory? selectedCategory;
-  final TextEditingController searchController = TextEditingController();
-  final TextEditingController customTokenController = TextEditingController();
+  final searchController = TextEditingController();
   late List<String> currentFavorites;
-
-  final Map<TokenCategory, String> categoryNames = {
-    TokenCategory.ally: 'Allies',
-    TokenCategory.item: 'Items',
-    TokenCategory.boonAura: 'Boon Auras',
-    TokenCategory.debuffAura: 'Debuff Auras',
-  };
+  final Map<TokenCategory, String> catNames = {TokenCategory.ally: 'Allies', TokenCategory.item: 'Items', TokenCategory.boonAura: 'Boons', TokenCategory.debuffAura: 'Debuffs'};
 
   @override
-  void initState() {
-    super.initState();
-    currentFavorites = List.from(widget.favoriteTokens);
-  }
-
+  void initState() { super.initState(); currentFavorites = List.from(widget.favoriteTokens); }
   @override
-  void dispose() {
-    searchController.dispose();
-    customTokenController.dispose();
-    super.dispose();
-  }
+  void dispose() { searchController.dispose(); super.dispose(); }
 
-  List<TokenData> _getSortedFilteredTokens() {
-    List<TokenData> tokens = List.from(widget.allTokens);
-    if (selectedCategory != null) {
-      tokens = tokens.where((t) => t.category == selectedCategory).toList();
-    }
-    if (searchQuery.isNotEmpty) {
-      tokens = tokens.where((t) => t.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
-    }
+  List<TokenData> _getFiltered() {
+    var tokens = List<TokenData>.from(widget.allTokens);
+    if (selectedCategory != null) tokens = tokens.where((t) => t.category == selectedCategory).toList();
+    if (searchQuery.isNotEmpty) tokens = tokens.where((t) => t.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
     final favs = tokens.where((t) => currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
-    final nonFavs = tokens.where((t) => !currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
-    return [...favs, ...nonFavs];
+    final rest = tokens.where((t) => !currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
+    return [...favs, ...rest];
   }
-
-  void _showAddCustomDialog() {
-    final nameController = TextEditingController();
-    final healthController = TextEditingController();
-    TokenCategory dialogCategory = TokenCategory.boonAura;
-    DestroyTrigger? dialogTrigger;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text('Add Custom Token'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(controller: nameController, decoration: InputDecoration(hintText: 'Token name')),
-                    SizedBox(height: 16),
-                    Text('Category'),
-                    SizedBox(height: 8),
-                    DropdownButton<TokenCategory>(
-                      value: dialogCategory,
-                      isExpanded: true,
-                      items: TokenCategory.values.map((cat) => DropdownMenuItem(value: cat, child: Text(_getCategoryLabel(cat)))).toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setDialogState(() {
-                            dialogCategory = value;
-                            if (value != TokenCategory.boonAura && value != TokenCategory.debuffAura) dialogTrigger = null;
-                            if (value != TokenCategory.ally) healthController.clear();
-                          });
-                        }
-                      },
-                    ),
-                    if (dialogCategory == TokenCategory.ally) ...[
-                      SizedBox(height: 16), Text('Health'), SizedBox(height: 8),
-                      TextField(controller: healthController, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'Health value')),
-                    ],
-                    if (dialogCategory == TokenCategory.boonAura || dialogCategory == TokenCategory.debuffAura) ...[
-                      SizedBox(height: 16), Text('Auto-destroy'), SizedBox(height: 8),
-                      DropdownButton<DestroyTrigger?>(
-                        value: dialogTrigger, isExpanded: true,
-                        items: [
-                          DropdownMenuItem(value: null, child: Text('None (manual only)')),
-                          DropdownMenuItem(value: DestroyTrigger.startOfYourTurn, child: Text('Start of your turn')),
-                          DropdownMenuItem(value: DestroyTrigger.startOfOpponentTurn, child: Text("Start of opponent's turn")),
-                          DropdownMenuItem(value: DestroyTrigger.beginningOfActionPhase, child: Text('Beginning of action phase')),
-                          DropdownMenuItem(value: DestroyTrigger.beginningOfEndPhase, child: Text('Beginning of end phase')),
-                        ],
-                        onChanged: (value) { setDialogState(() { dialogTrigger = value; }); },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-                TextButton(
-                  onPressed: () {
-                    final name = nameController.text.trim();
-                    final health = int.tryParse(healthController.text);
-                    if (name.isNotEmpty && !widget.allTokens.any((t) => t.name == name)) {
-                      if (dialogCategory == TokenCategory.ally && (health == null || health <= 0)) return;
-                      final newToken = TokenData(name: name, category: dialogCategory, destroyTrigger: dialogTrigger, health: dialogCategory == TokenCategory.ally ? health : null);
-                      TokenPreferences.addCustomTokenFull(widget.gameId, newToken);
-                      TokenPreferences.addCustomToken(widget.gameId, name);
-                      widget.onCustomTokenAdded(newToken);
-                      widget.allTokens.add(newToken);
-                    }
-                    Navigator.pop(context);
-                  },
-                  child: Text('Add'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  String _getCategoryLabel(TokenCategory category) => categoryNames[category] ?? 'Unknown';
 
   @override
   Widget build(BuildContext context) {
-    final sortedTokens = _getSortedFilteredTokens();
-    return Container(
-      padding: EdgeInsets.all(16),
-      height: MediaQuery.of(context).size.height * 0.6,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Add Token', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              TextButton.icon(onPressed: _showAddCustomDialog, icon: Icon(Icons.add), label: Text('Custom')),
-            ],
+    final filtered = _getFiltered();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('Add Token', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          GestureDetector(onTap: widget.onClose, child: Icon(Icons.close, color: Colors.white, size: 22)),
+        ]),
+        SizedBox(height: 6),
+        TextField(
+          controller: searchController,
+          style: TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Search...', hintStyle: TextStyle(color: Colors.grey),
+            prefixIcon: Icon(Icons.search, color: Colors.grey), isDense: true,
+            contentPadding: EdgeInsets.symmetric(vertical: 8),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
-          SizedBox(height: 8),
-          TextField(
-            controller: searchController,
-            decoration: InputDecoration(hintText: 'Search tokens...', prefixIcon: Icon(Icons.search), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8))),
-            onChanged: (value) { setState(() { searchQuery = value; }); },
-          ),
-          SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text('All'), selected: selectedCategory == null, onSelected: (_) { setState(() { selectedCategory = null; }); })),
-              for (var category in TokenCategory.values)
-                Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text(_getCategoryLabel(category)), selected: selectedCategory == category, onSelected: (_) { setState(() { selectedCategory = selectedCategory == category ? null : category; }); })),
-            ]),
-          ),
-          SizedBox(height: 8),
-          Expanded(
-            child: sortedTokens.isEmpty
-                ? Center(child: Text('No tokens found'))
-                : ListView.builder(
-                    itemCount: sortedTokens.length,
-                    itemBuilder: (context, index) {
-                      final tokenData = sortedTokens[index];
-                      final alreadyAdded = widget.playerTokens.any((t) => t.name == tokenData.name);
-                      final isFavorite = currentFavorites.contains(tokenData.name);
-                      return ListTile(
-                        leading: GestureDetector(
-                          onTap: () async {
-                            await TokenPreferences.toggleFavorite(widget.gameId, tokenData.name);
-                            setState(() { isFavorite ? currentFavorites.remove(tokenData.name) : currentFavorites.add(tokenData.name); });
-                            widget.onFavoriteToggled(tokenData.name, List.from(currentFavorites));
-                          },
-                          child: Icon(isFavorite ? Icons.star : Icons.star_border, color: isFavorite ? Colors.amber : Colors.grey),
-                        ),
-                        title: Text(tokenData.name),
-                        subtitle: Text(_getCategoryLabel(tokenData.category), style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        trailing: alreadyAdded ? Icon(Icons.check, color: Colors.green) : Icon(Icons.add_circle_outline),
-                        onTap: () { if (!alreadyAdded) widget.onTokenAdded(tokenData); Navigator.pop(context); },
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+          onChanged: (v) { setState(() { searchQuery = v; }); },
+        ),
+        SizedBox(height: 6),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: [
+            Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text('All', style: TextStyle(fontSize: 11)), selected: selectedCategory == null, onSelected: (_) { setState(() { selectedCategory = null; }); }, visualDensity: VisualDensity.compact)),
+            for (var c in TokenCategory.values)
+              Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text(catNames[c] ?? '', style: TextStyle(fontSize: 11)), selected: selectedCategory == c, onSelected: (_) { setState(() { selectedCategory = selectedCategory == c ? null : c; }); }, visualDensity: VisualDensity.compact)),
+          ]),
+        ),
+        SizedBox(height: 6),
+        Flexible(
+          child: filtered.isEmpty
+              ? Center(child: Text('No tokens found', style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final td = filtered[index];
+                    final added = widget.playerTokens.any((t) => t.name == td.name);
+                    final fav = currentFavorites.contains(td.name);
+                    return ListTile(
+                      dense: true, visualDensity: VisualDensity.compact,
+                      leading: GestureDetector(
+                        onTap: () async {
+                          await TokenPreferences.toggleFavorite(widget.gameId, td.name);
+                          setState(() { fav ? currentFavorites.remove(td.name) : currentFavorites.add(td.name); });
+                          widget.onFavoriteToggled(td.name, List.from(currentFavorites));
+                        },
+                        child: Icon(fav ? Icons.star : Icons.star_border, color: fav ? Colors.amber : Colors.grey, size: 20),
+                      ),
+                      title: Text(td.name, style: TextStyle(fontSize: 13, color: Colors.white)),
+                      subtitle: Text(catNames[td.category] ?? '', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      trailing: added ? Icon(Icons.check, color: Colors.green, size: 18) : Icon(Icons.add_circle_outline, color: Colors.white, size: 18),
+                      onTap: () { if (!added) widget.onTokenAdded(td); },
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

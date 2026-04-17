@@ -14,8 +14,8 @@ class HomeScreen extends StatelessWidget {
   final Function(ThemeMode) onThemeModeChanged;
   final int matchTimerMinutes;
   final Function(int) onMatchTimerChanged;
-  final bool showPlayerCount;
-  final Function(bool) onShowPlayerCountChanged;
+  final int firstTurnSetting;
+  final Function(int) onFirstTurnSettingChanged;
 
   const HomeScreen({
     super.key,
@@ -30,8 +30,8 @@ class HomeScreen extends StatelessWidget {
     required this.onThemeModeChanged,
     required this.matchTimerMinutes,
     required this.onMatchTimerChanged,
-    required this.showPlayerCount,
-    required this.onShowPlayerCountChanged,
+    required this.firstTurnSetting,
+    required this.onFirstTurnSettingChanged,
   });
 
   @override
@@ -62,7 +62,8 @@ class HomeScreen extends StatelessWidget {
                       onThemeModeChanged: onThemeModeChanged,
                       matchTimerMinutes: matchTimerMinutes,
                       onMatchTimerChanged: onMatchTimerChanged,
-                      showPlayerCount: showPlayerCount,
+                      firstTurnSetting: firstTurnSetting,
+                      onFirstTurnSettingChanged: onFirstTurnSettingChanged,
                     ),
                   ),
                 );
@@ -86,8 +87,8 @@ class HomeScreen extends StatelessWidget {
                       onThemeModeChanged: onThemeModeChanged,
                       matchTimerMinutes: matchTimerMinutes,
                       onMatchTimerChanged: onMatchTimerChanged,
-                      showPlayerCount: showPlayerCount,
-                      onShowPlayerCountChanged: onShowPlayerCountChanged,
+                      firstTurnSetting: firstTurnSetting,
+                      onFirstTurnSettingChanged: onFirstTurnSettingChanged,
                     ),
                   ),
                 );

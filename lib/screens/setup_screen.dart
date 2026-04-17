@@ -13,7 +13,8 @@ class SetupScreen extends StatefulWidget {
   final Function(ThemeMode) onThemeModeChanged;
   final int matchTimerMinutes;
   final Function(int) onMatchTimerChanged;
-  final bool showPlayerCount;
+  final int firstTurnSetting;
+  final Function(int) onFirstTurnSettingChanged;
 
   const SetupScreen({
     super.key,
@@ -28,7 +29,8 @@ class SetupScreen extends StatefulWidget {
     required this.onThemeModeChanged,
     required this.matchTimerMinutes,
     required this.onMatchTimerChanged,
-    required this.showPlayerCount,
+    required this.firstTurnSetting,
+    required this.onFirstTurnSettingChanged,
   });
 
   @override
@@ -40,29 +42,20 @@ class _SetupScreenState extends State<SetupScreen> {
   int selectedLife = 20;
   bool isCustomLife = false;
   final TextEditingController customLifeController = TextEditingController();
+  late int matchTimerMinutes;
+  late TextEditingController timerController;
 
   static const List<String> heroArchetypes = [
-    'Wizard',
-    'Knight',
-    'Warlock',
-    'Rogue',
-    'Mage',
-    'Druid',
-    'Runeknight',
-    'Paladin',
+    'Wizard', 'Knight', 'Warlock', 'Rogue',
+    'Mage', 'Druid', 'Runeknight', 'Paladin',
   ];
 
   late List<String> playerHeroes;
-  late int matchTimerMinutes;
-  late TextEditingController timerController;
 
   @override
   void initState() {
     super.initState();
-    playerHeroes = List.generate(
-      6,
-      (i) => heroArchetypes[i % heroArchetypes.length],
-    );
+    playerHeroes = List.generate(6, (i) => heroArchetypes[i % heroArchetypes.length]);
     matchTimerMinutes = widget.matchTimerMinutes;
     timerController = TextEditingController(text: matchTimerMinutes.toString());
   }
@@ -77,10 +70,7 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Game Setup'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text('Game Setup'), centerTitle: true),
       body: SingleChildScrollView(
         child: Center(
           child: Padding(
@@ -88,31 +78,6 @@ class _SetupScreenState extends State<SetupScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (widget.showPlayerCount) ...[
-                  Text('Number of Players'),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      for (int i = 2; i <= 6; i++)
-                        Padding(
-                          padding: EdgeInsets.all(4),
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                selectedPlayers = i;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  selectedPlayers == i ? Colors.blue : Colors.grey,
-                            ),
-                            child: Text('$i'),
-                          ),
-                        ),
-                    ],
-                  ),
-                  SizedBox(height: 30),
-                ],
                 Text('Starting Life'),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -121,16 +86,9 @@ class _SetupScreenState extends State<SetupScreen> {
                       Padding(
                         padding: EdgeInsets.all(4),
                         child: ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              selectedLife = life;
-                              isCustomLife = false;
-                            });
-                          },
+                          onPressed: () { setState(() { selectedLife = life; isCustomLife = false; }); },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: !isCustomLife && selectedLife == life
-                                ? Colors.blue
-                                : Colors.grey,
+                            backgroundColor: !isCustomLife && selectedLife == life ? Colors.blue : Colors.grey,
                           ),
                           child: Text('$life'),
                         ),
@@ -140,16 +98,8 @@ class _SetupScreenState extends State<SetupScreen> {
                 Padding(
                   padding: EdgeInsets.all(4),
                   child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        isCustomLife = true;
-                        selectedLife =
-                            int.tryParse(customLifeController.text) ?? 0;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isCustomLife ? Colors.blue : Colors.grey,
-                    ),
+                    onPressed: () { setState(() { isCustomLife = true; selectedLife = int.tryParse(customLifeController.text) ?? 0; }); },
+                    style: ElevatedButton.styleFrom(backgroundColor: isCustomLife ? Colors.blue : Colors.grey),
                     child: Text('Custom'),
                   ),
                 ),
@@ -161,22 +111,13 @@ class _SetupScreenState extends State<SetupScreen> {
                       child: TextField(
                         controller: customLifeController,
                         keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: 'Enter life',
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedLife = int.tryParse(value) ?? 0;
-                          });
-                        },
+                        decoration: InputDecoration(hintText: 'Enter life'),
+                        onChanged: (value) { setState(() { selectedLife = int.tryParse(value) ?? 0; }); },
                       ),
                     ),
                   ),
                 SizedBox(height: 30),
-                Text(
-                  'Choose Heroes',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                Text('Choose Heroes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 SizedBox(height: 12),
                 for (int p = 0; p < selectedPlayers; p++)
                   Padding(
@@ -184,66 +125,32 @@ class _SetupScreenState extends State<SetupScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(
-                          width: 90,
-                          child: Text(
-                            'Player ${p + 1}',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
+                        SizedBox(width: 90, child: Text('Player ${p + 1}', style: TextStyle(fontSize: 16))),
                         SizedBox(width: 8),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: Image.asset(
                             'assets/images/${playerHeroes[p]}.jpg',
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 40,
-                                height: 40,
-                                color: Colors.grey[300],
-                                child: Icon(Icons.person, size: 24),
-                              );
-                            },
+                            width: 40, height: 40, fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(width: 40, height: 40, color: Colors.grey[300], child: Icon(Icons.person, size: 24)),
                           ),
                         ),
                         SizedBox(width: 12),
                         Container(
                           width: 160,
                           padding: EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                          decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
                           child: DropdownButton<String>(
-                            value: playerHeroes[p],
-                            isExpanded: true,
-                            underline: SizedBox(),
-                            items: heroArchetypes.map((hero) {
-                              return DropdownMenuItem(
-                                value: hero,
-                                child: Text(hero),
-                              );
-                            }).toList(),
-                            onChanged: (String? value) {
-                              if (value != null) {
-                                setState(() {
-                                  playerHeroes[p] = value;
-                                });
-                              }
-                            },
+                            value: playerHeroes[p], isExpanded: true, underline: SizedBox(),
+                            items: heroArchetypes.map((hero) => DropdownMenuItem(value: hero, child: Text(hero))).toList(),
+                            onChanged: (value) { if (value != null) setState(() { playerHeroes[p] = value; }); },
                           ),
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(height: 30),
-                Text(
-                  'Match Timer',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                SizedBox(height: 30),
+                Text('Match Timer', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -256,16 +163,11 @@ class _SetupScreenState extends State<SetupScreen> {
                         controller: timerController,
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
+                        decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                         onChanged: (value) {
                           final parsed = int.tryParse(value);
                           if (parsed != null && parsed > 0) {
-                            setState(() {
-                              matchTimerMinutes = parsed;
-                            });
+                            setState(() { matchTimerMinutes = parsed; });
                             widget.onMatchTimerChanged(parsed);
                           }
                         },
@@ -282,10 +184,7 @@ class _SetupScreenState extends State<SetupScreen> {
                         label: Text('$preset'),
                         selected: matchTimerMinutes == preset,
                         onSelected: (_) {
-                          setState(() {
-                            matchTimerMinutes = preset;
-                            timerController.text = preset.toString();
-                          });
+                          setState(() { matchTimerMinutes = preset; timerController.text = preset.toString(); });
                           widget.onMatchTimerChanged(preset);
                         },
                       ),
@@ -313,6 +212,8 @@ class _SetupScreenState extends State<SetupScreen> {
                                 onThemeModeChanged: widget.onThemeModeChanged,
                                 matchTimerMinutes: matchTimerMinutes,
                                 onMatchTimerChanged: widget.onMatchTimerChanged,
+                                firstTurnSetting: widget.firstTurnSetting,
+                                onFirstTurnSettingChanged: widget.onFirstTurnSettingChanged,
                               ),
                             ),
                           );

@@ -12,8 +12,8 @@ class SettingsScreen extends StatefulWidget {
   final Function(ThemeMode) onThemeModeChanged;
   final int matchTimerMinutes;
   final Function(int) onMatchTimerChanged;
-  final bool showPlayerCount;
-  final Function(bool) onShowPlayerCountChanged;
+  final int firstTurnSetting;
+  final Function(int) onFirstTurnSettingChanged;
 
   const SettingsScreen({
     super.key,
@@ -27,8 +27,8 @@ class SettingsScreen extends StatefulWidget {
     required this.onThemeModeChanged,
     required this.matchTimerMinutes,
     required this.onMatchTimerChanged,
-    required this.showPlayerCount,
-    required this.onShowPlayerCountChanged,
+    required this.firstTurnSetting,
+    required this.onFirstTurnSettingChanged,
   });
 
   @override
@@ -40,14 +40,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool turnTracker;
   late bool frostedGlass;
   late ThemeMode currentThemeMode;
-  late bool showPlayerCount;
+  late int firstTurnSetting;
 
-  final List<String> availableFonts = [
-    'Sedan',
-    'EagleLake',
-    'Jacquard12',
-    'MedievalSharp',
-  ];
+  final List<String> availableFonts = ['Sedan', 'EagleLake', 'Jacquard12', 'MedievalSharp'];
 
   @override
   void initState() {
@@ -56,16 +51,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     turnTracker = widget.turnTrackerEnabled;
     frostedGlass = widget.frostedGlass;
     currentThemeMode = widget.themeMode;
-    showPlayerCount = widget.showPlayerCount;
+    firstTurnSetting = widget.firstTurnSetting;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Settings'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text('Settings'), centerTitle: true),
       body: Padding(
         padding: EdgeInsets.all(24),
         child: SingleChildScrollView(
@@ -73,163 +65,82 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // --- Font ---
-              Text(
-                'Font',
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-              ),
+              Text('Font', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
               SizedBox(height: 16),
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
                 child: DropdownButton<String>(
-                  value: selectedFont,
-                  isExpanded: true,
-                  underline: SizedBox(),
-                  items: availableFonts.map((font) {
-                    return DropdownMenuItem(
-                      value: font,
-                      child: Text(
-                        font,
-                        style: TextStyle(
-                          fontFamily: font,
-                          fontSize: 18,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (String? newFont) {
-                    if (newFont != null) {
-                      setState(() {
-                        selectedFont = newFont;
-                      });
-                      widget.onFontChanged(newFont);
-                    }
-                  },
+                  value: selectedFont, isExpanded: true, underline: SizedBox(),
+                  items: availableFonts.map((font) => DropdownMenuItem(value: font, child: Text(font, style: TextStyle(fontFamily: font, fontSize: 18)))).toList(),
+                  onChanged: (newFont) { if (newFont != null) { setState(() { selectedFont = newFont; }); widget.onFontChanged(newFont); } },
                 ),
               ),
 
               // --- Turn Tracker ---
               SizedBox(height: 32),
-              Text(
-                'Turn Tracker',
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-              ),
+              Text('Turn Tracker', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
-              Text(
-                'Shows phase tracking between players (Flesh and Blood, 2 players only)',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
+              Text('Shows phase tracking between players (Flesh and Blood, 2 players only)', style: TextStyle(fontSize: 14, color: Colors.grey)),
               SizedBox(height: 8),
               SwitchListTile(
                 title: Text('Enable Turn Tracker'),
                 value: turnTracker,
-                onChanged: (bool value) {
-                  setState(() {
-                    turnTracker = value;
-                  });
-                  widget.onTurnTrackerChanged(value);
-                },
+                onChanged: (value) { setState(() { turnTracker = value; }); widget.onTurnTrackerChanged(value); },
               ),
 
-              // --- Game Setup ---
+              // --- First Turn ---
               SizedBox(height: 32),
-              Text(
-                'Game Setup',
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-              ),
+              Text('First Turn', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
-              SwitchListTile(
-                title: Text('Show Player Count Selection'),
-                subtitle: Text('Toggle player count chooser on the setup screen'),
-                value: showPlayerCount,
-                onChanged: (bool value) {
-                  setState(() {
-                    showPlayerCount = value;
-                  });
-                  widget.onShowPlayerCountChanged(value);
+              Text('Determines who goes first in 2-player games', style: TextStyle(fontSize: 14, color: Colors.grey)),
+              SizedBox(height: 12),
+              SegmentedButton<int>(
+                segments: [
+                  ButtonSegment(value: 0, label: Text('Player 1'), icon: Icon(Icons.person)),
+                  ButtonSegment(value: 1, label: Text('Player 2'), icon: Icon(Icons.person_outline)),
+                  ButtonSegment(value: 2, label: Text('Random'), icon: Icon(Icons.casino)),
+                ],
+                selected: {firstTurnSetting},
+                onSelectionChanged: (selection) {
+                  setState(() { firstTurnSetting = selection.first; });
+                  widget.onFirstTurnSettingChanged(selection.first);
                 },
               ),
 
               // --- Visual ---
               SizedBox(height: 32),
-              Text(
-                'Visual',
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-              ),
+              Text('Visual', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
-              Text(
-                'Applies a frosted glass blur effect to the player panels on the counter screen',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
+              Text('Applies a frosted glass blur effect to the player panels on the counter screen', style: TextStyle(fontSize: 14, color: Colors.grey)),
               SizedBox(height: 8),
               SwitchListTile(
                 title: Text('Frosted Glass Effect'),
                 value: frostedGlass,
-                onChanged: (bool value) {
-                  setState(() {
-                    frostedGlass = value;
-                  });
-                  widget.onFrostedGlassChanged(value);
-                },
+                onChanged: (value) { setState(() { frostedGlass = value; }); widget.onFrostedGlassChanged(value); },
               ),
               SizedBox(height: 16),
-              Text(
-                'Theme',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              Text('Theme', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
               SegmentedButton<ThemeMode>(
                 segments: [
-                  ButtonSegment(
-                    value: ThemeMode.system,
-                    label: Text('System'),
-                    icon: Icon(Icons.settings_brightness),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.light,
-                    label: Text('Light'),
-                    icon: Icon(Icons.light_mode),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.dark,
-                    label: Text('Dark'),
-                    icon: Icon(Icons.dark_mode),
-                  ),
+                  ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.settings_brightness)),
+                  ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode)),
+                  ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode)),
                 ],
                 selected: {currentThemeMode},
-                onSelectionChanged: (Set<ThemeMode> selection) {
-                  setState(() {
-                    currentThemeMode = selection.first;
-                  });
-                  widget.onThemeModeChanged(selection.first);
-                },
+                onSelectionChanged: (selection) { setState(() { currentThemeMode = selection.first; }); widget.onThemeModeChanged(selection.first); },
               ),
 
               // --- Tokens ---
               SizedBox(height: 32),
-              Text(
-                'Tokens',
-                style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold),
-              ),
+              Text('Tokens', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
               SizedBox(height: 8),
               SizedBox(
-                width: double.infinity,
-                height: 48,
+                width: double.infinity, height: 48,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CustomTokenScreen(
-                          currentGame: 'fab',
-                        ),
-                      ),
-                    );
-                  },
+                  onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (context) => CustomTokenScreen(currentGame: 'fab'))); },
                   child: Text('Manage Custom Tokens'),
                 ),
               ),

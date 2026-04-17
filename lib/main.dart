@@ -15,13 +15,13 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String selectedFont = 'Sedan';
-  String selectedGame = 'fab'; // Defaulted to FaB; MTG removed for now
+  String selectedGame = 'fab';
   bool turnTrackerEnabled = false;
   bool isLoaded = false;
   bool frostedGlass = false;
   ThemeMode themeMode = ThemeMode.system;
   int matchTimerMinutes = 50;
-  bool showPlayerCount = true;
+  int firstTurnSetting = 2; // 0=Player1, 1=Player2, 2=Random
 
   @override
   void initState() {
@@ -40,7 +40,7 @@ class _MyAppState extends State<MyApp> {
       frostedGlass = _prefs.getBool('frostedGlass') ?? false;
       themeMode = ThemeMode.values[_prefs.getInt('themeMode') ?? 0];
       matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;
-      showPlayerCount = _prefs.getBool('showPlayerCount') ?? true;
+      firstTurnSetting = _prefs.getInt('firstTurnSetting') ?? 2;
       isLoaded = true;
     });
   }
@@ -65,59 +65,45 @@ class _MyAppState extends State<MyApp> {
     await _prefs.setInt('matchTimerMinutes', matchTimerMinutes);
   }
 
-  Future<void> _saveShowPlayerCount() async {
-    await _prefs.setBool('showPlayerCount', showPlayerCount);
-  }
-
-  void updateShowPlayerCount(bool value) {
-    setState(() {
-      showPlayerCount = value;
-    });
-    _saveShowPlayerCount();
+  Future<void> _saveFirstTurnSetting() async {
+    await _prefs.setInt('firstTurnSetting', firstTurnSetting);
   }
 
   void updateFont(String newFont) {
-    setState(() {
-      selectedFont = newFont;
-    });
+    setState(() { selectedFont = newFont; });
     _saveFont();
   }
 
   void updateFrostedGlass(bool enabled) {
-    setState(() {
-      frostedGlass = enabled;
-    });
+    setState(() { frostedGlass = enabled; });
     _saveFrostedGlass();
   }
 
   void updateThemeMode(ThemeMode mode) {
-    setState(() {
-      themeMode = mode;
-    });
+    setState(() { themeMode = mode; });
     _saveThemeMode();
   }
 
   void updateTurnTracker(bool enabled) {
-    setState(() {
-      turnTrackerEnabled = enabled;
-    });
+    setState(() { turnTrackerEnabled = enabled; });
     _saveTurnTracker();
   }
 
   void updateMatchTimer(int minutes) {
-    setState(() {
-      matchTimerMinutes = minutes;
-    });
+    setState(() { matchTimerMinutes = minutes; });
     _saveMatchTimer();
+  }
+
+  void updateFirstTurnSetting(int value) {
+    setState(() { firstTurnSetting = value; });
+    _saveFirstTurnSetting();
   }
 
   @override
   Widget build(BuildContext context) {
     if (!isLoaded) {
       return MaterialApp(
-        home: Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
     return MaterialApp(
@@ -146,9 +132,9 @@ class _MyAppState extends State<MyApp> {
         onThemeModeChanged: updateThemeMode,
         matchTimerMinutes: matchTimerMinutes,
         onMatchTimerChanged: updateMatchTimer,
-        showPlayerCount: showPlayerCount,
-        onShowPlayerCountChanged: updateShowPlayerCount,
+        firstTurnSetting: firstTurnSetting,
+        onFirstTurnSettingChanged: updateFirstTurnSetting,
       ),
-      );
+    );
   }
 }
