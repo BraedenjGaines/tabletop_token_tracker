@@ -179,7 +179,7 @@ class _SetupScreenState extends State<SetupScreen> {
                 Wrap(
                   spacing: 8,
                   children: [
-                    for (int preset in [30, 50, 60, 90])
+                    for (int preset in [30, 35, 55, 60])
                       ChoiceChip(
                         label: Text('$preset'),
                         selected: matchTimerMinutes == preset,

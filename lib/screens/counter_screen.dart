@@ -310,7 +310,7 @@ class _CounterScreenState extends State<CounterScreen> {
     return result;
   }
 
-  Widget _buildCategoryChip(TokenCategory cat, int count, int playerIndex) {
+  Widget _buildCategoryChip(TokenCategory cat, int count, int playerIndex, double chipWidth, double chipHeight) {
     final bool hasTriggering = playerTokens[playerIndex]
         .where((t) => t.category == cat)
         .any((t) => _isTokenTriggering(t, playerIndex));
@@ -318,18 +318,29 @@ class _CounterScreenState extends State<CounterScreen> {
     return GestureDetector(
       onTap: () { setState(() { _playerOverlay[playerIndex] = cat.index; }); },
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 3),
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        width: chipWidth,
+        height: chipHeight,
         decoration: BoxDecoration(
-          color: _categoryColors[cat]!.withOpacity(0.7),
+          color: _categoryColors[cat]!.withOpacity(0.75),
           borderRadius: BorderRadius.circular(4),
-          border: hasTriggering ? Border.all(color: Colors.amber, width: 2) : null,
+          border: hasTriggering
+              ? Border.all(color: Colors.amber, width: 2)
+              : Border.all(color: Colors.black.withOpacity(0.3), width: 1),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (hasTriggering) Padding(padding: EdgeInsets.only(right: 3), child: Icon(Icons.flash_on, size: 12, color: Colors.amber)),
-            Text('${_categoryNames[cat]}: $count', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+            if (hasTriggering)
+              Icon(Icons.flash_on, size: 14, color: Colors.amber),
+            Text(
+              _categoryNames[cat] ?? '',
+              style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              '$count',
+              style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
@@ -338,17 +349,42 @@ class _CounterScreenState extends State<CounterScreen> {
 
   Widget _buildTokenChips(int playerIndex) {
     final byCategory = _getTokensByCategory(playerIndex);
-    if (byCategory.isEmpty) return SizedBox.shrink();
 
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 4,
-      runSpacing: 4,
-      children: [
-        for (var cat in TokenCategory.values)
-          if (byCategory.containsKey(cat))
-            _buildCategoryChip(cat, byCategory[cat]!.length, playerIndex),
-      ],
+    // Fixed order: Boons, Allies, Items, Debuffs
+    final List<TokenCategory> order = [
+      TokenCategory.boonAura,
+      TokenCategory.ally,
+      TokenCategory.item,
+      TokenCategory.debuffAura,
+    ];
+
+    // Only show categories that have tokens
+    final active = order.where((cat) => byCategory.containsKey(cat)).toList();
+    if (active.isEmpty) return SizedBox.shrink();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double totalWidth = constraints.maxWidth * 0.9;
+        final double chipWidth = totalWidth / 4;
+        final double chipHeight = chipWidth * 1.4; // Taller than wide, like a trading card
+
+        return SizedBox(
+          height: chipHeight,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var cat in order)
+                if (byCategory.containsKey(cat))
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 2),
+                    child: _buildCategoryChip(cat, byCategory[cat]!.length, playerIndex, chipWidth, chipHeight),
+                  )
+                else
+                  SizedBox(width: chipWidth + 4), // Reserve space to keep positions stable
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -541,8 +577,12 @@ class _CounterScreenState extends State<CounterScreen> {
                 Text('${playerHealth[index]}', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black)),
                 SizedBox(height: 4),
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () { setState(() { _playerOverlay[index] = -2; }); },
-                  child: Icon(Icons.add_box, size: 24, color: Colors.black),
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Icon(Icons.add_box, size: 28, color: Colors.black),
+                  ),
                 ),
               ],
             ),
@@ -763,8 +803,8 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final td = filtered[index];
-                    final added = widget.playerTokens.any((t) => t.name == td.name);
                     final fav = currentFavorites.contains(td.name);
+                    final inPlayCount = widget.playerTokens.where((t) => t.name == td.name).length;
                     return ListTile(
                       dense: true, visualDensity: VisualDensity.compact,
                       leading: GestureDetector(
@@ -777,8 +817,17 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
                       ),
                       title: Text(td.name, style: TextStyle(fontSize: 13, color: Colors.white)),
                       subtitle: Text(catNames[td.category] ?? '', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                      trailing: added ? Icon(Icons.check, color: Colors.green, size: 18) : Icon(Icons.add_circle_outline, color: Colors.white, size: 18),
-                      onTap: () { if (!added) widget.onTokenAdded(td); },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (inPlayCount > 0) Padding(
+                            padding: EdgeInsets.only(right: 6),
+                            child: Text('x$inPlayCount', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          ),
+                          Icon(Icons.add_circle_outline, color: Colors.white, size: 18),
+                        ],
+                      ),
+                      onTap: () { widget.onTokenAdded(td); },
                     );
                   },
                 ),
