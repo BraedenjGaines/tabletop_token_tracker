@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'setup_screen.dart';
 import 'settings_screen.dart';
+import 'about_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String selectedFont;
@@ -143,6 +144,19 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          Positioned(
+            bottom: 16,
+            left: 16,
+            child: IconButton(
+              icon: Icon(Icons.info_outline, color: Colors.white, size: 24),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AboutScreen()),
+                );
+              },
             ),
           ),
         ],
