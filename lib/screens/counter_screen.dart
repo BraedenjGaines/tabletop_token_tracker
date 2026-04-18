@@ -83,6 +83,9 @@ class _CounterScreenState extends State<CounterScreen> {
   int currentPhase = 0;
   int turnCount = 0;
 
+  List<int> _playerPitch = [0, 0];
+  List<int> _playerAP = [0, 0];
+
   List<TokenData> customTokens = [];
   List<String> favoriteTokens = [];
 
@@ -152,6 +155,7 @@ class _CounterScreenState extends State<CounterScreen> {
     _timerSecondsRemaining = widget.matchTimerMinutes * 60;
     _loadTokenPreferences();
     _handleFirstTurn();
+    _playerAP[activePlayer] = 1;
   }
 
   void _handleFirstTurn() {
@@ -196,6 +200,7 @@ class _CounterScreenState extends State<CounterScreen> {
   void _onFirstTurnChoice(bool goFirst) {
     setState(() {
       activePlayer = goFirst ? _diceWinner : (_diceWinner == 0 ? 1 : 0);
+      _playerAP[activePlayer] = 1;
       _showDiceOverlay = false; _showChoicePrompt = false; _diceFinished = false;
     });
   }
@@ -261,7 +266,20 @@ class _CounterScreenState extends State<CounterScreen> {
   void _advancePhase() {
     setState(() {
       if (currentPhase < fabPhases.length - 1) { currentPhase++; _logNewlyTriggering(); _log(activePlayer, LogEventType.phaseChange, fabPhases[currentPhase]); }
-      else { _checkAutoDestroy(); currentPhase = 0; activePlayer = activePlayer == 0 ? 1 : 0; turnCount++; _logNewlyTriggering(); _log(activePlayer, LogEventType.phaseChange, 'Turn ${turnCount + 1} - ${fabPhases[currentPhase]}'); }
+      else {
+        _checkAutoDestroy();
+        currentPhase = 0;
+        // Reset outgoing player's resources
+        _playerPitch[activePlayer] = 0;
+        _playerAP[activePlayer] = 0;
+        // Switch player
+        activePlayer = activePlayer == 0 ? 1 : 0;
+        // New player starts with 1 AP
+        _playerAP[activePlayer] = 1;
+        turnCount++;
+        _logNewlyTriggering();
+        _log(activePlayer, LogEventType.phaseChange, 'Turn ${turnCount + 1} - ${fabPhases[currentPhase]}');
+      }
     });
   }
   void _logNewlyTriggering() { for (int pi = 0; pi < playerTokens.length; pi++) for (var t in playerTokens[pi]) if (_isTokenTriggering(t, pi)) _log(pi, LogEventType.tokenActivated, '${t.name} active'); }
@@ -628,19 +646,103 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   // --- Turn tracker ---
-  Widget _buildTurnTrackerPanel() {
+ Widget _buildTurnTrackerPanel() {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        IconButton(icon: Icon(Icons.arrow_left, color: Colors.black), onPressed: _retreatPhase),
-        Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
-          SizedBox(height: 4),
-          Text(fabPhases[currentPhase], style: TextStyle(fontSize: 16, color: Colors.black)),
-        ]),
-        IconButton(icon: Icon(Icons.arrow_right, color: Colors.black), onPressed: _advancePhase),
-      ]),
+      padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          // Pitch counters (left side)
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RotatedBox(
+                quarterTurns: 2,
+                child: _buildMiniCounter('Pitch', _playerPitch[0], (val) { setState(() { _playerPitch[0] = val; }); }),
+              ),
+              SizedBox(height: 4),
+              _buildMiniCounter('Pitch', _playerPitch[1], (val) { setState(() { _playerPitch[1] = val; }); }),
+            ],
+          ),
+          // Turn/phase center
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.arrow_left, color: Colors.black, size: 20),
+                      onPressed: _retreatPhase,
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+                          SizedBox(height: 2),
+                          Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color: Colors.black, height: 1.0)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.arrow_right, color: Colors.black, size: 20),
+                      onPressed: _advancePhase,
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // AP counters (right side)
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RotatedBox(
+                quarterTurns: 2,
+                child: _buildMiniCounter('AP', _playerAP[0], (val) { setState(() { _playerAP[0] = val; }); }),
+              ),
+              SizedBox(height: 4),
+              _buildMiniCounter('AP', _playerAP[1], (val) { setState(() { _playerAP[1] = val; }); }),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniCounter(String label, int value, Function(int) onChanged) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: () { if (value > 0) onChanged(value - 1); },
+          child: Icon(Icons.remove, size: 16, color: Colors.black54),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: TextStyle(fontSize: 8, color: Colors.black54, height: 1.0, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+              Text('$value', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+            ],
+          ),
+        ),
+        GestureDetector(
+          onTap: () { onChanged(value + 1); },
+          child: Icon(Icons.add, size: 16, color: Colors.black54),
+        ),
+      ],
     );
   }
 
@@ -745,7 +847,7 @@ class _CounterScreenState extends State<CounterScreen> {
           Positioned(top: 40, right: 16, child: IconButton(icon: Icon(Icons.refresh, color: Colors.white), onPressed: () {
             showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Reset Game'), content: Text('Reset all health, tokens, timer, and log?'), actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
-              TextButton(onPressed: () { setState(() { playerHealth = List.filled(widget.playerCount, widget.startingLife); playerTokens = List.generate(widget.playerCount, (_) => []); _playerOverlay = List.filled(widget.playerCount, -1); activePlayer = 0; currentPhase = 0; turnCount = 0; gameLog.clear(); }); _resetTimer(); Navigator.pop(ctx); }, child: Text('Reset', style: TextStyle(color: Colors.red))),
+              TextButton(onPressed: () { setState(() { playerHealth = List.filled(widget.playerCount, widget.startingLife); playerTokens = List.generate(widget.playerCount, (_) => []); _playerOverlay = List.filled(widget.playerCount, -1); activePlayer = 0; currentPhase = 0; turnCount = 0; _playerPitch = [0, 0]; _playerAP = [1, 0]; gameLog.clear(); }); _resetTimer(); Navigator.pop(ctx); }, child: Text('Reset', style: TextStyle(color: Colors.red))),
             ]));
           })),
           // Settings
