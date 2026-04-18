@@ -17,6 +17,7 @@ class ActiveToken {
   int? maxHealth;
   int turnPlayed;
   int playerPlayed;
+  int phasePlayed;
 
   ActiveToken({
     required this.name,
@@ -27,6 +28,7 @@ class ActiveToken {
     this.maxHealth,
     this.turnPlayed = 0,
     this.playerPlayed = 0,
+    this.phasePlayed = 0,
   });
 }
 
@@ -189,6 +191,7 @@ class _CounterScreenState extends State<CounterScreen> {
               maxHealth: d['maxHealth'],
               turnPlayed: d['turnPlayed'] ?? 0,
               playerPlayed: d['playerPlayed'] ?? 0,
+              phasePlayed: d['phasePlayed'] ?? 0,
             );
             final insertIdx = d['index'] as int? ?? playerTokens[entry.playerIndex].length;
             if (insertIdx <= playerTokens[entry.playerIndex].length) {
@@ -375,10 +378,26 @@ class _CounterScreenState extends State<CounterScreen> {
 
   bool _shouldAutoRemove(ActiveToken t, int pi) {
     switch (t.destroyTrigger!) {
-      case DestroyTrigger.startOfYourTurn: return pi == activePlayer && turnCount > t.turnPlayed;
-      case DestroyTrigger.startOfOpponentTurn: return pi != activePlayer && turnCount > t.turnPlayed;
-      case DestroyTrigger.beginningOfActionPhase: return pi == activePlayer && turnCount > t.turnPlayed;
-      case DestroyTrigger.beginningOfEndPhase: return pi == activePlayer && turnCount > t.turnPlayed;
+      case DestroyTrigger.startOfYourTurn:
+        // Remove at start of your turn, but not the turn it was played
+        return pi == activePlayer && turnCount > t.turnPlayed;
+      case DestroyTrigger.startOfOpponentTurn:
+        // Remove at start of opponent's turn, but not the turn it was played
+        return pi != activePlayer && turnCount > t.turnPlayed;
+      case DestroyTrigger.beginningOfActionPhase:
+        // Remove at action phase. If played before action phase on same turn, remove this turn.
+        // If played during or after action phase, remove next turn.
+        if (pi != activePlayer) return false;
+        if (turnCount > t.turnPlayed) return true;
+        if (turnCount == t.turnPlayed && t.phasePlayed < 2 && currentPhase >= 2) return true;
+        return false;
+      case DestroyTrigger.beginningOfEndPhase:
+        // Remove at end phase. If played before end phase on same turn, remove this turn.
+        // If played during or after end phase, remove next turn.
+        if (pi != activePlayer) return false;
+        if (turnCount > t.turnPlayed) return true;
+        if (turnCount == t.turnPlayed && t.phasePlayed < 3 && currentPhase >= 3) return true;
+        return false;
     }
   }
 
@@ -386,10 +405,20 @@ class _CounterScreenState extends State<CounterScreen> {
     if (!_showTurnTracker || t.destroyTrigger == null) return false;
     bool isAct = pi == activePlayer;
     switch (t.destroyTrigger!) {
-      case DestroyTrigger.startOfYourTurn: return isAct && turnCount > t.turnPlayed && currentPhase >= 0;
-      case DestroyTrigger.startOfOpponentTurn: return !isAct && turnCount > t.turnPlayed && currentPhase >= 0;
-      case DestroyTrigger.beginningOfActionPhase: return isAct && turnCount >= t.turnPlayed && currentPhase >= 2;
-      case DestroyTrigger.beginningOfEndPhase: return isAct && currentPhase >= 3;
+      case DestroyTrigger.startOfYourTurn:
+        return isAct && turnCount > t.turnPlayed;
+      case DestroyTrigger.startOfOpponentTurn:
+        return !isAct && turnCount > t.turnPlayed;
+      case DestroyTrigger.beginningOfActionPhase:
+        if (!isAct) return false;
+        if (turnCount > t.turnPlayed && currentPhase >= 2) return true;
+        if (turnCount == t.turnPlayed && t.phasePlayed < 2 && currentPhase >= 2) return true;
+        return false;
+      case DestroyTrigger.beginningOfEndPhase:
+        if (!isAct) return false;
+        if (turnCount > t.turnPlayed && currentPhase >= 3) return true;
+        if (turnCount == t.turnPlayed && t.phasePlayed < 3 && currentPhase >= 3) return true;
+        return false;
     }
   }
 
@@ -559,13 +588,16 @@ class _CounterScreenState extends State<CounterScreen> {
           if (isAlly) ...[
             GestureDetector(
               onTap: () { setState(() {
-                _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: -1, undoData: {'name': token.name});
-                token.health = token.health! - 1;
-                if (token.health! <= 0) {
-                  final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': 0, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
+                final undoHealthData = {'name': token.name};
+                final int newHealth = token.health! - 1;
+                if (newHealth <= 0) {
+                  final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
                   playerTokens[pi].removeAt(ti);
                   _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
                   _playerOverlay[pi] = -1;
+                } else {
+                  token.health = newHealth;
+                  _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: -1, undoData: undoHealthData);
                 }
               }); },
               child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
@@ -632,11 +664,23 @@ class _CounterScreenState extends State<CounterScreen> {
             gameId: widget.selectedGame,
             onTokenAdded: (TokenData td) {
               setState(() {
+                // For tokens with destroy triggers (non-allies), stack onto a non-triggered instance if one exists
+                if (td.destroyTrigger != null && td.category != TokenCategory.ally) {
+                  final existingIdx = playerTokens[playerIndex].indexWhere((t) =>
+                    t.name == td.name && !_isTokenTriggering(t, playerIndex));
+                  if (existingIdx >= 0) {
+                    playerTokens[playerIndex][existingIdx].count++;
+                    _log(playerIndex, LogEventType.tokenCountChange, td.name, value: 1, undoData: {'name': td.name});
+                    _playerOverlay[playerIndex] = -1;
+                    return;
+                  }
+                }
+                // Otherwise create a new instance
                 playerTokens[playerIndex].add(ActiveToken(
                   name: td.name, category: td.category, destroyTrigger: td.destroyTrigger,
                   health: td.category == TokenCategory.ally ? td.health : null,
                   maxHealth: td.category == TokenCategory.ally ? td.health : null,
-                  turnPlayed: turnCount, playerPlayed: playerIndex,
+                  turnPlayed: turnCount, playerPlayed: playerIndex, phasePlayed: currentPhase,
                 ));
                 _log(playerIndex, LogEventType.tokenAdded, '${td.name} added', undoData: {'name': td.name});
                 _playerOverlay[playerIndex] = -1;
