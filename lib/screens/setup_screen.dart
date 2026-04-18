@@ -19,6 +19,8 @@ class SetupScreen extends StatefulWidget {
   final Function(int) onFirstTurnSettingChanged;
   final int resourceTrackerSetting;
   final Function(int) onResourceTrackerChanged;
+  final bool armorTrackingEnabled;
+  final Function(bool) onArmorTrackingChanged;
 
   const SetupScreen({
     super.key,
@@ -39,6 +41,8 @@ class SetupScreen extends StatefulWidget {
     required this.onFirstTurnSettingChanged,
     required this.resourceTrackerSetting,
     required this.onResourceTrackerChanged,
+    required this.armorTrackingEnabled,
+    required this.onArmorTrackingChanged,
   });
 
   @override
@@ -230,6 +234,8 @@ class _SetupScreenState extends State<SetupScreen> {
                                 onFirstTurnSettingChanged: widget.onFirstTurnSettingChanged,
                                 resourceTrackerSetting: widget.resourceTrackerSetting,
                                 onResourceTrackerChanged: widget.onResourceTrackerChanged,
+                                armorTrackingEnabled: widget.armorTrackingEnabled,
+                                onArmorTrackingChanged: widget.onArmorTrackingChanged,
                               ),
                             ),
                           );

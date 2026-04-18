@@ -20,6 +20,8 @@ class HomeScreen extends StatelessWidget {
   final Function(int) onFirstTurnSettingChanged;
   final int resourceTrackerSetting;
   final Function(int) onResourceTrackerChanged;
+  final bool armorTrackingEnabled;
+  final Function(bool) onArmorTrackingChanged;
 
   const HomeScreen({
     super.key,
@@ -40,6 +42,8 @@ class HomeScreen extends StatelessWidget {
     required this.onFirstTurnSettingChanged,
     required this.resourceTrackerSetting,
     required this.onResourceTrackerChanged,
+    required this.armorTrackingEnabled,
+    required this.onArmorTrackingChanged,
   });
 
   @override
@@ -91,6 +95,8 @@ class HomeScreen extends StatelessWidget {
                       onFirstTurnSettingChanged: onFirstTurnSettingChanged,
                       resourceTrackerSetting: resourceTrackerSetting,
                       onResourceTrackerChanged: onResourceTrackerChanged,
+                      armorTrackingEnabled: armorTrackingEnabled,
+                      onArmorTrackingChanged: onArmorTrackingChanged,
                     ),
                   ),
                 );
@@ -122,6 +128,8 @@ class HomeScreen extends StatelessWidget {
                       onFirstTurnSettingChanged: onFirstTurnSettingChanged,
                       resourceTrackerSetting: resourceTrackerSetting,
                       onResourceTrackerChanged: onResourceTrackerChanged,
+                      armorTrackingEnabled: armorTrackingEnabled,
+                      onArmorTrackingChanged: onArmorTrackingChanged,
                     ),
                   ),
                 );

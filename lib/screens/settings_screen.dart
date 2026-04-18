@@ -16,6 +16,8 @@ class SettingsScreen extends StatefulWidget {
   final Function(int) onFirstTurnSettingChanged;
   final int resourceTrackerSetting;
   final Function(int) onResourceTrackerChanged;
+  final bool armorTrackingEnabled;
+  final Function(bool) onArmorTrackingChanged;
 
   const SettingsScreen({
     super.key,
@@ -33,6 +35,8 @@ class SettingsScreen extends StatefulWidget {
     required this.onFirstTurnSettingChanged,
     required this.resourceTrackerSetting,
     required this.onResourceTrackerChanged,
+    required this.armorTrackingEnabled,
+    required this.onArmorTrackingChanged,
   });
 
   @override
@@ -46,6 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late ThemeMode currentThemeMode;
   late int firstTurnSetting;
   late int resourceTrackerSetting;
+  late bool armorTrackingEnabled;
 
   final List<String> availableFonts = ['Sedan', 'EagleLake', 'Jacquard12', 'MedievalSharp'];
 
@@ -58,6 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     currentThemeMode = widget.themeMode;
     firstTurnSetting = widget.firstTurnSetting;
     resourceTrackerSetting = widget.resourceTrackerSetting;
+    armorTrackingEnabled = widget.armorTrackingEnabled;
   }
 
   @override
@@ -182,6 +188,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
               ),
+              // --- Armor Tracking ---
+              SizedBox(height: 32),
+              SizedBox(width: double.infinity, child: Text('Armor Tracking', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Show Armor Slots'),
+                subtitle: Text('Track equipment defense on each player\'s side'),
+                value: armorTrackingEnabled,
+                onChanged: (value) { setState(() { armorTrackingEnabled = value; }); widget.onArmorTrackingChanged(value); },
+              ),
+
 
               // --- Tokens ---
               SizedBox(height: 32),

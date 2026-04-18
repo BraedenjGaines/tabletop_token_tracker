@@ -69,6 +69,8 @@ class CounterScreen extends StatefulWidget {
   final Function(int) onFirstTurnSettingChanged;
   final int resourceTrackerSetting;
   final Function(int) onResourceTrackerChanged;
+  final bool armorTrackingEnabled;
+  final Function(bool) onArmorTrackingChanged;
 
   const CounterScreen({
     super.key,
@@ -90,6 +92,8 @@ class CounterScreen extends StatefulWidget {
     required this.onFirstTurnSettingChanged,
     required this.resourceTrackerSetting,
     required this.onResourceTrackerChanged,
+    required this.armorTrackingEnabled,
+    required this.onArmorTrackingChanged,
   });
 
   @override
@@ -103,6 +107,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   late bool turnTrackerEnabled;
   late bool frostedGlass;
   late int resourceTrackerSetting;
+  late bool armorTrackingEnabled;
 
   int activePlayer = 0;
   int currentPhase = 0;
@@ -261,6 +266,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     resourceTrackerSetting = widget.resourceTrackerSetting;
     _timerSecondsRemaining = widget.matchTimerMinutes * 60;
     _playerArmor = List.generate(widget.playerCount, (_) => [0, 0, 0, 0]);
+    armorTrackingEnabled = widget.armorTrackingEnabled;
     _loadTokenPreferences();
     _handleFirstTurn();
     _playerAP[activePlayer] = 1;
@@ -427,8 +433,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   Widget _buildArmorIcon(int playerIndex, int slotIndex) {
     final int state = _playerArmor[playerIndex][slotIndex];
-
-    double opacity = state == -1 ? 0.2 : 1.0;
+    final bool isDestroyed = state == -99;
+    final bool isDamaged = state < 0 && !isDestroyed;
+    final bool isBuffed = state > 0;
+    final double opacity = isDestroyed ? 0.2 : 1.0;
 
     return Container(
       width: 60,
@@ -451,43 +459,20 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               ),
             ),
           ),
-          // Damaged overlay
-          if (state > 0)
-            Positioned.fill(
-              child: Container(color: Colors.orange.withOpacity(0.3)),
-            ),
-          // Top half: add -1 counter
+          // Damage overlay (orange)
+          if (isDamaged)
+            Positioned.fill(child: Container(color: Colors.orange.withOpacity(0.3))),
+          // Buff overlay (green)
+          if (isBuffed)
+            Positioned.fill(child: Container(color: Colors.green.withOpacity(0.3))),
+          // Top half: + button (remove -1 counter or add +1)
           Positioned(
             top: 0, left: 0, right: 0, height: 40,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
                 setState(() {
-                  if (state == -1) {
-                    _playerArmor[playerIndex][slotIndex] = 0;
-                  } else if (state > 0) {
-                    _playerArmor[playerIndex][slotIndex] = state - 1;
-                  }
-                });
-              },
-              child: Container(
-                color: Colors.white.withOpacity(0.1),
-                alignment: Alignment.topCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(top: 1),
-                  child: Text('+', style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.6), height: .65)),
-                ),
-              ),
-            ),
-          ),
-          // Bottom half: remove -1 counter
-          Positioned(
-            top: 40, left: 0, right: 0, height: 40,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                setState(() {
-                  if (state == -1) {
+                  if (isDestroyed) {
                     _playerArmor[playerIndex][slotIndex] = 0;
                   } else {
                     _playerArmor[playerIndex][slotIndex] = state + 1;
@@ -496,23 +481,59 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               },
               child: Container(
                 color: Colors.white.withOpacity(0.1),
-                alignment: Alignment.bottomCenter,
+                alignment: Alignment.topCenter,
                 child: Padding(
-                  padding: EdgeInsets.only(bottom: 1),
-                  child: Text('-', style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.6), height: .65)),
+                  padding: EdgeInsets.only(top: 2),
+                  child: Text('+', style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.6), height: 0.65)),
                 ),
               ),
             ),
           ),
-          // Counter badge
-          if (state > 0)
+          // Bottom half: - button (add -1 counter or remove +1)
+          Positioned(
+            top: 40, left: 0, right: 0, height: 40,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                setState(() {
+                  if (isDestroyed) {
+                    _playerArmor[playerIndex][slotIndex] = 0;
+                  } else {
+                    _playerArmor[playerIndex][slotIndex] = state - 1;
+                  }
+                });
+              },
+              child: Container(
+                color: Colors.white.withOpacity(0.1),
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Text('-', style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.6), height: 0.65)),
+                ),
+              ),
+            ),
+          ),
+          // Counter badge - damaged (red)
+          if (isDamaged)
             Positioned(
               bottom: 4, right: 4,
               child: IgnorePointer(
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6)),
-                  child: Text('-$state', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold, height: 1.0)),
+                  child: Text('$state', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold, height: 1.0)),
+                ),
+              ),
+            ),
+          // Counter badge - buffed (green)
+          if (isBuffed)
+            Positioned(
+              bottom: 4, right: 4,
+              child: IgnorePointer(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(6)),
+                  child: Text('+$state', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold, height: 1.0)),
                 ),
               ),
             ),
@@ -522,8 +543,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               behavior: HitTestBehavior.translucent,
               onLongPress: () {
                 setState(() {
-                  if (state != -1) {
-                    _playerArmor[playerIndex][slotIndex] = -1;
+                  if (!isDestroyed) {
+                    _playerArmor[playerIndex][slotIndex] = -99;
                   }
                 });
               },
@@ -1075,38 +1096,41 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
       );
     }
 
-    Widget centerContent = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              icon: Icon(Icons.arrow_left, color: Colors.black, size: 20),
-              onPressed: _retreatPhase,
-              padding: EdgeInsets.zero,
-              constraints: BoxConstraints(),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
-                  SizedBox(height: 2),
-                  Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color: Colors.black, height: 1.0)),
-                ],
+    Widget centerContent = RotatedBox(
+      quarterTurns: activePlayer == 0 ? 2 : 0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: Icon(Icons.arrow_left, color: Colors.black, size: 20),
+                onPressed: _retreatPhase,
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(),
               ),
-            ),
-            IconButton(
-              icon: Icon(Icons.arrow_right, color: Colors.black, size: 20),
-              onPressed: _advancePhase,
-              padding: EdgeInsets.zero,
-              constraints: BoxConstraints(),
-            ),
-          ],
-        ),
-      ],
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+                    SizedBox(height: 2),
+                    Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color: Colors.black, height: 1.0)),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.arrow_right, color: Colors.black, size: 20),
+                onPressed: _advancePhase,
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
 
     // Layout: No trackers
@@ -1249,7 +1273,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           Positioned(bottom: 40, left: 0, right: 0, child: Center(child: _buildTimerDisplay())),
           // Home
           // Player 1 armor - left side (Head, Chest) rotated
-          if (widget.playerCount == 2)
+          if (widget.playerCount == 2 && armorTrackingEnabled)
             Positioned(
               top: 80,
               left: 8,
@@ -1262,7 +1286,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               )),
             ),
           // Player 1 armor - right side (Arms, Legs) rotated
-          if (widget.playerCount == 2)
+          if (widget.playerCount == 2 && armorTrackingEnabled)
             Positioned(
               top: 80,
               right: 8,
@@ -1275,7 +1299,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               )),
             ),
           // Player 2 armor - left side (Head, Chest)
-          if (widget.playerCount == 2)
+          if (widget.playerCount == 2 && armorTrackingEnabled)
             Positioned(
               bottom: 80,
               left: 8,
@@ -1288,7 +1312,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               ),
             ),
           // Player 2 armor - right side (Arms, Legs)
-          if (widget.playerCount == 2)
+          if (widget.playerCount == 2 && armorTrackingEnabled)
             Positioned(
               bottom: 80,
               right: 8,
@@ -1326,6 +1350,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               matchTimerMinutes: widget.matchTimerMinutes, onMatchTimerChanged: widget.onMatchTimerChanged,
               firstTurnSetting: widget.firstTurnSetting, onFirstTurnSettingChanged: widget.onFirstTurnSettingChanged,
               resourceTrackerSetting: resourceTrackerSetting, onResourceTrackerChanged: (int val) { widget.onResourceTrackerChanged(val); setState(() { resourceTrackerSetting = val; }); },
+              armorTrackingEnabled: armorTrackingEnabled, onArmorTrackingChanged: (bool val) { widget.onArmorTrackingChanged(val); setState(() { armorTrackingEnabled = val; }); },
             )));
           })),
           // Log

@@ -36,7 +36,8 @@ class _MyAppState extends State<MyApp> {
   int matchTimerMinutes = 50;
   int startingLife = 20;
   int firstTurnSetting = 2;
-  int resourceTrackerSetting = 0; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
+  int resourceTrackerSetting = 0;
+  bool armorTrackingEnabled = true;// 0=Both, 1=AP Only, 2=Pitch Only, 3=None
 
   @override
   void initState() {
@@ -58,6 +59,7 @@ class _MyAppState extends State<MyApp> {
       startingLife = _prefs.getInt('startingLife') ?? 20;
       firstTurnSetting = _prefs.getInt('firstTurnSetting') ?? 2;
       resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 0;
+      armorTrackingEnabled = _prefs.getBool('armorTrackingEnabled') ?? true;
       isLoaded = true;
     });
   }
@@ -134,6 +136,15 @@ class _MyAppState extends State<MyApp> {
     _saveResourceTracker();
   }
 
+  Future<void> _saveArmorTracking() async {
+    await _prefs.setBool('armorTrackingEnabled', armorTrackingEnabled);
+  }
+
+  void updateArmorTracking(bool enabled) {
+    setState(() { armorTrackingEnabled = enabled; });
+    _saveArmorTracking();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!isLoaded) {
@@ -182,6 +193,8 @@ class _MyAppState extends State<MyApp> {
           onFirstTurnSettingChanged: updateFirstTurnSetting,
           resourceTrackerSetting: resourceTrackerSetting,
           onResourceTrackerChanged: updateResourceTracker,
+          armorTrackingEnabled: armorTrackingEnabled,
+          onArmorTrackingChanged: updateArmorTracking,
         ),
       );
   }
