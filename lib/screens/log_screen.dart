@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import '../data/game_log.dart';
 
-class LogScreen extends StatelessWidget {
+class LogScreen extends StatefulWidget {
   final GameLog gameLog;
   final double? rotationAngle;
+  final VoidCallback? onUndo;
 
   const LogScreen({super.key, 
     required this.gameLog,
     this.rotationAngle,
+    this.onUndo,
   });
+
+  @override
+  _LogScreenState createState() => _LogScreenState();
+}
+
+class _LogScreenState extends State<LogScreen> {
 
   String _getPlayerLabel(int index) {
     return 'Player ${index + 1}';
@@ -63,7 +71,7 @@ class LogScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reversedEntries = gameLog.entries.reversed.toList();
+    final reversedEntries = widget.gameLog.entries.reversed.toList();
 
     return Container(
       padding: EdgeInsets.all(16),
@@ -78,9 +86,22 @@ class LogScreen extends StatelessWidget {
                 'Game Log',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              IconButton(
-                icon: Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.onUndo != null)
+                    IconButton(
+                      icon: Icon(Icons.undo, color: Colors.blue),
+                      onPressed: () {
+                        widget.onUndo!();
+                        setState(() {});
+                      },
+                    ),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
               ),
             ],
           ),
@@ -103,7 +124,11 @@ class LogScreen extends StatelessWidget {
                         ),
                         title: Text(
                           entry.description,
-                          style: TextStyle(fontSize: 14),
+                          style: TextStyle(
+                            fontSize: 14,
+                            decoration: entry.undone ? TextDecoration.lineThrough : null,
+                            color: entry.undone ? Colors.grey : null,
+                          ),
                         ),
                         subtitle: Text(
                           '${entry.timestamp} • ${_getPlayerLabel(entry.playerIndex)}${entry.phase != null ? ' • ${entry.phase}' : ''}',

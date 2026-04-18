@@ -137,7 +137,7 @@ class _CounterScreenState extends State<CounterScreen> {
   String? get _currentPhaseName =>
       _showTurnTracker ? fabPhases[currentPhase] : null;
 
-  void _log(int playerIndex, LogEventType type, String description, {int value = 0}) {
+  void _log(int playerIndex, LogEventType type, String description, {int value = 0, Map<String, dynamic>? undoData}) {
     final int minutes = _timerSecondsRemaining ~/ 60;
     final int seconds = _timerSecondsRemaining % 60;
     final String timerStamp = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
@@ -145,7 +145,81 @@ class _CounterScreenState extends State<CounterScreen> {
       playerIndex: playerIndex, type: type, description: description,
       value: value, timestamp: timerStamp,
       turn: _showTurnTracker ? turnCount : null, phase: _currentPhaseName,
+      undoData: undoData,
     ));
+  }
+
+  void _undoLastEntry() {
+    if (gameLog.entries.isEmpty) return;
+
+    // Find last undoable entry (skip phase changes and token activations)
+    int targetIndex = -1;
+    for (int i = gameLog.entries.length - 1; i >= 0; i--) {
+      final e = gameLog.entries[i];
+      if (e.type != LogEventType.phaseChange && e.type != LogEventType.tokenActivated) {
+        targetIndex = i;
+        break;
+      }
+    }
+    if (targetIndex < 0) return;
+
+    final entry = gameLog.entries[targetIndex];
+
+    setState(() {
+      switch (entry.type) {
+        case LogEventType.healthChange:
+          playerHealth[entry.playerIndex] -= entry.value;
+          break;
+        case LogEventType.tokenAdded:
+          if (entry.undoData != null) {
+            final name = entry.undoData!['name'] as String;
+            final idx = playerTokens[entry.playerIndex].lastIndexWhere((t) => t.name == name);
+            if (idx >= 0) playerTokens[entry.playerIndex].removeAt(idx);
+          }
+          break;
+        case LogEventType.tokenDestroyed:
+          if (entry.undoData != null) {
+            final d = entry.undoData!;
+            final token = ActiveToken(
+              name: d['name'],
+              category: TokenCategory.values[d['category']],
+              destroyTrigger: d['destroyTrigger'] != null ? DestroyTrigger.values[d['destroyTrigger']] : null,
+              count: d['count'] ?? 1,
+              health: d['health'],
+              maxHealth: d['maxHealth'],
+              turnPlayed: d['turnPlayed'] ?? 0,
+              playerPlayed: d['playerPlayed'] ?? 0,
+            );
+            final insertIdx = d['index'] as int? ?? playerTokens[entry.playerIndex].length;
+            if (insertIdx <= playerTokens[entry.playerIndex].length) {
+              playerTokens[entry.playerIndex].insert(insertIdx, token);
+            } else {
+              playerTokens[entry.playerIndex].add(token);
+            }
+          }
+          break;
+        case LogEventType.tokenCountChange:
+          if (entry.undoData != null) {
+            final name = entry.undoData!['name'] as String;
+            for (var t in playerTokens[entry.playerIndex]) {
+              if (t.name == name) { t.count -= entry.value; break; }
+            }
+          }
+          break;
+        case LogEventType.allyHealthChange:
+          if (entry.undoData != null) {
+            final name = entry.undoData!['name'] as String;
+            for (var t in playerTokens[entry.playerIndex]) {
+              if (t.name == name) { t.health = (t.health ?? 0) - entry.value; break; }
+            }
+          }
+          break;
+        default:
+          break;
+      }
+      // Remove the entry from the log entirely
+      gameLog.entries.removeAt(targetIndex);
+    });
   }
 
   @override
@@ -271,25 +345,21 @@ class _CounterScreenState extends State<CounterScreen> {
   // --- Phase / turn ---
   void _advancePhase() {
     setState(() {
-      if (currentPhase < fabPhases.length - 1) { currentPhase++; _logNewlyTriggering(); _log(activePlayer, LogEventType.phaseChange, fabPhases[currentPhase]); }
+      if (currentPhase < fabPhases.length - 1) { currentPhase++; _logNewlyTriggering(); }
       else {
         _checkAutoDestroy();
         currentPhase = 0;
-        // Reset outgoing player's resources
         _playerPitch[activePlayer] = 0;
         _playerAP[activePlayer] = 0;
-        // Switch player
         activePlayer = activePlayer == 0 ? 1 : 0;
-        // New player starts with 1 AP
         _playerAP[activePlayer] = 1;
         turnCount++;
         _logNewlyTriggering();
-        _log(activePlayer, LogEventType.phaseChange, 'Turn ${turnCount + 1} - ${fabPhases[currentPhase]}');
       }
     });
   }
-  void _logNewlyTriggering() { for (int pi = 0; pi < playerTokens.length; pi++) for (var t in playerTokens[pi]) if (_isTokenTriggering(t, pi)) _log(pi, LogEventType.tokenActivated, '${t.name} active'); }
-  void _retreatPhase() { setState(() { if (currentPhase > 0) { currentPhase--; _log(activePlayer, LogEventType.phaseChange, 'Back to ${fabPhases[currentPhase]}'); } }); }
+  void _logNewlyTriggering() { /* disabled — trigger status visible on token chips */ }
+  void _retreatPhase() { setState(() { if (currentPhase > 0) { currentPhase--; } }); }
 
   void _checkAutoDestroy() {
     if (!_showTurnTracker) return;
@@ -488,28 +558,51 @@ class _CounterScreenState extends State<CounterScreen> {
           Expanded(child: Text(token.name, style: TextStyle(fontSize: 13, color: Colors.white))),
           if (isAlly) ...[
             GestureDetector(
-              onTap: () { setState(() { token.health = token.health! - 1; _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: -1); if (token.health! <= 0) { playerTokens[pi].removeAt(ti); _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed'); _playerOverlay[pi] = -1; } }); },
+              onTap: () { setState(() {
+                _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: -1, undoData: {'name': token.name});
+                token.health = token.health! - 1;
+                if (token.health! <= 0) {
+                  final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': 0, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
+                  playerTokens[pi].removeAt(ti);
+                  _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
+                  _playerOverlay[pi] = -1;
+                }
+              }); },
               child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
             ),
             Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Text('${token.health}/${token.maxHealth}', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold))),
             GestureDetector(
-              onTap: () { setState(() { token.health = token.health! + 1; _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: 1); }); },
+              onTap: () { setState(() { token.health = token.health! + 1; _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: 1, undoData: {'name': token.name}); }); },
               child: Icon(Icons.add_circle, size: 18, color: Colors.green),
             ),
           ] else ...[
             GestureDetector(
-              onTap: () { setState(() { token.count--; _log(pi, LogEventType.tokenCountChange, token.name, value: -1); if (token.count <= 0) { playerTokens[pi].removeAt(ti); _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed'); _playerOverlay[pi] = -1; } }); },
+              onTap: () { setState(() {
+                token.count--;
+                _log(pi, LogEventType.tokenCountChange, token.name, value: -1, undoData: {'name': token.name});
+                if (token.count <= 0) {
+                  final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': 0, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
+                  playerTokens[pi].removeAt(ti);
+                  _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
+                  _playerOverlay[pi] = -1;
+                }
+              }); },
               child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
             ),
             Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Text('${token.count}', style: TextStyle(fontSize: 13, color: Colors.white))),
             GestureDetector(
-              onTap: () { setState(() { token.count++; _log(pi, LogEventType.tokenCountChange, token.name, value: 1); }); },
+              onTap: () { setState(() { token.count++; _log(pi, LogEventType.tokenCountChange, token.name, value: 1, undoData: {'name': token.name}); }); },
               child: Icon(Icons.add_circle, size: 18, color: Colors.green),
             ),
           ],
           SizedBox(width: 6),
           GestureDetector(
-            onTap: () { setState(() { playerTokens[pi].removeAt(ti); _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed'); if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1; }); },
+            onTap: () { setState(() {
+              final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
+              playerTokens[pi].removeAt(ti);
+              _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
+              if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1;
+            }); },
             child: Icon(Icons.delete, size: 16, color: Colors.grey),
           ),
         ],
@@ -545,7 +638,7 @@ class _CounterScreenState extends State<CounterScreen> {
                   maxHealth: td.category == TokenCategory.ally ? td.health : null,
                   turnPlayed: turnCount, playerPlayed: playerIndex,
                 ));
-                _log(playerIndex, LogEventType.tokenAdded, '${td.name} added');
+                _log(playerIndex, LogEventType.tokenAdded, '${td.name} added', undoData: {'name': td.name});
                 _playerOverlay[playerIndex] = -1;
               });
             },
@@ -918,7 +1011,7 @@ class _CounterScreenState extends State<CounterScreen> {
             )));
           })),
           // Log
-          Positioned(bottom: 24, left: 16, child: IconButton(icon: Icon(Icons.list_alt, color: Colors.white), onPressed: () { showDialog(context: context, builder: (ctx) => Dialog(insetPadding: EdgeInsets.all(16), child: LogScreen(gameLog: gameLog))); })),
+          Positioned(bottom: 24, left: 16, child: IconButton(icon: Icon(Icons.list_alt, color: Colors.white), onPressed: () { showDialog(context: context, builder: (ctx) => Dialog(insetPadding: EdgeInsets.all(16), child: LogScreen(gameLog: gameLog, onUndo: _undoLastEntry))); })),
           // Dice overlay
           if (_showDiceOverlay) Positioned.fill(child: _buildDiceOverlay()),
           // Player overlays — on top of everything including timer and buttons
