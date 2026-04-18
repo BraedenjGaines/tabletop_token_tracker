@@ -15,6 +15,8 @@ class SetupScreen extends StatefulWidget {
   final Function(int) onMatchTimerChanged;
   final int firstTurnSetting;
   final Function(int) onFirstTurnSettingChanged;
+  final int resourceTrackerSetting;
+  final Function(int) onResourceTrackerChanged;
 
   const SetupScreen({
     super.key,
@@ -31,6 +33,8 @@ class SetupScreen extends StatefulWidget {
     required this.onMatchTimerChanged,
     required this.firstTurnSetting,
     required this.onFirstTurnSettingChanged,
+    required this.resourceTrackerSetting,
+    required this.onResourceTrackerChanged,
   });
 
   @override
@@ -214,6 +218,8 @@ class _SetupScreenState extends State<SetupScreen> {
                                 onMatchTimerChanged: widget.onMatchTimerChanged,
                                 firstTurnSetting: widget.firstTurnSetting,
                                 onFirstTurnSettingChanged: widget.onFirstTurnSettingChanged,
+                                resourceTrackerSetting: widget.resourceTrackerSetting,
+                                onResourceTrackerChanged: widget.onResourceTrackerChanged,
                               ),
                             ),
                           );

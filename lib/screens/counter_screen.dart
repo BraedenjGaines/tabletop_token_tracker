@@ -47,6 +47,8 @@ class CounterScreen extends StatefulWidget {
   final Function(int) onMatchTimerChanged;
   final int firstTurnSetting;
   final Function(int) onFirstTurnSettingChanged;
+  final int resourceTrackerSetting;
+  final Function(int) onResourceTrackerChanged;
 
   const CounterScreen({
     super.key,
@@ -66,6 +68,8 @@ class CounterScreen extends StatefulWidget {
     required this.onMatchTimerChanged,
     required this.firstTurnSetting,
     required this.onFirstTurnSettingChanged,
+    required this.resourceTrackerSetting,
+    required this.onResourceTrackerChanged,
   });
 
   @override
@@ -78,6 +82,7 @@ class _CounterScreenState extends State<CounterScreen> {
   late String currentFont;
   late bool turnTrackerEnabled;
   late bool frostedGlass;
+  late int resourceTrackerSetting;
 
   int activePlayer = 0;
   int currentPhase = 0;
@@ -152,6 +157,7 @@ class _CounterScreenState extends State<CounterScreen> {
     currentFont = widget.selectedFont;
     turnTrackerEnabled = widget.turnTrackerEnabled;
     frostedGlass = widget.frostedGlass;
+    resourceTrackerSetting = widget.resourceTrackerSetting;
     _timerSecondsRemaining = widget.matchTimerMinutes * 60;
     _loadTokenPreferences();
     _handleFirstTurn();
@@ -647,105 +653,154 @@ class _CounterScreenState extends State<CounterScreen> {
 
   // --- Turn tracker ---
  Widget _buildTurnTrackerPanel() {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
+    final int setting = resourceTrackerSetting;
+    final bool showPitch = setting == 0 || setting == 2;
+    final bool showAP = setting == 0 || setting == 1;
+    final bool bothVisible = showPitch && showAP;
+    final bool singleVisible = (showPitch || showAP) && !bothVisible;
+
+    Widget pitchCounter(int playerIndex, {bool large = false}) {
+      final double iconSize = large ? 20.0 : 16.0;
+      final double numSize = large ? 22.0 : 16.0;
+      final double labelSize = large ? 10.0 : 8.0;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Pitch counters (left side)
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RotatedBox(
-                quarterTurns: 2,
-                child: _buildMiniCounter('Pitch', _playerPitch[0], (val) { setState(() { _playerPitch[0] = val; }); }),
-              ),
-              SizedBox(height: 4),
-              _buildMiniCounter('Pitch', _playerPitch[1], (val) { setState(() { _playerPitch[1] = val; }); }),
-            ],
+          GestureDetector(
+            onTap: () { if (_playerPitch[playerIndex] > 0) setState(() { _playerPitch[playerIndex]--; }); },
+            child: Icon(Icons.remove, size: iconSize, color: Colors.black54),
           ),
-          // Turn/phase center
-          Expanded(
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.arrow_left, color: Colors.black, size: 20),
-                      onPressed: _retreatPhase,
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
-                          SizedBox(height: 2),
-                          Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color: Colors.black, height: 1.0)),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.arrow_right, color: Colors.black, size: 20),
-                      onPressed: _advancePhase,
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
-                    ),
-                  ],
-                ),
+                Text('Pitch', style: TextStyle(fontSize: labelSize, color: Colors.black54, height: 1.0, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+                Text('${_playerPitch[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
               ],
             ),
           ),
-          // AP counters (right side)
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RotatedBox(
-                quarterTurns: 2,
-                child: _buildMiniCounter('AP', _playerAP[0], (val) { setState(() { _playerAP[0] = val; }); }),
-              ),
-              SizedBox(height: 4),
-              _buildMiniCounter('AP', _playerAP[1], (val) { setState(() { _playerAP[1] = val; }); }),
-            ],
+          GestureDetector(
+            onTap: () { setState(() { _playerPitch[playerIndex]++; }); },
+            child: Icon(Icons.add, size: iconSize, color: Colors.black54),
           ),
         ],
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildMiniCounter(String label, int value, Function(int) onChanged) {
-    return Row(
+    Widget apCounter(int playerIndex, {bool large = false}) {
+      final double iconSize = large ? 20.0 : 16.0;
+      final double numSize = large ? 22.0 : 16.0;
+      final double labelSize = large ? 10.0 : 8.0;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () { if (_playerAP[playerIndex] > 0) setState(() { _playerAP[playerIndex]--; }); },
+            child: Icon(Icons.remove, size: iconSize, color: Colors.black54),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('AP', style: TextStyle(fontSize: labelSize, color: Colors.black54, height: 1.0, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+                Text('${_playerAP[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () { setState(() { _playerAP[playerIndex]++; }); },
+            child: Icon(Icons.add, size: iconSize, color: Colors.black54),
+          ),
+        ],
+      );
+    }
+
+    Widget centerContent = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        GestureDetector(
-          onTap: () { if (value > 0) onChanged(value - 1); },
-          child: Icon(Icons.remove, size: 16, color: Colors.black54),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(label, style: TextStyle(fontSize: 8, color: Colors.black54, height: 1.0, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
-              Text('$value', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
-            ],
-          ),
-        ),
-        GestureDetector(
-          onTap: () { onChanged(value + 1); },
-          child: Icon(Icons.add, size: 16, color: Colors.black54),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              icon: Icon(Icons.arrow_left, color: Colors.black, size: 20),
+              onPressed: _retreatPhase,
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints(),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+                  SizedBox(height: 2),
+                  Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color: Colors.black, height: 1.0)),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.arrow_right, color: Colors.black, size: 20),
+              onPressed: _advancePhase,
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints(),
+            ),
+          ],
         ),
       ],
     );
-  }
 
+    // Layout: No trackers
+    if (!showPitch && !showAP) {
+      return Container(
+        padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
+        child: centerContent,
+      );
+    }
+
+    // Layout: Both trackers — stacked on each side
+    if (bothVisible) {
+      return Container(
+        padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
+        child: Row(
+          children: [
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              RotatedBox(quarterTurns: 2, child: pitchCounter(0)),
+              SizedBox(height: 4),
+              pitchCounter(1),
+            ]),
+            Expanded(child: centerContent),
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              RotatedBox(quarterTurns: 2, child: apCounter(0)),
+              SizedBox(height: 4),
+              apCounter(1),
+            ]),
+          ],
+        ),
+      );
+    }
+
+    // Layout: Single tracker — split to flanking sides, larger
+    if (singleVisible) {
+      Widget Function(int, {bool large}) counter = showAP ? apCounter : pitchCounter;
+      return Container(
+        padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
+        child: Row(
+          children: [
+            RotatedBox(quarterTurns: 2, child: counter(0, large: true)),
+            Expanded(child: centerContent),
+            counter(1, large: true),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox.shrink();
+  }
   // --- Timer display ---
   Widget _buildTimerDisplay() {
     return Container(
@@ -859,6 +914,7 @@ class _CounterScreenState extends State<CounterScreen> {
               themeMode: widget.themeMode, onThemeModeChanged: widget.onThemeModeChanged,
               matchTimerMinutes: widget.matchTimerMinutes, onMatchTimerChanged: widget.onMatchTimerChanged,
               firstTurnSetting: widget.firstTurnSetting, onFirstTurnSettingChanged: widget.onFirstTurnSettingChanged,
+              resourceTrackerSetting: resourceTrackerSetting, onResourceTrackerChanged: (int val) { widget.onResourceTrackerChanged(val); setState(() { resourceTrackerSetting = val; }); },
             )));
           })),
           // Log

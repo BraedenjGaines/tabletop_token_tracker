@@ -34,7 +34,8 @@ class _MyAppState extends State<MyApp> {
   bool frostedGlass = false;
   ThemeMode themeMode = ThemeMode.system;
   int matchTimerMinutes = 50;
-  int firstTurnSetting = 2; // 0=Player1, 1=Player2, 2=Random
+  int firstTurnSetting = 2;
+  int resourceTrackerSetting = 0; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
 
   @override
   void initState() {
@@ -54,6 +55,7 @@ class _MyAppState extends State<MyApp> {
       themeMode = ThemeMode.values[_prefs.getInt('themeMode') ?? 0];
       matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;
       firstTurnSetting = _prefs.getInt('firstTurnSetting') ?? 2;
+      resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 0;
       isLoaded = true;
     });
   }
@@ -112,6 +114,15 @@ class _MyAppState extends State<MyApp> {
     _saveFirstTurnSetting();
   }
 
+ Future<void> _saveResourceTracker() async {
+    await _prefs.setInt('resourceTrackerSetting', resourceTrackerSetting);
+  }
+
+  void updateResourceTracker(int value) {
+    setState(() { resourceTrackerSetting = value; });
+    _saveResourceTracker();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!isLoaded) {
@@ -156,6 +167,8 @@ class _MyAppState extends State<MyApp> {
           onMatchTimerChanged: updateMatchTimer,
           firstTurnSetting: firstTurnSetting,
           onFirstTurnSettingChanged: updateFirstTurnSetting,
+          resourceTrackerSetting: resourceTrackerSetting,
+          onResourceTrackerChanged: updateResourceTracker,
         ),
       );
   }

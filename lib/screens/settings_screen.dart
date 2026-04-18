@@ -14,6 +14,8 @@ class SettingsScreen extends StatefulWidget {
   final Function(int) onMatchTimerChanged;
   final int firstTurnSetting;
   final Function(int) onFirstTurnSettingChanged;
+  final int resourceTrackerSetting;
+  final Function(int) onResourceTrackerChanged;
 
   const SettingsScreen({
     super.key,
@@ -29,6 +31,8 @@ class SettingsScreen extends StatefulWidget {
     required this.onMatchTimerChanged,
     required this.firstTurnSetting,
     required this.onFirstTurnSettingChanged,
+    required this.resourceTrackerSetting,
+    required this.onResourceTrackerChanged,
   });
 
   @override
@@ -41,6 +45,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool frostedGlass;
   late ThemeMode currentThemeMode;
   late int firstTurnSetting;
+  late int resourceTrackerSetting;
 
   final List<String> availableFonts = ['Sedan', 'EagleLake', 'Jacquard12', 'MedievalSharp'];
 
@@ -52,6 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     frostedGlass = widget.frostedGlass;
     currentThemeMode = widget.themeMode;
     firstTurnSetting = widget.firstTurnSetting;
+    resourceTrackerSetting = widget.resourceTrackerSetting;
   }
 
   @override
@@ -112,6 +118,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onSelectionChanged: (selection) {
                     setState(() { firstTurnSetting = selection.first; });
                     widget.onFirstTurnSettingChanged(selection.first);
+                  },
+                ),
+              ),
+
+              // --- Resource Tracking ---
+              SizedBox(height: 32),
+              Text('Resource Tracking', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('Track action points and pitch resources during gameplay (2 players with turn tracker)', style: TextStyle(fontSize: 14, color: Colors.grey)),
+              SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<int>(
+                  showSelectedIcon: false,
+                  style: ButtonStyle(
+                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 12, horizontal: 8)),
+                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 13, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+                  ),
+                  segments: [
+                    ButtonSegment(value: 0, label: Text('Both')),
+                    ButtonSegment(value: 1, label: Text('AP')),
+                    ButtonSegment(value: 2, label: Text('Pitch')),
+                    ButtonSegment(value: 3, label: Text('None')),
+                  ],
+                  selected: {resourceTrackerSetting},
+                  onSelectionChanged: (selection) {
+                    setState(() { resourceTrackerSetting = selection.first; });
+                    widget.onResourceTrackerChanged(selection.first);
                   },
                 ),
               ),

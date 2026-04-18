@@ -16,6 +16,8 @@ class HomeScreen extends StatelessWidget {
   final Function(int) onMatchTimerChanged;
   final int firstTurnSetting;
   final Function(int) onFirstTurnSettingChanged;
+  final int resourceTrackerSetting;
+  final Function(int) onResourceTrackerChanged;
 
   const HomeScreen({
     super.key,
@@ -32,6 +34,8 @@ class HomeScreen extends StatelessWidget {
     required this.onMatchTimerChanged,
     required this.firstTurnSetting,
     required this.onFirstTurnSettingChanged,
+    required this.resourceTrackerSetting,
+    required this.onResourceTrackerChanged,
   });
 
   @override
@@ -64,6 +68,8 @@ class HomeScreen extends StatelessWidget {
                       onMatchTimerChanged: onMatchTimerChanged,
                       firstTurnSetting: firstTurnSetting,
                       onFirstTurnSettingChanged: onFirstTurnSettingChanged,
+                      resourceTrackerSetting: resourceTrackerSetting,
+                      onResourceTrackerChanged: onResourceTrackerChanged,
                     ),
                   ),
                 );
@@ -89,6 +95,8 @@ class HomeScreen extends StatelessWidget {
                       onMatchTimerChanged: onMatchTimerChanged,
                       firstTurnSetting: firstTurnSetting,
                       onFirstTurnSettingChanged: onFirstTurnSettingChanged,
+                      resourceTrackerSetting: resourceTrackerSetting,
+                      onResourceTrackerChanged: onResourceTrackerChanged,
                     ),
                   ),
                 );
