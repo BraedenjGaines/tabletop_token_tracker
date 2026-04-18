@@ -27,7 +27,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String selectedFont = 'Sedan';
+  String selectedFont = 'EagleLake';
   String selectedGame = 'fab';
   bool turnTrackerEnabled = false;
   bool isLoaded = false;
@@ -47,7 +47,7 @@ class _MyAppState extends State<MyApp> {
   Future<void> _loadPreferences() async {
     _prefs = await SharedPreferences.getInstance();
     setState(() {
-      selectedFont = _prefs.getString('selectedFont') ?? 'Sedan';
+      selectedFont = _prefs.getString('selectedFont') ?? 'EagleLake';
       selectedGame = _prefs.getString('selectedGame') ?? 'fab';
       turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? false;
       frostedGlass = _prefs.getBool('frostedGlass') ?? false;

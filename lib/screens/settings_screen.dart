@@ -65,19 +65,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // --- Font ---
-              Text('Font', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
-              SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
-                child: DropdownButton<String>(
-                  value: selectedFont, isExpanded: true, underline: SizedBox(),
-                  items: availableFonts.map((font) => DropdownMenuItem(value: font, child: Text(font, style: TextStyle(fontFamily: font, fontSize: 18)))).toList(),
-                  onChanged: (newFont) { if (newFont != null) { setState(() { selectedFont = newFont; }); widget.onFontChanged(newFont); } },
-                ),
-              ),
-
+              //Text('Font', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+              //SizedBox(height: 16),
+              //Container(
+              //width: double.infinity,
+              //  padding: EdgeInsets.symmetric(horizontal: 12),
+              //  decoration: BoxDecoration(border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8)),
+              //  child: DropdownButton<String>(
+              //    value: selectedFont, isExpanded: true, underline: SizedBox(),
+              //    items: availableFonts.map((font) => DropdownMenuItem(value: font, child: Text(font, style: TextStyle(fontFamily: font, fontSize: 18)))).toList(),
+              //    onChanged: (newFont) { if (newFont != null) { setState(() { selectedFont = newFont; }); widget.onFontChanged(newFont); } },
+              //  ),
+              //),
               // --- Turn Tracker ---
               SizedBox(height: 32),
               Text('Turn Tracker', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
