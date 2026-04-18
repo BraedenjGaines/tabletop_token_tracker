@@ -29,11 +29,12 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   String selectedFont = 'EagleLake';
   String selectedGame = 'fab';
-  bool turnTrackerEnabled = false;
+  bool turnTrackerEnabled = true;
   bool isLoaded = false;
   bool frostedGlass = false;
   ThemeMode themeMode = ThemeMode.system;
   int matchTimerMinutes = 50;
+  int startingLife = 20;
   int firstTurnSetting = 2;
   int resourceTrackerSetting = 0; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
 
@@ -50,10 +51,11 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       selectedFont = _prefs.getString('selectedFont') ?? 'EagleLake';
       selectedGame = _prefs.getString('selectedGame') ?? 'fab';
-      turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? false;
+      turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? true;
       frostedGlass = _prefs.getBool('frostedGlass') ?? false;
       themeMode = ThemeMode.values[_prefs.getInt('themeMode') ?? 0];
       matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;
+      startingLife = _prefs.getInt('startingLife') ?? 20;
       firstTurnSetting = _prefs.getInt('firstTurnSetting') ?? 2;
       resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 0;
       isLoaded = true;
@@ -78,6 +80,15 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _saveMatchTimer() async {
     await _prefs.setInt('matchTimerMinutes', matchTimerMinutes);
+  }
+
+  Future<void> _saveStartingLife() async {
+    await _prefs.setInt('startingLife', startingLife);
+  }
+
+  void updateStartingLife(int value) {
+    setState(() { startingLife = value; });
+    _saveStartingLife();
   }
 
   Future<void> _saveFirstTurnSetting() async {
@@ -165,6 +176,8 @@ class _MyAppState extends State<MyApp> {
           onThemeModeChanged: updateThemeMode,
           matchTimerMinutes: matchTimerMinutes,
           onMatchTimerChanged: updateMatchTimer,
+          startingLife: startingLife,
+          onStartingLifeChanged: updateStartingLife,
           firstTurnSetting: firstTurnSetting,
           onFirstTurnSettingChanged: updateFirstTurnSetting,
           resourceTrackerSetting: resourceTrackerSetting,

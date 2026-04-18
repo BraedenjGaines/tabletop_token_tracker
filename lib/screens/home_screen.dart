@@ -14,6 +14,8 @@ class HomeScreen extends StatelessWidget {
   final Function(ThemeMode) onThemeModeChanged;
   final int matchTimerMinutes;
   final Function(int) onMatchTimerChanged;
+  final int startingLife;
+  final Function(int) onStartingLifeChanged;
   final int firstTurnSetting;
   final Function(int) onFirstTurnSettingChanged;
   final int resourceTrackerSetting;
@@ -32,6 +34,8 @@ class HomeScreen extends StatelessWidget {
     required this.onThemeModeChanged,
     required this.matchTimerMinutes,
     required this.onMatchTimerChanged,
+    required this.startingLife,
+    required this.onStartingLifeChanged,
     required this.firstTurnSetting,
     required this.onFirstTurnSettingChanged,
     required this.resourceTrackerSetting,
@@ -41,16 +45,31 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text('TableTop Token Tracker'),
         centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(
-              onPressed: () {
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/home_background.jpg',
+              fit: BoxFit.cover,
+              errorBuilder: (c, e, s) => Container(color: Colors.grey[900]),
+            ),
+          ),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 220,
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -66,6 +85,8 @@ class HomeScreen extends StatelessWidget {
                       onThemeModeChanged: onThemeModeChanged,
                       matchTimerMinutes: matchTimerMinutes,
                       onMatchTimerChanged: onMatchTimerChanged,
+                      startingLife: startingLife,
+                      onStartingLifeChanged: onStartingLifeChanged,
                       firstTurnSetting: firstTurnSetting,
                       onFirstTurnSettingChanged: onFirstTurnSettingChanged,
                       resourceTrackerSetting: resourceTrackerSetting,
@@ -74,11 +95,15 @@ class HomeScreen extends StatelessWidget {
                   ),
                 );
               },
-              child: Text('Play'),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
+              child: Text('Play', style: TextStyle(fontSize: 22)),
+                  ),
+                ),
+                SizedBox(height: 20),
+                SizedBox(
+                  width: 220,
+                  height: 60,
+                  child: ElevatedButton(
+                    onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -101,10 +126,13 @@ class HomeScreen extends StatelessWidget {
                   ),
                 );
               },
-              child: Text('Settings'),
+              child: Text('Settings', style: TextStyle(fontSize: 22)),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

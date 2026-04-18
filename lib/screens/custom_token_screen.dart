@@ -377,10 +377,6 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Custom Tokens',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
             SizedBox(height: 12),
             Expanded(
               child: customTokens.isEmpty

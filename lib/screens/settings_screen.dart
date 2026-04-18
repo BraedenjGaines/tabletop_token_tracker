@@ -85,7 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               //),
               // --- Turn Tracker ---
               SizedBox(height: 32),
-              Text('Turn Tracker', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+              Center(child: Text('Turn Tracker', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold))),
               SizedBox(height: 8),
               Text('Shows phase tracking between players (Flesh and Blood, 2 players only)', style: TextStyle(fontSize: 14, color: Colors.grey)),
               SizedBox(height: 8),
@@ -97,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // --- First Turn ---
               SizedBox(height: 32),
-              Text('First Turn', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+              Center(child: Text('First Turn', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold))),
               SizedBox(height: 8),
               Text('Determines who goes first in 2-player games', style: TextStyle(fontSize: 14, color: Colors.grey)),
               SizedBox(height: 12),
@@ -106,8 +106,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: SegmentedButton<int>(
                   showSelectedIcon: false,
                   style: ButtonStyle(
-                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 20)),
-                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 16, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 10)),
+                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 14, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
                   ),
                   segments: [
                     ButtonSegment(value: 0, label: Text('Player 1')),
@@ -122,19 +122,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
 
+                // --- Visual ---
+              SizedBox(height: 32),
+              Center(child: Text('Visual', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold))),
+              SizedBox(height: 8),
+              Text('Applies a frosted glass blur effect to the player panels on the counter screen', style: TextStyle(fontSize: 14, color: Colors.grey)),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Frosted Glass Effect'),
+                value: frostedGlass,
+                onChanged: (value) { setState(() { frostedGlass = value; }); widget.onFrostedGlassChanged(value); },
+              ),
+              SizedBox(height: 16),
+              Center(child: Text('Theme', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+              SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<ThemeMode>(
+                  showSelectedIcon: false,
+                  style: ButtonStyle(
+                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 10)),
+                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 14, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+                  ),
+                  segments: [
+                    ButtonSegment(value: ThemeMode.system, label: Text('System')),
+                    ButtonSegment(value: ThemeMode.light, label: Text('Light')),
+                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+                  ],
+                  selected: {currentThemeMode},
+                  onSelectionChanged: (selection) { setState(() { currentThemeMode = selection.first; }); widget.onThemeModeChanged(selection.first); },
+                ),
+              ),
+
+
               // --- Resource Tracking ---
               SizedBox(height: 32),
-              Text('Resource Tracking', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+              SizedBox(width: double.infinity, child: Text('Resource Tracking', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
               SizedBox(height: 8),
-              Text('Track action points and pitch resources during gameplay (2 players with turn tracker)', style: TextStyle(fontSize: 14, color: Colors.grey)),
+              Text('Track action points and pitch resources during gameplay', style: TextStyle(fontSize: 14, color: Colors.grey)),
               SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: SegmentedButton<int>(
                   showSelectedIcon: false,
                   style: ButtonStyle(
-                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 12, horizontal: 8)),
-                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 13, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 10)),
+                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 14, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
                   ),
                   segments: [
                     ButtonSegment(value: 0, label: Text('Both')),
@@ -150,33 +183,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
 
-              // --- Visual ---
-              SizedBox(height: 32),
-              Text('Visual', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              Text('Applies a frosted glass blur effect to the player panels on the counter screen', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              SizedBox(height: 8),
-              SwitchListTile(
-                title: Text('Frosted Glass Effect'),
-                value: frostedGlass,
-                onChanged: (value) { setState(() { frostedGlass = value; }); widget.onFrostedGlassChanged(value); },
-              ),
-              SizedBox(height: 16),
-              Text('Theme', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              SizedBox(height: 8),
-              SegmentedButton<ThemeMode>(
-                segments: [
-                  ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.settings_brightness)),
-                  ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode)),
-                  ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode)),
-                ],
-                selected: {currentThemeMode},
-                onSelectionChanged: (selection) { setState(() { currentThemeMode = selection.first; }); widget.onThemeModeChanged(selection.first); },
-              ),
-
               // --- Tokens ---
               SizedBox(height: 32),
-              Text('Tokens', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold)),
+              Center(child: Text('Tokens', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold))),
               SizedBox(height: 8),
               SizedBox(
                 width: double.infinity, height: 48,

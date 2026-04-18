@@ -13,6 +13,8 @@ class SetupScreen extends StatefulWidget {
   final Function(ThemeMode) onThemeModeChanged;
   final int matchTimerMinutes;
   final Function(int) onMatchTimerChanged;
+  final int startingLife;
+  final Function(int) onStartingLifeChanged;
   final int firstTurnSetting;
   final Function(int) onFirstTurnSettingChanged;
   final int resourceTrackerSetting;
@@ -31,6 +33,8 @@ class SetupScreen extends StatefulWidget {
     required this.onThemeModeChanged,
     required this.matchTimerMinutes,
     required this.onMatchTimerChanged,
+    required this.startingLife,
+    required this.onStartingLifeChanged,
     required this.firstTurnSetting,
     required this.onFirstTurnSettingChanged,
     required this.resourceTrackerSetting,
@@ -43,8 +47,7 @@ class SetupScreen extends StatefulWidget {
 
 class _SetupScreenState extends State<SetupScreen> {
   int selectedPlayers = 2;
-  int selectedLife = 20;
-  bool isCustomLife = false;
+  late int selectedLife;
   final TextEditingController customLifeController = TextEditingController();
   late int matchTimerMinutes;
   late TextEditingController timerController;
@@ -60,6 +63,8 @@ class _SetupScreenState extends State<SetupScreen> {
   void initState() {
     super.initState();
     playerHeroes = List.generate(6, (i) => heroArchetypes[i % heroArchetypes.length]);
+    selectedLife = widget.startingLife;
+    customLifeController.text = selectedLife.toString();
     matchTimerMinutes = widget.matchTimerMinutes;
     timerController = TextEditingController(text: matchTimerMinutes.toString());
   }
@@ -82,44 +87,49 @@ class _SetupScreenState extends State<SetupScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Starting Life'),
+                Text('Starting Life', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    for (int life in [20, 25, 30, 40])
-                      Padding(
-                        padding: EdgeInsets.all(4),
-                        child: ElevatedButton(
-                          onPressed: () { setState(() { selectedLife = life; isCustomLife = false; }); },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: !isCustomLife && selectedLife == life ? Colors.blue : Colors.grey,
-                          ),
-                          child: Text('$life'),
-                        ),
-                      ),
-                  ],
-                ),
-                Padding(
-                  padding: EdgeInsets.all(4),
-                  child: ElevatedButton(
-                    onPressed: () { setState(() { isCustomLife = true; selectedLife = int.tryParse(customLifeController.text) ?? 0; }); },
-                    style: ElevatedButton.styleFrom(backgroundColor: isCustomLife ? Colors.blue : Colors.grey),
-                    child: Text('Custom'),
-                  ),
-                ),
-                if (isCustomLife)
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: SizedBox(
-                      width: 100,
+                    Text('Life: ', style: TextStyle(fontSize: 16)),
+                    SizedBox(width: 8),
+                    SizedBox(
+                      width: 80,
                       child: TextField(
                         controller: customLifeController,
                         keyboardType: TextInputType.number,
-                        decoration: InputDecoration(hintText: 'Enter life'),
-                        onChanged: (value) { setState(() { selectedLife = int.tryParse(value) ?? 0; }); },
+                        textAlign: TextAlign.center,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        onChanged: (value) {
+                          final parsed = int.tryParse(value);
+                          if (parsed != null && parsed > 0) {
+                            setState(() { selectedLife = parsed; });
+                            widget.onStartingLifeChanged(parsed);
+                          }
+                        },
                       ),
                     ),
-                  ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (int life in [20, 25, 30, 40])
+                      ChoiceChip(
+                        label: Text('$life'),
+                        selected: selectedLife == life,
+                        onSelected: (_) {
+                          setState(() { selectedLife = life; customLifeController.text = life.toString(); });
+                          widget.onStartingLifeChanged(life);
+                        },
+                      ),
+                  ],
+                ),
                 SizedBox(height: 30),
                 Text('Choose Heroes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 SizedBox(height: 12),
