@@ -51,10 +51,15 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text('TableTop Token Tracker'),
+        title: Text(
+          'TableTop\nToken Tracker',
+          style: TextStyle(color: Colors.black, fontSize: 32, fontWeight: FontWeight.w900),
+          textAlign: TextAlign.center,
+        ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        toolbarHeight: 100,
       ),
       body: Stack(
         children: [

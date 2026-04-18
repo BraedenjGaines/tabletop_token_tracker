@@ -269,7 +269,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     armorTrackingEnabled = widget.armorTrackingEnabled;
     _loadTokenPreferences();
     _handleFirstTurn();
-    _playerAP[activePlayer] = 1;
+    // Only set AP here for non-dice cases; dice case sets AP in _onFirstTurnChoice
+    if (widget.firstTurnSetting != 2) {
+      _playerAP[activePlayer] = 1;
+    }
   }
 
   void _handleFirstTurn() {
@@ -1221,7 +1224,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           if (_diceFinished && !_diceRolling) ...[SizedBox(height: 8), Text(_diceWinner == 0 ? 'WINNER!' : '', style: TextStyle(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold))],
           if (_showChoicePrompt && _diceWinner == 0) ...[SizedBox(height: 16), choiceButtons],
         ])))),
-        Container(height: 2, color: Colors.white24),
         Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text('Player 2', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 12),
