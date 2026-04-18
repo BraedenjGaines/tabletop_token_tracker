@@ -592,7 +592,7 @@ class _CounterScreenState extends State<CounterScreen> {
           // Token chips — positioned toward the center divider
           Positioned.fill(
             child: Align(
-              alignment: Alignment(0, -0.6),
+              alignment: Alignment(0, -.9),
               child: _buildTokenChips(index),
             ),
           ),
