@@ -534,6 +534,22 @@ class _CounterScreenState extends State<CounterScreen> {
     );
   }
 
+  Widget _buildPlayerOverlayPositioned(int index, Widget overlay) {
+    if (playerHealth.length == 2) {
+      final double halfHeight = MediaQuery.of(context).size.height / 2;
+      final int? qt = _getQuarterTurns(index);
+      return Positioned(
+        top: index == 0 ? 0 : halfHeight,
+        left: 0,
+        right: 0,
+        height: halfHeight,
+        child: qt != null ? RotatedBox(quarterTurns: qt, child: overlay) : overlay,
+      );
+    }
+    // For 3+ players, fall back to full screen overlay
+    return Positioned.fill(child: overlay);
+  }
+
   // --- Player tap halves (fills entire panel including behind system bars) ---
   Widget _buildPlayerTapHalf({required int index, required int delta, required String label, required Alignment labelAlignment, required EdgeInsets labelPadding, required Border? border}) {
     final double blurSigma = frostedGlass ? 5.0 : 0.0;
@@ -552,7 +568,6 @@ class _CounterScreenState extends State<CounterScreen> {
   // --- Single player panel: background + tap halves fill full space, content is padded ---
   Widget _buildPlayerPanel(int index) {
     final bool isActive = _showTurnTracker && activePlayer == index;
-    final int overlay = _playerOverlay[index];
 
     return Container(
       decoration: isActive ? BoxDecoration(border: Border.all(color: Colors.blue, width: 3)) : null,
@@ -599,11 +614,6 @@ class _CounterScreenState extends State<CounterScreen> {
               ),
             ),
           ),
-          // Overlays
-          if (overlay >= 0 && overlay < TokenCategory.values.length)
-            Positioned.fill(child: _buildCategoryOverlay(index, TokenCategory.values[overlay])),
-          if (overlay == -2)
-            Positioned.fill(child: _buildAddTokenOverlay(index)),
         ],
       ),
     );
@@ -753,6 +763,13 @@ class _CounterScreenState extends State<CounterScreen> {
           Positioned(bottom: 24, left: 16, child: IconButton(icon: Icon(Icons.list_alt, color: Colors.white), onPressed: () { showDialog(context: context, builder: (ctx) => Dialog(insetPadding: EdgeInsets.all(16), child: LogScreen(gameLog: gameLog))); })),
           // Dice overlay
           if (_showDiceOverlay) Positioned.fill(child: _buildDiceOverlay()),
+          // Player overlays — on top of everything including timer and buttons
+          for (int i = 0; i < widget.playerCount; i++)
+            if (_playerOverlay[i] >= 0 && _playerOverlay[i] < TokenCategory.values.length)
+              _buildPlayerOverlayPositioned(i, _buildCategoryOverlay(i, TokenCategory.values[_playerOverlay[i]])),
+          for (int i = 0; i < widget.playerCount; i++)
+            if (_playerOverlay[i] == -2)
+              _buildPlayerOverlayPositioned(i, _buildAddTokenOverlay(i)),
         ]),
       ),
     );
@@ -797,29 +814,91 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
     return [...favs, ...rest];
   }
 
+void _showAddCustomDialog() {
+    final nameCtrl = TextEditingController();
+    final healthCtrl = TextEditingController();
+    TokenCategory cat = TokenCategory.boonAura;
+    DestroyTrigger? trigger;
+    final Map<DestroyTrigger, String> triggerNames = {
+      DestroyTrigger.startOfYourTurn: 'Start of your turn',
+      DestroyTrigger.startOfOpponentTurn: "Start of opponent's turn",
+      DestroyTrigger.beginningOfActionPhase: 'Beginning of action phase',
+      DestroyTrigger.beginningOfEndPhase: 'Beginning of end phase',
+    };
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDS) => AlertDialog(
+          title: Text('Add Custom Token'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              TextField(controller: nameCtrl, decoration: InputDecoration(hintText: 'Token name')),
+              SizedBox(height: 16), Text('Category'), SizedBox(height: 8),
+              DropdownButton<TokenCategory>(value: cat, isExpanded: true,
+                items: TokenCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(catNames[c] ?? ''))).toList(),
+                onChanged: (v) { if (v != null) setDS(() { cat = v; if (v != TokenCategory.boonAura && v != TokenCategory.debuffAura) trigger = null; if (v != TokenCategory.ally) healthCtrl.clear(); }); },
+              ),
+              if (cat == TokenCategory.ally) ...[
+                SizedBox(height: 16), Text('Health'), SizedBox(height: 8),
+                TextField(controller: healthCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'Health value')),
+              ],
+              if (cat == TokenCategory.boonAura || cat == TokenCategory.debuffAura) ...[
+                SizedBox(height: 16), Text('Auto-destroy'), SizedBox(height: 8),
+                DropdownButton<DestroyTrigger?>(value: trigger, isExpanded: true,
+                  items: [
+                    DropdownMenuItem(value: null, child: Text('None (manual only)')),
+                    ...DestroyTrigger.values.map((t) => DropdownMenuItem(value: t, child: Text(triggerNames[t] ?? ''))),
+                  ],
+                  onChanged: (v) { setDS(() { trigger = v; }); },
+                ),
+              ],
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
+            TextButton(onPressed: () {
+              final name = nameCtrl.text.trim();
+              final health = int.tryParse(healthCtrl.text);
+              if (name.isNotEmpty && !widget.allTokens.any((t) => t.name == name)) {
+                if (cat == TokenCategory.ally && (health == null || health <= 0)) return;
+                final nt = TokenData(name: name, category: cat, destroyTrigger: trigger, health: cat == TokenCategory.ally ? health : null);
+                TokenPreferences.addCustomTokenFull(widget.gameId, nt);
+                TokenPreferences.addCustomToken(widget.gameId, name);
+                widget.onCustomTokenAdded(nt);
+                widget.allTokens.add(nt);
+                setState(() {});
+              }
+              Navigator.pop(context);
+            }, child: Text('Add')),
+          ],
+        ),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final filtered = _getFiltered();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Row(children: [
           Text('Add Token', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          Spacer(),
+          GestureDetector(
+            onTap: _showAddCustomDialog,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+              child: Text('+ Custom', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          SizedBox(width: 8),
           GestureDetector(onTap: widget.onClose, child: Icon(Icons.close, color: Colors.white, size: 22)),
         ]),
-        SizedBox(height: 6),
-        TextField(
-          controller: searchController,
-          style: TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Search...', hintStyle: TextStyle(color: Colors.grey),
-            prefixIcon: Icon(Icons.search, color: Colors.grey), isDense: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 8),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-          onChanged: (v) { setState(() { searchQuery = v; }); },
-        ),
-        SizedBox(height: 6),
+        SizedBox(height: 1),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
@@ -834,6 +913,7 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
               ? Center(child: Text('No tokens found', style: TextStyle(color: Colors.grey)))
               : ListView.builder(
                   shrinkWrap: true,
+                  padding: EdgeInsets.zero,
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final td = filtered[index];

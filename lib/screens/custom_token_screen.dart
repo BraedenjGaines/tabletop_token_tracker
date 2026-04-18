@@ -378,42 +378,6 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Game',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButton<String>(
-                value: selectedGame,
-                isExpanded: true,
-                underline: SizedBox(),
-                items: availableGames.map((game) {
-                  return DropdownMenuItem(
-                    value: game['id'],
-                    child: Text(
-                      game['name']!,
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  );
-                }).toList(),
-                onChanged: (String? newGame) {
-                  if (newGame != null) {
-                    setState(() {
-                      selectedGame = newGame;
-                    });
-                    _loadTokens();
-                  }
-                },
-              ),
-            ),
-            SizedBox(height: 24),
-            Text(
               'Custom Tokens',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
