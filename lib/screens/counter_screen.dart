@@ -813,89 +813,15 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
     final rest = tokens.where((t) => !currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
     return [...favs, ...rest];
   }
-
-void _showAddCustomDialog() {
-    final nameCtrl = TextEditingController();
-    final healthCtrl = TextEditingController();
-    TokenCategory cat = TokenCategory.boonAura;
-    DestroyTrigger? trigger;
-    final Map<DestroyTrigger, String> triggerNames = {
-      DestroyTrigger.startOfYourTurn: 'Start of your turn',
-      DestroyTrigger.startOfOpponentTurn: "Start of opponent's turn",
-      DestroyTrigger.beginningOfActionPhase: 'Beginning of action phase',
-      DestroyTrigger.beginningOfEndPhase: 'Beginning of end phase',
-    };
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDS) => AlertDialog(
-          title: Text('Add Custom Token'),
-          content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              TextField(controller: nameCtrl, decoration: InputDecoration(hintText: 'Token name')),
-              SizedBox(height: 16), Text('Category'), SizedBox(height: 8),
-              DropdownButton<TokenCategory>(value: cat, isExpanded: true,
-                items: TokenCategory.values.map((c) => DropdownMenuItem(value: c, child: Text(catNames[c] ?? ''))).toList(),
-                onChanged: (v) { if (v != null) setDS(() { cat = v; if (v != TokenCategory.boonAura && v != TokenCategory.debuffAura) trigger = null; if (v != TokenCategory.ally) healthCtrl.clear(); }); },
-              ),
-              if (cat == TokenCategory.ally) ...[
-                SizedBox(height: 16), Text('Health'), SizedBox(height: 8),
-                TextField(controller: healthCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'Health value')),
-              ],
-              if (cat == TokenCategory.boonAura || cat == TokenCategory.debuffAura) ...[
-                SizedBox(height: 16), Text('Auto-destroy'), SizedBox(height: 8),
-                DropdownButton<DestroyTrigger?>(value: trigger, isExpanded: true,
-                  items: [
-                    DropdownMenuItem(value: null, child: Text('None (manual only)')),
-                    ...DestroyTrigger.values.map((t) => DropdownMenuItem(value: t, child: Text(triggerNames[t] ?? ''))),
-                  ],
-                  onChanged: (v) { setDS(() { trigger = v; }); },
-                ),
-              ],
-            ]),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-            TextButton(onPressed: () {
-              final name = nameCtrl.text.trim();
-              final health = int.tryParse(healthCtrl.text);
-              if (name.isNotEmpty && !widget.allTokens.any((t) => t.name == name)) {
-                if (cat == TokenCategory.ally && (health == null || health <= 0)) return;
-                final nt = TokenData(name: name, category: cat, destroyTrigger: trigger, health: cat == TokenCategory.ally ? health : null);
-                TokenPreferences.addCustomTokenFull(widget.gameId, nt);
-                TokenPreferences.addCustomToken(widget.gameId, name);
-                widget.onCustomTokenAdded(nt);
-                widget.allTokens.add(nt);
-                setState(() {});
-              }
-              Navigator.pop(context);
-            }, child: Text('Add')),
-          ],
-        ),
-      ),
-    );
-  }
-
-
+  
   @override
   Widget build(BuildContext context) {
     final filtered = _getFiltered();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text('Add Token', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-          Spacer(),
-          GestureDetector(
-            onTap: _showAddCustomDialog,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
-              child: Text('+ Custom', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
-          ),
-          SizedBox(width: 8),
           GestureDetector(onTap: widget.onClose, child: Icon(Icons.close, color: Colors.white, size: 22)),
         ]),
         SizedBox(height: 1),
