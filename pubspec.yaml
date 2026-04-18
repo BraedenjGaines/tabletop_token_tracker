@@ -70,6 +70,7 @@ flutter:
         - asset: assets/fonts/Sedan-Regular.ttf
 
   assets:
+    - assets/images/home_background.jpg
     - assets/images/Wizard.jpg
     - assets/images/Knight.jpg
     - assets/images/Warlock.jpg
@@ -78,4 +79,7 @@ flutter:
     - assets/images/Druid.jpg
     - assets/images/Runeknight.jpg
     - assets/images/Paladin.jpg
-    - assets/images/home_background.jpg
+    - assets/images/armor_helmet.png
+    - assets/images/armor_chest.png
+    - assets/images/armor_gauntlet.png
+    - assets/images/armor_greave.png

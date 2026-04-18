@@ -110,6 +110,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   List<int> _playerPitch = [0, 0];
   List<int> _playerAP = [0, 0];
+
+  // Armor: 4 slots per player [Head, Chest, Arms, Legs]
+  // Value: -1 = destroyed, 0 = fresh, 1+ = number of -1 counters
+  late List<List<int>> _playerArmor;
   final List<_FloatingNumber> _floatingNumbers = [];
   int _floatCounter = 0;
 
@@ -256,6 +260,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     frostedGlass = widget.frostedGlass;
     resourceTrackerSetting = widget.resourceTrackerSetting;
     _timerSecondsRemaining = widget.matchTimerMinutes * 60;
+    _playerArmor = List.generate(widget.playerCount, (_) => [0, 0, 0, 0]);
     _loadTokenPreferences();
     _handleFirstTurn();
     _playerAP[activePlayer] = 1;
@@ -408,6 +413,122 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+
+ static const List<String> _armorAssets = [
+    'assets/images/armor_helmet.png',
+    'assets/images/armor_chest.png',
+    'assets/images/armor_gauntlet.png',
+    'assets/images/armor_greave.png',
+  ];
+
+  Widget _buildArmorIcon(int playerIndex, int slotIndex) {
+    final int state = _playerArmor[playerIndex][slotIndex];
+
+    double opacity = state == -1 ? 0.2 : 1.0;
+
+    return Container(
+      width: 60,
+      height: 80,
+      margin: EdgeInsets.all(3),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Stack(
+        children: [
+          // Background image fills entire box
+          Positioned.fill(
+            child: Opacity(
+              opacity: opacity,
+              child: Image.asset(
+                _armorAssets[slotIndex],
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => Container(color: Colors.grey[800]),
+              ),
+            ),
+          ),
+          // Damaged overlay
+          if (state > 0)
+            Positioned.fill(
+              child: Container(color: Colors.orange.withOpacity(0.3)),
+            ),
+          // Top half: add -1 counter
+          Positioned(
+            top: 0, left: 0, right: 0, height: 40,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                setState(() {
+                  if (state == -1) {
+                    _playerArmor[playerIndex][slotIndex] = 0;
+                  } else if (state > 0) {
+                    _playerArmor[playerIndex][slotIndex] = state - 1;
+                  }
+                });
+              },
+              child: Container(
+                color: Colors.white.withOpacity(0.1),
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 1),
+                  child: Text('+', style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.6), height: .65)),
+                ),
+              ),
+            ),
+          ),
+          // Bottom half: remove -1 counter
+          Positioned(
+            top: 40, left: 0, right: 0, height: 40,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                setState(() {
+                  if (state == -1) {
+                    _playerArmor[playerIndex][slotIndex] = 0;
+                  } else {
+                    _playerArmor[playerIndex][slotIndex] = state + 1;
+                  }
+                });
+              },
+              child: Container(
+                color: Colors.white.withOpacity(0.1),
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: 1),
+                  child: Text('-', style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.6), height: .65)),
+                ),
+              ),
+            ),
+          ),
+          // Counter badge
+          if (state > 0)
+            Positioned(
+              bottom: 4, right: 4,
+              child: IgnorePointer(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6)),
+                  child: Text('-$state', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold, height: 1.0)),
+                ),
+              ),
+            ),
+          // Long press to destroy
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onLongPress: () {
+                setState(() {
+                  if (state != -1) {
+                    _playerArmor[playerIndex][slotIndex] = -1;
+                  }
+                });
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -846,7 +967,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           // Token chips — positioned toward the center divider
           Positioned.fill(
             child: Align(
-              alignment: Alignment(0, -.9),
+              alignment: Alignment(0, -.955),
               child: _buildTokenChips(index),
             ),
           ),
@@ -1127,6 +1248,59 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           Positioned(top: 40, left: 0, right: 0, child: Center(child: RotatedBox(quarterTurns: 2, child: _buildTimerDisplay()))),
           Positioned(bottom: 40, left: 0, right: 0, child: Center(child: _buildTimerDisplay())),
           // Home
+          // Player 1 armor - left side (Head, Chest) rotated
+          if (widget.playerCount == 2)
+            Positioned(
+              top: 80,
+              left: 8,
+              child: RotatedBox(quarterTurns: 2, child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildArmorIcon(0, 0),
+                  _buildArmorIcon(0, 1),
+                ],
+              )),
+            ),
+          // Player 1 armor - right side (Arms, Legs) rotated
+          if (widget.playerCount == 2)
+            Positioned(
+              top: 80,
+              right: 8,
+              child: RotatedBox(quarterTurns: 2, child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildArmorIcon(0, 2),
+                  _buildArmorIcon(0, 3),
+                ],
+              )),
+            ),
+          // Player 2 armor - left side (Head, Chest)
+          if (widget.playerCount == 2)
+            Positioned(
+              bottom: 80,
+              left: 8,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildArmorIcon(1, 0),
+                  _buildArmorIcon(1, 1),
+                ],
+              ),
+            ),
+          // Player 2 armor - right side (Arms, Legs)
+          if (widget.playerCount == 2)
+            Positioned(
+              bottom: 80,
+              right: 8,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildArmorIcon(1, 2),
+                  _buildArmorIcon(1, 3),
+                ],
+              ),
+            ),
+          // Home
           Positioned(top: 40, left: 16, child: IconButton(icon: Icon(Icons.home, color: Colors.white), onPressed: () {
             if (gameLog.entries.isNotEmpty) {
               showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Leave Game'), content: Text('A game is in progress. Are you sure you want to return to the home screen?'), actions: [
@@ -1139,7 +1313,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           Positioned(top: 40, right: 16, child: IconButton(icon: Icon(Icons.refresh, color: Colors.white), onPressed: () {
             showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Reset Game'), content: Text('Reset all health, tokens, timer, and log?'), actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
-              TextButton(onPressed: () { setState(() { playerHealth = List.filled(widget.playerCount, widget.startingLife); playerTokens = List.generate(widget.playerCount, (_) => []); _playerOverlay = List.filled(widget.playerCount, -1); activePlayer = 0; currentPhase = 0; turnCount = 0; _playerPitch = [0, 0]; _playerAP = [1, 0]; gameLog.clear(); }); _resetTimer(); Navigator.pop(ctx); }, child: Text('Reset', style: TextStyle(color: Colors.red))),
+              TextButton(onPressed: () { setState(() { playerHealth = List.filled(widget.playerCount, widget.startingLife); playerTokens = List.generate(widget.playerCount, (_) => []); _playerOverlay = List.filled(widget.playerCount, -1); activePlayer = 0; currentPhase = 0; turnCount = 0; _playerPitch = [0, 0]; _playerAP = [1, 0]; _playerArmor = List.generate(widget.playerCount, (_) => [0, 0, 0, 0]); gameLog.clear(); }); _resetTimer(); Navigator.pop(ctx); }, child: Text('Reset', style: TextStyle(color: Colors.red))),
             ]));
           })),
           // Settings
