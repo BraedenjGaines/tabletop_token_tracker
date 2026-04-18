@@ -3,6 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_screen.dart';
 
+
+class _NoOverscrollBehavior extends ScrollBehavior {
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
+    return child;
+  }
+}
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
@@ -108,39 +115,48 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     if (!isLoaded) {
-      return MaterialApp(
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+      return ScrollConfiguration(
+        behavior: _NoOverscrollBehavior(),
+        child: MaterialApp(
+          home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        ),
       );
     }
     return MaterialApp(
       title: 'TableTop Token Tracker',
-      debugShowCheckedModeBanner: false,
-      themeMode: themeMode,
-      theme: ThemeData(
-        fontFamily: selectedFont,
-        brightness: Brightness.light,
-        colorSchemeSeed: Colors.blue,
-      ),
-      darkTheme: ThemeData(
-        fontFamily: selectedFont,
-        brightness: Brightness.dark,
-        colorSchemeSeed: Colors.blue,
-      ),
-      home: HomeScreen(
-        selectedFont: selectedFont,
-        onFontChanged: updateFont,
-        selectedGame: selectedGame,
-        turnTrackerEnabled: turnTrackerEnabled,
-        onTurnTrackerChanged: updateTurnTracker,
-        frostedGlass: frostedGlass,
-        onFrostedGlassChanged: updateFrostedGlass,
+      builder: (context, child) {
+        return ScrollConfiguration(
+          behavior: _NoOverscrollBehavior(),
+          child: child!,
+        );
+      },
+        debugShowCheckedModeBanner: false,
         themeMode: themeMode,
-        onThemeModeChanged: updateThemeMode,
-        matchTimerMinutes: matchTimerMinutes,
-        onMatchTimerChanged: updateMatchTimer,
-        firstTurnSetting: firstTurnSetting,
-        onFirstTurnSettingChanged: updateFirstTurnSetting,
-      ),
-    );
+        theme: ThemeData(
+          fontFamily: selectedFont,
+          brightness: Brightness.light,
+          colorSchemeSeed: Colors.blue,
+        ),
+        darkTheme: ThemeData(
+          fontFamily: selectedFont,
+          brightness: Brightness.dark,
+          colorSchemeSeed: Colors.blue,
+        ),
+        home: HomeScreen(
+          selectedFont: selectedFont,
+          onFontChanged: updateFont,
+          selectedGame: selectedGame,
+          turnTrackerEnabled: turnTrackerEnabled,
+          onTurnTrackerChanged: updateTurnTracker,
+          frostedGlass: frostedGlass,
+          onFrostedGlassChanged: updateFrostedGlass,
+          themeMode: themeMode,
+          onThemeModeChanged: updateThemeMode,
+          matchTimerMinutes: matchTimerMinutes,
+          onMatchTimerChanged: updateMatchTimer,
+          firstTurnSetting: firstTurnSetting,
+          onFirstTurnSettingChanged: updateFirstTurnSetting,
+        ),
+      );
   }
 }
