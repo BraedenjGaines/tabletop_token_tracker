@@ -350,7 +350,6 @@ class _CounterScreenState extends State<CounterScreen> {
   Widget _buildTokenChips(int playerIndex) {
     final byCategory = _getTokensByCategory(playerIndex);
 
-    // Fixed order: Boons, Allies, Items, Debuffs
     final List<TokenCategory> order = [
       TokenCategory.boonAura,
       TokenCategory.ally,
@@ -358,7 +357,6 @@ class _CounterScreenState extends State<CounterScreen> {
       TokenCategory.debuffAura,
     ];
 
-    // Only show categories that have tokens
     final active = order.where((cat) => byCategory.containsKey(cat)).toList();
     if (active.isEmpty) return SizedBox.shrink();
 
@@ -366,7 +364,7 @@ class _CounterScreenState extends State<CounterScreen> {
       builder: (context, constraints) {
         final double totalWidth = constraints.maxWidth * 0.9;
         final double chipWidth = totalWidth / 4;
-        final double chipHeight = chipWidth * 1.4; // Taller than wide, like a trading card
+        final double chipHeight = chipWidth * 1.4;
 
         return SizedBox(
           height: chipHeight,
@@ -380,7 +378,7 @@ class _CounterScreenState extends State<CounterScreen> {
                     child: _buildCategoryChip(cat, byCategory[cat]!.length, playerIndex, chipWidth, chipHeight),
                   )
                 else
-                  SizedBox(width: chipWidth + 4), // Reserve space to keep positions stable
+                  SizedBox(width: chipWidth + 4),
             ],
           ),
         );
@@ -388,7 +386,7 @@ class _CounterScreenState extends State<CounterScreen> {
     );
   }
 
-  // --- Category management overlay (within player half) ---
+  // --- Category management overlay ---
   Widget _buildCategoryOverlay(int playerIndex, TokenCategory cat) {
     final tokens = <int>[];
     for (int i = 0; i < playerTokens[playerIndex].length; i++) {
@@ -495,7 +493,7 @@ class _CounterScreenState extends State<CounterScreen> {
     );
   }
 
-  // --- Add token picker overlay (within player half) ---
+  // --- Add token picker overlay ---
   Widget _buildAddTokenOverlay(int playerIndex) {
     final List<TokenData> allTokens = [...(tokenLibrary[widget.selectedGame] ?? []), ...customTokens];
 
@@ -536,7 +534,7 @@ class _CounterScreenState extends State<CounterScreen> {
     );
   }
 
-  // --- Player tap halves ---
+  // --- Player tap halves (fills entire panel including behind system bars) ---
   Widget _buildPlayerTapHalf({required int index, required int delta, required String label, required Alignment labelAlignment, required EdgeInsets labelPadding, required Border? border}) {
     final double blurSigma = frostedGlass ? 5.0 : 0.0;
     return Expanded(
@@ -551,43 +549,57 @@ class _CounterScreenState extends State<CounterScreen> {
     );
   }
 
-  // --- Player widget ---
-  Widget _buildPlayerWidget(int index) {
+  // --- Single player panel: background + tap halves fill full space, content is padded ---
+  Widget _buildPlayerPanel(int index) {
     final bool isActive = _showTurnTracker && activePlayer == index;
     final int overlay = _playerOverlay[index];
 
-    Widget content = Container(
+    return Container(
       decoration: isActive ? BoxDecoration(border: Border.all(color: Colors.blue, width: 3)) : null,
       child: Stack(
         children: [
           // Hero background
-          Positioned.fill(child: Image.asset('assets/images/${widget.playerHeroes[index]}.jpg', fit: BoxFit.cover, errorBuilder: (c, e, s) => Container(color: Colors.grey[900]))),
-          // Tap halves
-          Row(children: [
-            _buildPlayerTapHalf(index: index, delta: -1, label: '-', labelAlignment: Alignment.centerRight, labelPadding: EdgeInsets.only(right: 60), border: Border(right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5))),
-            _buildPlayerTapHalf(index: index, delta: 1, label: '+', labelAlignment: Alignment.centerLeft, labelPadding: EdgeInsets.only(left: 60), border: Border(left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5))),
-          ]),
-          // Center: health + token chips + add button
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildTokenChips(index),
-                SizedBox(height: 4),
-                Text('${playerHealth[index]}', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black)),
-                SizedBox(height: 4),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () { setState(() { _playerOverlay[index] = -2; }); },
-                  child: Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Icon(Icons.add_box, size: 28, color: Colors.black),
-                  ),
-                ),
-              ],
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/${widget.playerHeroes[index]}.jpg',
+              fit: BoxFit.cover,
+              errorBuilder: (c, e, s) => Container(color: Colors.grey[900]),
             ),
           ),
-          // Overlay: category manager or add token picker
+          // Tap halves
+          Positioned.fill(
+            child: Row(children: [
+              _buildPlayerTapHalf(index: index, delta: -1, label: '-', labelAlignment: Alignment.centerRight, labelPadding: EdgeInsets.only(right: 60), border: Border(right: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5))),
+              _buildPlayerTapHalf(index: index, delta: 1, label: '+', labelAlignment: Alignment.centerLeft, labelPadding: EdgeInsets.only(left: 60), border: Border(left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 0.5))),
+            ]),
+          ),
+          // Center content — biased toward the middle of the screen
+          // Token chips — positioned toward the center divider
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment(0, -0.6),
+              child: _buildTokenChips(index),
+            ),
+          ),
+          // Health number — fixed at center
+          Center(
+            child: Text('${playerHealth[index]}', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black)),
+          ),
+          // Add token button — fixed below center
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment(0, 0.3),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () { setState(() { _playerOverlay[index] = -2; }); },
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Icon(Icons.add_box, size: 28, color: Colors.black),
+                ),
+              ),
+            ),
+          ),
+          // Overlays
           if (overlay >= 0 && overlay < TokenCategory.values.length)
             Positioned.fill(child: _buildCategoryOverlay(index, TokenCategory.values[overlay])),
           if (overlay == -2)
@@ -595,7 +607,11 @@ class _CounterScreenState extends State<CounterScreen> {
         ],
       ),
     );
+  }
 
+  // --- Player widget with rotation applied ---
+  Widget _buildPlayerWidget(int index) {
+    Widget content = _buildPlayerPanel(index);
     final int? qt = _getQuarterTurns(index);
     if (qt != null) content = RotatedBox(quarterTurns: qt, child: content);
     return content;
@@ -670,15 +686,27 @@ class _CounterScreenState extends State<CounterScreen> {
     );
   }
 
-  // --- Grid ---
+  // --- Grid: full edge-to-edge, no padding here ---
   Widget _buildPlayerGrid() {
     if (playerHealth.length == 2) {
-      if (_showTurnTracker) return Column(children: [Expanded(child: _buildPlayerWidget(0)), _buildTurnTrackerPanel(), Expanded(child: _buildPlayerWidget(1))]);
-      return Column(children: [Expanded(child: _buildPlayerWidget(0)), Expanded(child: _buildPlayerWidget(1))]);
+      if (_showTurnTracker) {
+        return Column(children: [
+          Expanded(child: _buildPlayerWidget(0)),
+          _buildTurnTrackerPanel(),
+          Expanded(child: _buildPlayerWidget(1)),
+        ]);
+      }
+      return Column(children: [
+        Expanded(child: _buildPlayerWidget(0)),
+        Expanded(child: _buildPlayerWidget(1)),
+      ]);
     }
     return Column(children: [
       for (int i = 0; i < playerHealth.length; i += 2)
-        Expanded(child: Row(children: [Expanded(child: _buildPlayerWidget(i)), if (i + 1 < playerHealth.length) Expanded(child: _buildPlayerWidget(i + 1))])),
+        Expanded(child: Row(children: [
+          Expanded(child: _buildPlayerWidget(i)),
+          if (i + 1 < playerHealth.length) Expanded(child: _buildPlayerWidget(i + 1)),
+        ])),
     ]);
   }
 
@@ -691,8 +719,10 @@ class _CounterScreenState extends State<CounterScreen> {
         backgroundColor: Colors.black,
         body: Stack(children: [
           _buildPlayerGrid(),
+          // Timer top (rotated for P1)
           Positioned(top: 40, left: 0, right: 0, child: Center(child: RotatedBox(quarterTurns: 2, child: _buildTimerDisplay()))),
-          Positioned(bottom: 60, left: 0, right: 0, child: Center(child: _buildTimerDisplay())),
+          Positioned(bottom: 40, left: 0, right: 0, child: Center(child: _buildTimerDisplay())),
+          // Home
           Positioned(top: 40, left: 16, child: IconButton(icon: Icon(Icons.home, color: Colors.white), onPressed: () {
             if (gameLog.entries.isNotEmpty) {
               showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Leave Game'), content: Text('A game is in progress. Are you sure you want to return to the home screen?'), actions: [
@@ -701,12 +731,14 @@ class _CounterScreenState extends State<CounterScreen> {
               ]));
             } else { _timer?.cancel(); Navigator.popUntil(context, (r) => r.isFirst); }
           })),
+          // Reset
           Positioned(top: 40, right: 16, child: IconButton(icon: Icon(Icons.refresh, color: Colors.white), onPressed: () {
             showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Reset Game'), content: Text('Reset all health, tokens, timer, and log?'), actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
               TextButton(onPressed: () { setState(() { playerHealth = List.filled(widget.playerCount, widget.startingLife); playerTokens = List.generate(widget.playerCount, (_) => []); _playerOverlay = List.filled(widget.playerCount, -1); activePlayer = 0; currentPhase = 0; turnCount = 0; gameLog.clear(); }); _resetTimer(); Navigator.pop(ctx); }, child: Text('Reset', style: TextStyle(color: Colors.red))),
             ]));
           })),
+          // Settings
           Positioned(bottom: 24, right: 16, child: IconButton(icon: Icon(Icons.settings, color: Colors.white), onPressed: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => SettingsScreen(
               currentFont: currentFont, onFontChanged: (f) { widget.onFontChanged(f); setState(() { currentFont = f; }); },
@@ -717,7 +749,9 @@ class _CounterScreenState extends State<CounterScreen> {
               firstTurnSetting: widget.firstTurnSetting, onFirstTurnSettingChanged: widget.onFirstTurnSettingChanged,
             )));
           })),
+          // Log
           Positioned(bottom: 24, left: 16, child: IconButton(icon: Icon(Icons.list_alt, color: Colors.white), onPressed: () { showDialog(context: context, builder: (ctx) => Dialog(insetPadding: EdgeInsets.all(16), child: LogScreen(gameLog: gameLog))); })),
+          // Dice overlay
           if (_showDiceOverlay) Positioned.fill(child: _buildDiceOverlay()),
         ]),
       ),
@@ -725,7 +759,7 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 }
 
-// --- Inline token picker (used inside player half) ---
+// --- Inline token picker ---
 class _InlineTokenPicker extends StatefulWidget {
   final List<TokenData> allTokens;
   final List<String> favoriteTokens;
