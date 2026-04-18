@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../data/game_log.dart';
 
 class LogScreen extends StatefulWidget {
@@ -69,6 +71,28 @@ class _LogScreenState extends State<LogScreen> {
     return '';
   }
 
+  String _formatLogAsText() {
+    final buffer = StringBuffer();
+    buffer.writeln('=== TableTop Token Tracker - Game Log ===');
+    buffer.writeln('');
+    for (final entry in widget.gameLog.entries) {
+      final player = 'Player ${entry.playerIndex + 1}';
+      final time = entry.timestamp;
+      final phase = entry.phase != null ? ' [${entry.phase}]' : '';
+      String detail = entry.description;
+      if (entry.type == LogEventType.healthChange ||
+          entry.type == LogEventType.allyHealthChange ||
+          entry.type == LogEventType.tokenCountChange) {
+        final sign = entry.value > 0 ? '+' : '';
+        detail = '${entry.description} $sign${entry.value}';
+      }
+      buffer.writeln('$time | $player$phase | $detail');
+    }
+    buffer.writeln('');
+    buffer.writeln('========================================');
+    return buffer.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final reversedEntries = widget.gameLog.entries.reversed.toList();
@@ -89,6 +113,23 @@ class _LogScreenState extends State<LogScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (widget.gameLog.entries.isNotEmpty) ...[
+                    IconButton(
+                      icon: Icon(Icons.copy, size: 20),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: _formatLogAsText()));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Log copied to clipboard'), duration: Duration(seconds: 2)),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.share, size: 20),
+                      onPressed: () {
+                        Share.share(_formatLogAsText());
+                      },
+                    ),
+                  ],
                   if (widget.onUndo != null)
                     IconButton(
                       icon: Icon(Icons.undo, color: Colors.blue),
