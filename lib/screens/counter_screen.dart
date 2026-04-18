@@ -32,6 +32,24 @@ class ActiveToken {
   });
 }
 
+class _FloatingNumber {
+  final int value;
+  final AnimationController controller;
+  final int playerIndex;
+  final double startX;
+  final double startY;
+  final double arcDirection; // -1 for left arc, 1 for right arc
+
+  _FloatingNumber({
+    required this.value,
+    required this.controller,
+    required this.playerIndex,
+    required this.startX,
+    required this.startY,
+    required this.arcDirection,
+  });
+}
+
 class CounterScreen extends StatefulWidget {
   final int playerCount;
   final int startingLife;
@@ -78,7 +96,7 @@ class CounterScreen extends StatefulWidget {
   _CounterScreenState createState() => _CounterScreenState();
 }
 
-class _CounterScreenState extends State<CounterScreen> {
+class _CounterScreenState extends State<CounterScreen> with TickerProviderStateMixin {
   late List<int> playerHealth;
   late List<List<ActiveToken>> playerTokens;
   late String currentFont;
@@ -92,6 +110,8 @@ class _CounterScreenState extends State<CounterScreen> {
 
   List<int> _playerPitch = [0, 0];
   List<int> _playerAP = [0, 0];
+  final List<_FloatingNumber> _floatingNumbers = [];
+  int _floatCounter = 0;
 
   List<TokenData> customTokens = [];
   List<String> favoriteTokens = [];
@@ -297,7 +317,12 @@ class _CounterScreenState extends State<CounterScreen> {
   }
 
   @override
-  void dispose() { _timer?.cancel(); _diceTimer?.cancel(); super.dispose(); }
+  void dispose() {
+    _timer?.cancel();
+    _diceTimer?.cancel();
+    for (final f in _floatingNumbers) { f.controller.dispose(); }
+    super.dispose();
+  }
 
   // --- Timer ---
   void _startTimer() {
@@ -318,6 +343,74 @@ class _CounterScreenState extends State<CounterScreen> {
     if (_timerSecondsRemaining <= 0) return Colors.red;
     if (_timerSecondsRemaining <= 300) return Colors.orange;
     return Colors.white;
+  }
+
+  void _spawnFloatingNumber(int playerIndex, int value) {
+    _floatCounter++;
+    final direction = value < 0 ? -1.0 : 1.0;
+    // Alternate sides slightly for rapid taps
+    final xOffset = (_floatCounter % 2 == 0) ? direction : -direction;
+
+    final controller = AnimationController(
+      duration: Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    final floater = _FloatingNumber(
+      value: value,
+      controller: controller,
+      playerIndex: playerIndex,
+      startX: xOffset * 0.3,
+      startY: 0,
+      arcDirection: xOffset,
+    );
+
+    setState(() { _floatingNumbers.add(floater); });
+
+    controller.forward().then((_) {
+      controller.dispose();
+      if (mounted) {
+        setState(() { _floatingNumbers.remove(floater); });
+      }
+    });
+  }
+
+  Widget _buildFloatingNumbers(int playerIndex) {
+    final playerFloaters = _floatingNumbers.where((f) => f.playerIndex == playerIndex).toList();
+    if (playerFloaters.isEmpty) return SizedBox.shrink();
+
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          for (final f in playerFloaters)
+            AnimatedBuilder(
+              animation: f.controller,
+              builder: (context, child) {
+                final t = f.controller.value;
+                final opacity = 1.0 - t;
+                final yOffset = -80 * t;
+                final xOffset = 30 * sin(t * pi) * f.arcDirection;
+
+                return Transform.translate(
+                  offset: Offset(xOffset, yOffset),
+                  child: Opacity(
+                    opacity: opacity.clamp(0.0, 1.0),
+                    child: Text(
+                      f.value > 0 ? '+${f.value}' : '${f.value}',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
   }
 
   // --- Token prefs ---
@@ -716,7 +809,7 @@ class _CounterScreenState extends State<CounterScreen> {
     final double blurSigma = frostedGlass ? 5.0 : 0.0;
     return Expanded(
       child: GestureDetector(
-        onTap: () { setState(() { playerHealth[index] += delta; _log(index, LogEventType.healthChange, 'Health', value: delta); }); },
+        onTap: () { setState(() { playerHealth[index] += delta; _log(index, LogEventType.healthChange, 'Health', value: delta); }); _spawnFloatingNumber(index, delta); },
         child: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
           child: Container(decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), border: border),
             child: Align(alignment: labelAlignment, child: Padding(padding: labelPadding, child: Text(label, style: TextStyle(fontSize: 28, color: Colors.black.withOpacity(0.4))))),
@@ -759,7 +852,14 @@ class _CounterScreenState extends State<CounterScreen> {
           ),
           // Health number — fixed at center
           Center(
-            child: Text('${playerHealth[index]}', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black)),
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                Text('${playerHealth[index]}', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black)),
+                _buildFloatingNumbers(index),
+              ],
+            ),
           ),
           // Add token button — fixed below center
           Positioned.fill(
