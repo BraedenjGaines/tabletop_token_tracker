@@ -95,17 +95,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SizedBox(height: 8),
               Text('Determines who goes first in 2-player games', style: TextStyle(fontSize: 14, color: Colors.grey)),
               SizedBox(height: 12),
-              SegmentedButton<int>(
-                segments: [
-                  ButtonSegment(value: 0, label: Text('Player 1'), icon: Icon(Icons.person)),
-                  ButtonSegment(value: 1, label: Text('Player 2'), icon: Icon(Icons.person_outline)),
-                  ButtonSegment(value: 2, label: Text('Random'), icon: Icon(Icons.casino)),
-                ],
-                selected: {firstTurnSetting},
-                onSelectionChanged: (selection) {
-                  setState(() { firstTurnSetting = selection.first; });
-                  widget.onFirstTurnSettingChanged(selection.first);
-                },
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<int>(
+                  showSelectedIcon: false,
+                  style: ButtonStyle(
+                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 20)),
+                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 16, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+                  ),
+                  segments: [
+                    ButtonSegment(value: 0, label: Text('Player 1')),
+                    ButtonSegment(value: 2, label: Icon(Icons.casino, size: 28)),
+                    ButtonSegment(value: 1, label: Text('Player 2')),
+                  ],
+                  selected: {firstTurnSetting},
+                  onSelectionChanged: (selection) {
+                    setState(() { firstTurnSetting = selection.first; });
+                    widget.onFirstTurnSettingChanged(selection.first);
+                  },
+                ),
               ),
 
               // --- Visual ---
