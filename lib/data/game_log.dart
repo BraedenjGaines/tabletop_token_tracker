@@ -41,16 +41,15 @@ class GameLog {
     final now = DateTime.now();
     if (entries.isNotEmpty && _isStackable(entry.type)) {
       final last = entries.last;
-      final withinTime = _lastEntryTime != null && now.difference(_lastEntryTime!).inSeconds < 10;
+      final withinTime = _lastEntryTime != null && now.difference(_lastEntryTime!).inSeconds < 2;
+      final sameSign = (last.value > 0 && entry.value > 0) || (last.value < 0 && entry.value < 0);
       if (last.playerIndex == entry.playerIndex &&
           last.type == entry.type &&
           last.description == entry.description &&
           last.phase == entry.phase &&
-          withinTime) {
+          withinTime &&
+          sameSign) {
         last.value += entry.value;
-        if (last.value == 0) {
-          entries.removeLast();
-        }
         _lastEntryTime = now;
         return;
       }

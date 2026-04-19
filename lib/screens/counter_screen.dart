@@ -116,6 +116,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     return settings.turnTrackerEnabled && settings.selectedGame == 'fab' && widget.playerCount == 2;
   }
 
+  bool get _showMiddleBar {
+    final settings = context.read<GameSettingsProvider>();
+    if (widget.playerCount != 2) return false;
+    if (_showTurnTracker) return true;
+    return settings.resourceTrackerSetting != 3; // show if any resource tracking is on
+  }
+
   String? get _currentPhaseName =>
       _showTurnTracker ? fabPhases[currentPhase] : null;
 
@@ -340,8 +347,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
     // Update running accumulator
     _accumulatorValues[key] = (_accumulatorValues[key] ?? 0) + delta;
-    final settings2 = context.read<GameSettingsProvider>();
-    final resetDuration = settings2.damageDisplayMode == 0 ? 2 : 3;
+    final resetDuration = 2; // seconds to wait after last change before resetting accumulator
     _accumulatorTimers[key]?.cancel();
     _accumulatorTimers[key] = Timer(Duration(seconds: resetDuration), () {
       _accumulatorValues.remove(key);
@@ -979,29 +985,34 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
       );
     }
 
-    Widget centerContent = RotatedBox(
-      quarterTurns: activePlayer == 0 ? 2 : 0,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(icon: Icon(Icons.arrow_left, color: Colors.black, size: 20), onPressed: _retreatPhase, padding: EdgeInsets.zero, constraints: BoxConstraints()),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
-                  SizedBox(height: 2),
-                  Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color: Colors.black, height: 1.0)),
-                ]),
-              ),
-              IconButton(icon: Icon(Icons.arrow_right, color: Colors.black, size: 20), onPressed: _advancePhase, padding: EdgeInsets.zero, constraints: BoxConstraints()),
-            ],
-          ),
-        ],
-      ),
-    );
+    Widget centerContent;
+    if (_showTurnTracker) {
+      centerContent = RotatedBox(
+        quarterTurns: activePlayer == 0 ? 2 : 0,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(icon: Icon(Icons.arrow_left, color: Colors.black, size: 20), onPressed: _retreatPhase, padding: EdgeInsets.zero, constraints: BoxConstraints()),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+                    SizedBox(height: 2),
+                    Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color: Colors.black, height: 1.0)),
+                  ]),
+                ),
+                IconButton(icon: Icon(Icons.arrow_right, color: Colors.black, size: 20), onPressed: _advancePhase, padding: EdgeInsets.zero, constraints: BoxConstraints()),
+              ],
+            ),
+          ],
+        ),
+      );
+    } else {
+      centerContent = SizedBox.shrink();
+    }
 
     if (!showPitch && !showAP) {
       return Container(
@@ -1054,7 +1065,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   // --- Grid ---
   Widget _buildPlayerGrid() {
     if (playerHealth.length == 2) {
-      if (_showTurnTracker) {
+      if (_showMiddleBar) {
         return Column(children: [
           Expanded(child: _buildPlayerWidget(0)),
           _buildTurnTrackerPanel(),
@@ -1202,7 +1213,7 @@ class _InlineTokenPicker extends StatefulWidget {
 
 class _InlineTokenPickerState extends State<_InlineTokenPicker> {
   String searchQuery = '';
-  TokenCategory? selectedCategory;
+  final Set<TokenCategory> selectedCategories = {};
   final searchController = TextEditingController();
   late List<String> currentFavorites;
   final Map<TokenCategory, String> catNames = {TokenCategory.ally: 'Allies', TokenCategory.item: 'Items', TokenCategory.boonAura: 'Boons', TokenCategory.debuffAura: 'Debuffs'};
@@ -1214,7 +1225,7 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
 
   List<TokenData> _getFiltered() {
     var tokens = List<TokenData>.from(widget.allTokens);
-    if (selectedCategory != null) tokens = tokens.where((t) => t.category == selectedCategory).toList();
+    if (selectedCategories.isNotEmpty) tokens = tokens.where((t) => selectedCategories.contains(t.category)).toList();
     if (searchQuery.isNotEmpty) tokens = tokens.where((t) => t.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
     final favs = tokens.where((t) => currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
     final rest = tokens.where((t) => !currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
@@ -1235,9 +1246,8 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
-            Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text('All', style: TextStyle(fontSize: 11)), selected: selectedCategory == null, onSelected: (_) { setState(() { selectedCategory = null; }); }, visualDensity: VisualDensity.compact)),
             for (var c in TokenCategory.values)
-              Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text(catNames[c] ?? '', style: TextStyle(fontSize: 11)), selected: selectedCategory == c, onSelected: (_) { setState(() { selectedCategory = selectedCategory == c ? null : c; }); }, visualDensity: VisualDensity.compact)),
+              Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text(catNames[c] ?? '', style: TextStyle(fontSize: 11)), selected: selectedCategories.contains(c), showCheckmark: false, onSelected: (_) { setState(() { selectedCategories.contains(c) ? selectedCategories.remove(c) : selectedCategories.add(c); }); }, visualDensity: VisualDensity.compact)),
           ]),
         ),
         SizedBox(height: 6),
