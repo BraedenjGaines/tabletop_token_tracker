@@ -1,0 +1,43 @@
+import 'package:flutter/material.dart';
+
+class TimerDisplay extends StatelessWidget {
+  final int secondsRemaining;
+  final bool isRunning;
+  final VoidCallback onReset;
+  final VoidCallback onToggle;
+
+  const TimerDisplay({
+    super.key,
+    required this.secondsRemaining,
+    required this.isRunning,
+    required this.onReset,
+    required this.onToggle,
+  });
+
+  String _format() {
+    final m = secondsRemaining ~/ 60;
+    final s = secondsRemaining % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  Color _color() {
+    if (secondsRemaining <= 0) return Colors.red;
+    if (secondsRemaining <= 300) return Colors.orange;
+    return Colors.white;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(8)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        GestureDetector(onTap: onReset, child: Icon(Icons.replay, color: Colors.white, size: 18)),
+        SizedBox(width: 8),
+        Text(_format(), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _color(), fontFeatures: [FontFeature.tabularFigures()])),
+        SizedBox(width: 8),
+        GestureDetector(onTap: onToggle, child: Icon(isRunning ? Icons.pause : Icons.play_arrow, color: Colors.white, size: 20)),
+      ]),
+    );
+  }
+}

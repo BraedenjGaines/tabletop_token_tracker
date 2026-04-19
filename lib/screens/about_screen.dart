@@ -46,7 +46,7 @@ class AboutScreen extends StatelessWidget {
                   ],
                 ),
                 onPressed: () {
-                  launchUrl(Uri.parse('buymeacoffee.com/braedenjgaines'), mode: LaunchMode.externalApplication);
+                  launchUrl(Uri.parse('https://buymeacoffee.com/braedenjgaines'), mode: LaunchMode.externalApplication);
                 },
               ),
             ),

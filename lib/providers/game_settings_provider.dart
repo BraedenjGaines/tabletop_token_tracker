@@ -1,0 +1,88 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class GameSettingsProvider extends ChangeNotifier {
+  String selectedFont = 'EagleLake';
+  String selectedGame = 'fab';
+  bool turnTrackerEnabled = true;
+  bool frostedGlass = false;
+  ThemeMode themeMode = ThemeMode.system;
+  int matchTimerMinutes = 50;
+  int startingLife = 20;
+  int firstTurnSetting = 2;
+  int resourceTrackerSetting = 0; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
+  bool armorTrackingEnabled = true;
+  bool isLoaded = false;
+
+  late SharedPreferences _prefs;
+
+  Future<void> loadPreferences() async {
+    _prefs = await SharedPreferences.getInstance();
+    selectedFont = _prefs.getString('selectedFont') ?? 'EagleLake';
+    selectedGame = _prefs.getString('selectedGame') ?? 'fab';
+    turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? true;
+    frostedGlass = _prefs.getBool('frostedGlass') ?? false;
+    themeMode = ThemeMode.values[_prefs.getInt('themeMode') ?? 0];
+    matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;
+    startingLife = _prefs.getInt('startingLife') ?? 20;
+    firstTurnSetting = _prefs.getInt('firstTurnSetting') ?? 2;
+    resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 0;
+    armorTrackingEnabled = _prefs.getBool('armorTrackingEnabled') ?? true;
+    isLoaded = true;
+    notifyListeners();
+  }
+
+  void updateFont(String newFont) {
+    selectedFont = newFont;
+    _prefs.setString('selectedFont', newFont);
+    notifyListeners();
+  }
+
+  void updateTurnTracker(bool enabled) {
+    turnTrackerEnabled = enabled;
+    _prefs.setBool('turnTrackerEnabled', enabled);
+    notifyListeners();
+  }
+
+  void updateFrostedGlass(bool enabled) {
+    frostedGlass = enabled;
+    _prefs.setBool('frostedGlass', enabled);
+    notifyListeners();
+  }
+
+  void updateThemeMode(ThemeMode mode) {
+    themeMode = mode;
+    _prefs.setInt('themeMode', mode.index);
+    notifyListeners();
+  }
+
+  void updateMatchTimer(int minutes) {
+    matchTimerMinutes = minutes;
+    _prefs.setInt('matchTimerMinutes', minutes);
+    notifyListeners();
+  }
+
+  void updateStartingLife(int value) {
+    startingLife = value;
+    _prefs.setInt('startingLife', value);
+    notifyListeners();
+  }
+
+  void updateFirstTurnSetting(int value) {
+    firstTurnSetting = value;
+    _prefs.setInt('firstTurnSetting', value);
+    notifyListeners();
+  }
+
+  void updateResourceTracker(int value) {
+    resourceTrackerSetting = value;
+    _prefs.setInt('resourceTrackerSetting', value);
+    notifyListeners();
+  }
+
+  void updateArmorTracking(bool enabled) {
+    armorTrackingEnabled = enabled;
+    _prefs.setBool('armorTrackingEnabled', enabled);
+    notifyListeners();
+  }
+}

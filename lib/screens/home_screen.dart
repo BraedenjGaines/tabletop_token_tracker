@@ -4,48 +4,7 @@ import 'settings_screen.dart';
 import 'about_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  final String selectedFont;
-  final Function(String) onFontChanged;
-  final String selectedGame;
-  final bool turnTrackerEnabled;
-  final Function(bool) onTurnTrackerChanged;
-  final bool frostedGlass;
-  final Function(bool) onFrostedGlassChanged;
-  final ThemeMode themeMode;
-  final Function(ThemeMode) onThemeModeChanged;
-  final int matchTimerMinutes;
-  final Function(int) onMatchTimerChanged;
-  final int startingLife;
-  final Function(int) onStartingLifeChanged;
-  final int firstTurnSetting;
-  final Function(int) onFirstTurnSettingChanged;
-  final int resourceTrackerSetting;
-  final Function(int) onResourceTrackerChanged;
-  final bool armorTrackingEnabled;
-  final Function(bool) onArmorTrackingChanged;
-
-  const HomeScreen({
-    super.key,
-    required this.selectedFont,
-    required this.onFontChanged,
-    required this.selectedGame,
-    required this.turnTrackerEnabled,
-    required this.onTurnTrackerChanged,
-    required this.frostedGlass,
-    required this.onFrostedGlassChanged,
-    required this.themeMode,
-    required this.onThemeModeChanged,
-    required this.matchTimerMinutes,
-    required this.onMatchTimerChanged,
-    required this.startingLife,
-    required this.onStartingLifeChanged,
-    required this.firstTurnSetting,
-    required this.onFirstTurnSettingChanged,
-    required this.resourceTrackerSetting,
-    required this.onResourceTrackerChanged,
-    required this.armorTrackingEnabled,
-    required this.onArmorTrackingChanged,
-  });
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -80,34 +39,12 @@ class HomeScreen extends StatelessWidget {
                   height: 60,
                   child: ElevatedButton(
                     onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SetupScreen(
-                      selectedFont: selectedFont,
-                      onFontChanged: onFontChanged,
-                      selectedGame: selectedGame,
-                      turnTrackerEnabled: turnTrackerEnabled,
-                      onTurnTrackerChanged: onTurnTrackerChanged,
-                      frostedGlass: frostedGlass,
-                      onFrostedGlassChanged: onFrostedGlassChanged,
-                      themeMode: themeMode,
-                      onThemeModeChanged: onThemeModeChanged,
-                      matchTimerMinutes: matchTimerMinutes,
-                      onMatchTimerChanged: onMatchTimerChanged,
-                      startingLife: startingLife,
-                      onStartingLifeChanged: onStartingLifeChanged,
-                      firstTurnSetting: firstTurnSetting,
-                      onFirstTurnSettingChanged: onFirstTurnSettingChanged,
-                      resourceTrackerSetting: resourceTrackerSetting,
-                      onResourceTrackerChanged: onResourceTrackerChanged,
-                      armorTrackingEnabled: armorTrackingEnabled,
-                      onArmorTrackingChanged: onArmorTrackingChanged,
-                    ),
-                  ),
-                );
-              },
-              child: Text('Play', style: TextStyle(fontSize: 22)),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SetupScreen()),
+                      );
+                    },
+                    child: Text('Play', style: TextStyle(fontSize: 22)),
                   ),
                 ),
                 SizedBox(height: 20),
@@ -116,31 +53,12 @@ class HomeScreen extends StatelessWidget {
                   height: 60,
                   child: ElevatedButton(
                     onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SettingsScreen(
-                      currentFont: selectedFont,
-                      onFontChanged: onFontChanged,
-                      turnTrackerEnabled: turnTrackerEnabled,
-                      onTurnTrackerChanged: onTurnTrackerChanged,
-                      frostedGlass: frostedGlass,
-                      onFrostedGlassChanged: onFrostedGlassChanged,
-                      themeMode: themeMode,
-                      onThemeModeChanged: onThemeModeChanged,
-                      matchTimerMinutes: matchTimerMinutes,
-                      onMatchTimerChanged: onMatchTimerChanged,
-                      firstTurnSetting: firstTurnSetting,
-                      onFirstTurnSettingChanged: onFirstTurnSettingChanged,
-                      resourceTrackerSetting: resourceTrackerSetting,
-                      onResourceTrackerChanged: onResourceTrackerChanged,
-                      armorTrackingEnabled: armorTrackingEnabled,
-                      onArmorTrackingChanged: onArmorTrackingChanged,
-                    ),
-                  ),
-                );
-              },
-              child: Text('Settings', style: TextStyle(fontSize: 22)),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                      );
+                    },
+                    child: Text('Settings', style: TextStyle(fontSize: 22)),
                   ),
                 ),
               ],
@@ -154,7 +72,7 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => AboutScreen()),
+                  MaterialPageRoute(builder: (context) => const AboutScreen()),
                 );
               },
             ),

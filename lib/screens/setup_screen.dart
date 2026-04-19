@@ -1,52 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/game_settings_provider.dart';
 import 'counter_screen.dart';
 
 class SetupScreen extends StatefulWidget {
-  final String selectedFont;
-  final Function(String) onFontChanged;
-  final String selectedGame;
-  final bool turnTrackerEnabled;
-  final Function(bool) onTurnTrackerChanged;
-  final bool frostedGlass;
-  final Function(bool) onFrostedGlassChanged;
-  final ThemeMode themeMode;
-  final Function(ThemeMode) onThemeModeChanged;
-  final int matchTimerMinutes;
-  final Function(int) onMatchTimerChanged;
-  final int startingLife;
-  final Function(int) onStartingLifeChanged;
-  final int firstTurnSetting;
-  final Function(int) onFirstTurnSettingChanged;
-  final int resourceTrackerSetting;
-  final Function(int) onResourceTrackerChanged;
-  final bool armorTrackingEnabled;
-  final Function(bool) onArmorTrackingChanged;
-
-  const SetupScreen({
-    super.key,
-    required this.selectedFont,
-    required this.onFontChanged,
-    required this.selectedGame,
-    required this.turnTrackerEnabled,
-    required this.onTurnTrackerChanged,
-    required this.frostedGlass,
-    required this.onFrostedGlassChanged,
-    required this.themeMode,
-    required this.onThemeModeChanged,
-    required this.matchTimerMinutes,
-    required this.onMatchTimerChanged,
-    required this.startingLife,
-    required this.onStartingLifeChanged,
-    required this.firstTurnSetting,
-    required this.onFirstTurnSettingChanged,
-    required this.resourceTrackerSetting,
-    required this.onResourceTrackerChanged,
-    required this.armorTrackingEnabled,
-    required this.onArmorTrackingChanged,
-  });
+  const SetupScreen({super.key});
 
   @override
-  _SetupScreenState createState() => _SetupScreenState();
+  State<SetupScreen> createState() => _SetupScreenState();
 }
 
 class _SetupScreenState extends State<SetupScreen> {
@@ -66,10 +27,11 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   void initState() {
     super.initState();
+    final settings = context.read<GameSettingsProvider>();
     playerHeroes = List.generate(6, (i) => heroArchetypes[i % heroArchetypes.length]);
-    selectedLife = widget.startingLife;
+    selectedLife = settings.startingLife;
     customLifeController.text = selectedLife.toString();
-    matchTimerMinutes = widget.matchTimerMinutes;
+    matchTimerMinutes = settings.matchTimerMinutes;
     timerController = TextEditingController(text: matchTimerMinutes.toString());
   }
 
@@ -82,6 +44,8 @@ class _SetupScreenState extends State<SetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.read<GameSettingsProvider>();
+
     return Scaffold(
       appBar: AppBar(title: Text('Game Setup'), centerTitle: true),
       body: SingleChildScrollView(
@@ -112,7 +76,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           final parsed = int.tryParse(value);
                           if (parsed != null && parsed > 0) {
                             setState(() { selectedLife = parsed; });
-                            widget.onStartingLifeChanged(parsed);
+                            settings.updateStartingLife(parsed);
                           }
                         },
                       ),
@@ -129,7 +93,7 @@ class _SetupScreenState extends State<SetupScreen> {
                         selected: selectedLife == life,
                         onSelected: (_) {
                           setState(() { selectedLife = life; customLifeController.text = life.toString(); });
-                          widget.onStartingLifeChanged(life);
+                          settings.updateStartingLife(life);
                         },
                       ),
                   ],
@@ -186,7 +150,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           final parsed = int.tryParse(value);
                           if (parsed != null && parsed > 0) {
                             setState(() { matchTimerMinutes = parsed; });
-                            widget.onMatchTimerChanged(parsed);
+                            settings.updateMatchTimer(parsed);
                           }
                         },
                       ),
@@ -203,7 +167,7 @@ class _SetupScreenState extends State<SetupScreen> {
                         selected: matchTimerMinutes == preset,
                         onSelected: (_) {
                           setState(() { matchTimerMinutes = preset; timerController.text = preset.toString(); });
-                          widget.onMatchTimerChanged(preset);
+                          settings.updateMatchTimer(preset);
                         },
                       ),
                   ],
@@ -219,23 +183,7 @@ class _SetupScreenState extends State<SetupScreen> {
                                 playerCount: selectedPlayers,
                                 startingLife: selectedLife,
                                 playerHeroes: playerHeroes.sublist(0, selectedPlayers),
-                                selectedFont: widget.selectedFont,
-                                onFontChanged: widget.onFontChanged,
-                                selectedGame: widget.selectedGame,
-                                turnTrackerEnabled: widget.turnTrackerEnabled,
-                                onTurnTrackerChanged: widget.onTurnTrackerChanged,
-                                frostedGlass: widget.frostedGlass,
-                                onFrostedGlassChanged: widget.onFrostedGlassChanged,
-                                themeMode: widget.themeMode,
-                                onThemeModeChanged: widget.onThemeModeChanged,
                                 matchTimerMinutes: matchTimerMinutes,
-                                onMatchTimerChanged: widget.onMatchTimerChanged,
-                                firstTurnSetting: widget.firstTurnSetting,
-                                onFirstTurnSettingChanged: widget.onFirstTurnSettingChanged,
-                                resourceTrackerSetting: widget.resourceTrackerSetting,
-                                onResourceTrackerChanged: widget.onResourceTrackerChanged,
-                                armorTrackingEnabled: widget.armorTrackingEnabled,
-                                onArmorTrackingChanged: widget.onArmorTrackingChanged,
                               ),
                             ),
                           );

@@ -15,7 +15,7 @@ class LogScreen extends StatefulWidget {
   });
 
   @override
-  _LogScreenState createState() => _LogScreenState();
+  State<LogScreen> createState() => _LogScreenState();
 }
 
 class _LogScreenState extends State<LogScreen> {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'providers/game_settings_provider.dart';
 import 'screens/home_screen.dart';
-
 
 class _NoOverscrollBehavior extends ScrollBehavior {
   @override
@@ -10,6 +10,7 @@ class _NoOverscrollBehavior extends ScrollBehavior {
     return child;
   }
 }
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
@@ -19,183 +20,47 @@ void main() {
   });
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  _MyAppState createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  String selectedFont = 'EagleLake';
-  String selectedGame = 'fab';
-  bool turnTrackerEnabled = true;
-  bool isLoaded = false;
-  bool frostedGlass = false;
-  ThemeMode themeMode = ThemeMode.system;
-  int matchTimerMinutes = 50;
-  int startingLife = 20;
-  int firstTurnSetting = 2;
-  int resourceTrackerSetting = 0;
-  bool armorTrackingEnabled = true;// 0=Both, 1=AP Only, 2=Pitch Only, 3=None
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPreferences();
-  }
-
-  late SharedPreferences _prefs;
-
-  Future<void> _loadPreferences() async {
-    _prefs = await SharedPreferences.getInstance();
-    setState(() {
-      selectedFont = _prefs.getString('selectedFont') ?? 'EagleLake';
-      selectedGame = _prefs.getString('selectedGame') ?? 'fab';
-      turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? true;
-      frostedGlass = _prefs.getBool('frostedGlass') ?? false;
-      themeMode = ThemeMode.values[_prefs.getInt('themeMode') ?? 0];
-      matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;
-      startingLife = _prefs.getInt('startingLife') ?? 20;
-      firstTurnSetting = _prefs.getInt('firstTurnSetting') ?? 2;
-      resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 0;
-      armorTrackingEnabled = _prefs.getBool('armorTrackingEnabled') ?? true;
-      isLoaded = true;
-    });
-  }
-
-  Future<void> _saveFont() async {
-    await _prefs.setString('selectedFont', selectedFont);
-  }
-
-  Future<void> _saveTurnTracker() async {
-    await _prefs.setBool('turnTrackerEnabled', turnTrackerEnabled);
-  }
-
-  Future<void> _saveFrostedGlass() async {
-    await _prefs.setBool('frostedGlass', frostedGlass);
-  }
-
-  Future<void> _saveThemeMode() async {
-    await _prefs.setInt('themeMode', themeMode.index);
-  }
-
-  Future<void> _saveMatchTimer() async {
-    await _prefs.setInt('matchTimerMinutes', matchTimerMinutes);
-  }
-
-  Future<void> _saveStartingLife() async {
-    await _prefs.setInt('startingLife', startingLife);
-  }
-
-  void updateStartingLife(int value) {
-    setState(() { startingLife = value; });
-    _saveStartingLife();
-  }
-
-  Future<void> _saveFirstTurnSetting() async {
-    await _prefs.setInt('firstTurnSetting', firstTurnSetting);
-  }
-
-  void updateFont(String newFont) {
-    setState(() { selectedFont = newFont; });
-    _saveFont();
-  }
-
-  void updateFrostedGlass(bool enabled) {
-    setState(() { frostedGlass = enabled; });
-    _saveFrostedGlass();
-  }
-
-  void updateThemeMode(ThemeMode mode) {
-    setState(() { themeMode = mode; });
-    _saveThemeMode();
-  }
-
-  void updateTurnTracker(bool enabled) {
-    setState(() { turnTrackerEnabled = enabled; });
-    _saveTurnTracker();
-  }
-
-  void updateMatchTimer(int minutes) {
-    setState(() { matchTimerMinutes = minutes; });
-    _saveMatchTimer();
-  }
-
-  void updateFirstTurnSetting(int value) {
-    setState(() { firstTurnSetting = value; });
-    _saveFirstTurnSetting();
-  }
-
- Future<void> _saveResourceTracker() async {
-    await _prefs.setInt('resourceTrackerSetting', resourceTrackerSetting);
-  }
-
-  void updateResourceTracker(int value) {
-    setState(() { resourceTrackerSetting = value; });
-    _saveResourceTracker();
-  }
-
-  Future<void> _saveArmorTracking() async {
-    await _prefs.setBool('armorTrackingEnabled', armorTrackingEnabled);
-  }
-
-  void updateArmorTracking(bool enabled) {
-    setState(() { armorTrackingEnabled = enabled; });
-    _saveArmorTracking();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (!isLoaded) {
-      return ScrollConfiguration(
-        behavior: _NoOverscrollBehavior(),
-        child: MaterialApp(
-          home: Scaffold(body: Center(child: CircularProgressIndicator())),
-        ),
-      );
-    }
-    return MaterialApp(
-      title: 'TableTop Token Tracker',
-      builder: (context, child) {
-        return ScrollConfiguration(
-          behavior: _NoOverscrollBehavior(),
-          child: child!,
-        );
-      },
-        debugShowCheckedModeBanner: false,
-        themeMode: themeMode,
-        theme: ThemeData(
-          fontFamily: selectedFont,
-          brightness: Brightness.light,
-          colorSchemeSeed: Colors.blue,
-        ),
-        darkTheme: ThemeData(
-          fontFamily: selectedFont,
-          brightness: Brightness.dark,
-          colorSchemeSeed: Colors.blue,
-        ),
-        home: HomeScreen(
-          selectedFont: selectedFont,
-          onFontChanged: updateFont,
-          selectedGame: selectedGame,
-          turnTrackerEnabled: turnTrackerEnabled,
-          onTurnTrackerChanged: updateTurnTracker,
-          frostedGlass: frostedGlass,
-          onFrostedGlassChanged: updateFrostedGlass,
-          themeMode: themeMode,
-          onThemeModeChanged: updateThemeMode,
-          matchTimerMinutes: matchTimerMinutes,
-          onMatchTimerChanged: updateMatchTimer,
-          startingLife: startingLife,
-          onStartingLifeChanged: updateStartingLife,
-          firstTurnSetting: firstTurnSetting,
-          onFirstTurnSettingChanged: updateFirstTurnSetting,
-          resourceTrackerSetting: resourceTrackerSetting,
-          onResourceTrackerChanged: updateResourceTracker,
-          armorTrackingEnabled: armorTrackingEnabled,
-          onArmorTrackingChanged: updateArmorTracking,
-        ),
-      );
+    return ChangeNotifierProvider(
+      create: (_) => GameSettingsProvider()..loadPreferences(),
+      child: Consumer<GameSettingsProvider>(
+        builder: (context, settings, _) {
+          if (!settings.isLoaded) {
+            return ScrollConfiguration(
+              behavior: _NoOverscrollBehavior(),
+              child: MaterialApp(
+                home: Scaffold(body: Center(child: CircularProgressIndicator())),
+              ),
+            );
+          }
+          return MaterialApp(
+            title: 'TableTop Token Tracker',
+            builder: (context, child) {
+              return ScrollConfiguration(
+                behavior: _NoOverscrollBehavior(),
+                child: child!,
+              );
+            },
+            debugShowCheckedModeBanner: false,
+            themeMode: settings.themeMode,
+            theme: ThemeData(
+              fontFamily: settings.selectedFont,
+              brightness: Brightness.light,
+              colorSchemeSeed: Colors.blue,
+            ),
+            darkTheme: ThemeData(
+              fontFamily: settings.selectedFont,
+              brightness: Brightness.dark,
+              colorSchemeSeed: Colors.blue,
+            ),
+            home: const HomeScreen(),
+          );
+        },
+      ),
+    );
   }
 }

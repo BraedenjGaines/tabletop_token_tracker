@@ -3,8 +3,15 @@ import 'dart:convert';
 import 'token_library.dart';
 
 class TokenPreferences {
-  static Future<List<TokenData>> getCustomTokensFull(String gameId) async {
-    final prefs = await SharedPreferences.getInstance();
+  static SharedPreferences? _prefs;
+
+  static Future<SharedPreferences> _getPrefs() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!;
+  }
+
+  static Future<List<TokenData>> getCustomTokens(String gameId) async {
+    final prefs = await _getPrefs();
     final jsonList = prefs.getStringList('customTokensFull_$gameId') ?? [];
     return jsonList.map((json) {
       final map = jsonDecode(json);
@@ -19,8 +26,8 @@ class TokenPreferences {
     }).toList();
   }
 
-  static Future<void> addCustomTokenFull(String gameId, TokenData token) async {
-    final prefs = await SharedPreferences.getInstance();
+  static Future<void> addCustomToken(String gameId, TokenData token) async {
+    final prefs = await _getPrefs();
     final jsonList = prefs.getStringList('customTokensFull_$gameId') ?? [];
     final exists = jsonList.any((json) {
       final map = jsonDecode(json);
@@ -38,41 +45,28 @@ class TokenPreferences {
   }
 
   static Future<void> removeCustomToken(String gameId, String tokenName) async {
-    final prefs = await SharedPreferences.getInstance();
-    // Remove from old format
-    final tokens = prefs.getStringList('customTokens_$gameId') ?? [];
-    tokens.remove(tokenName);
-    await prefs.setStringList('customTokens_$gameId', tokens);
-    // Remove from new format
+    final prefs = await _getPrefs();
     final jsonList = prefs.getStringList('customTokensFull_$gameId') ?? [];
     jsonList.removeWhere((json) {
       final map = jsonDecode(json);
       return map['name'] == tokenName;
     });
     await prefs.setStringList('customTokensFull_$gameId', jsonList);
-  }
 
-  static Future<List<String>> getCustomTokens(String gameId) async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList('customTokens_$gameId') ?? [];
-  }
-
-  static Future<void> addCustomToken(String gameId, String tokenName) async {
-    final prefs = await SharedPreferences.getInstance();
-    final tokens = prefs.getStringList('customTokens_$gameId') ?? [];
-    if (!tokens.contains(tokenName)) {
-      tokens.add(tokenName);
-      await prefs.setStringList('customTokens_$gameId', tokens);
+    // Clean up legacy format if it exists
+    final legacyKey = 'customTokens_$gameId';
+    if (prefs.containsKey(legacyKey)) {
+      await prefs.remove(legacyKey);
     }
   }
 
   static Future<List<String>> getFavorites(String gameId) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _getPrefs();
     return prefs.getStringList('favoriteTokens_$gameId') ?? [];
   }
 
   static Future<void> toggleFavorite(String gameId, String tokenName) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _getPrefs();
     final favorites = prefs.getStringList('favoriteTokens_$gameId') ?? [];
     if (favorites.contains(tokenName)) {
       favorites.remove(tokenName);
