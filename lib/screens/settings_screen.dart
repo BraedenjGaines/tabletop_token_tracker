@@ -18,32 +18,10 @@ class SettingsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- Turn Tracker ---
-              SizedBox(height: 32),
-              Center(child: Text('Turn Tracker', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold))),
-              SizedBox(height: 8),
-              Text('Shows phase tracking between players (Flesh and Blood, 2 players only)', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              SizedBox(height: 8),
-              SwitchListTile(
-                title: Text('Enable Turn Tracker'),
-                value: settings.turnTrackerEnabled,
-                onChanged: (value) => settings.updateTurnTracker(value),
-              ),
-
-              // --- Visual ---
-              SizedBox(height: 32),
-              Center(child: Text('Visual', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold))),
-              SizedBox(height: 8),
-              Text('Applies a frosted glass blur effect to the player panels on the counter screen', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              SizedBox(height: 8),
-              SwitchListTile(
-                title: Text('Frosted Glass Effect'),
-                value: settings.frostedGlass,
-                onChanged: (value) => settings.updateFrostedGlass(value),
-              ),
+              // --- Theme ---
               SizedBox(height: 16),
-              Center(child: Text('Theme', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-              SizedBox(height: 8),
+              Center(child: Text('Choose a theme:', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: SegmentedButton<ThemeMode>(
@@ -62,12 +40,21 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
 
+              // --- Turn Tracker ---
+              SizedBox(height: 32),
+              Center(child: Text('Turn Tracking', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Enable Turn Tracking'),
+                value: settings.turnTrackerEnabled,
+                onChanged: (value) => settings.updateTurnTracker(value),
+              ),
+              Text('Displays a turn-by-turn phase bar between players. Some tokens are automatically destroyed when their trigger phase is reached.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+
               // --- Resource Tracking ---
               SizedBox(height: 32),
-              SizedBox(width: double.infinity, child: Text('Resource Tracking', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+              Center(child: Text('Resource Tracking', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
               SizedBox(height: 8),
-              Text('Track action points and pitch resources during gameplay', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: SegmentedButton<int>(
@@ -86,13 +73,23 @@ class SettingsScreen extends StatelessWidget {
                   onSelectionChanged: (selection) => settings.updateResourceTracker(selection.first),
                 ),
               ),
-
-              // --- Damage Display ---
-              SizedBox(height: 32),
-              SizedBox(width: double.infinity, child: Text('Damage Display', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
               SizedBox(height: 8),
-              Text('How life changes appear on the counter screen', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              SizedBox(height: 12),
+              Text('Enables tracking for action points, pitch values, both, or none.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+
+              // --- Armor Tracking ---
+              SizedBox(height: 32),
+              Center(child: Text('Armor Tracking', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Show equipment slot icons'),
+                value: settings.armorTrackingEnabled,
+                onChanged: (value) => settings.updateArmorTracking(value),
+              ),
+
+              // --- Combat Text ---
+              SizedBox(height: 32),
+              Center(child: Text('Combat Text', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: SegmentedButton<int>(
@@ -102,28 +99,30 @@ class SettingsScreen extends StatelessWidget {
                     textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 14, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
                   ),
                   segments: [
-                    ButtonSegment(value: 0, label: Text('Floating')),
-                    ButtonSegment(value: 1, label: Text('Totals')),
+                    ButtonSegment(value: 0, label: Text('Cascading')),
+                    ButtonSegment(value: 1, label: Text('Fixed')),
                   ],
                   selected: {settings.damageDisplayMode},
                   onSelectionChanged: (selection) => settings.updateDamageDisplayMode(selection.first),
                 ),
               ),
+              SizedBox(height: 8),
+              Text('How the text will appear when taking or gaining health.', style: TextStyle(fontSize: 13, color: Colors.grey)),
 
-              // --- Armor Tracking ---
+              // --- Frosted Glass ---
               SizedBox(height: 32),
-              SizedBox(width: double.infinity, child: Text('Armor Tracking', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+              Center(child: Text('Visual', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
               SizedBox(height: 8),
               SwitchListTile(
-                title: Text('Show Armor Slots'),
-                subtitle: Text('Track equipment defense on each player\'s side'),
-                value: settings.armorTrackingEnabled,
-                onChanged: (value) => settings.updateArmorTracking(value),
+                title: Text('Frosted Glass Effect'),
+                subtitle: Text('Applies a frosted glass blur effect to the player panels on the counter screen'),
+                value: settings.frostedGlass,
+                onChanged: (value) => settings.updateFrostedGlass(value),
               ),
 
-              // --- Tokens ---
+              // --- Custom Tokens ---
               SizedBox(height: 32),
-              Center(child: Text('Tokens', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold))),
+              Center(child: Text('Custom Tokens', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
               SizedBox(height: 8),
               SizedBox(
                 width: double.infinity, height: 48,
@@ -136,6 +135,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Text('Manage Custom Tokens'),
                 ),
               ),
+              SizedBox(height: 32),
             ],
           ),
         ),

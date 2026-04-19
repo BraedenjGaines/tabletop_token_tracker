@@ -106,9 +106,9 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   final Map<TokenCategory, Color> _categoryColors = {
     TokenCategory.ally: Colors.orange,
-    TokenCategory.boonAura: Colors.green,
-    TokenCategory.debuffAura: Colors.red,
-    TokenCategory.item: Colors.blue,
+    TokenCategory.boonAura: Colors.lightBlueAccent,
+    TokenCategory.debuffAura: Colors.purpleAccent,
+    TokenCategory.item: Color(0xFFD2A679),
   };
 
   bool get _showTurnTracker {
