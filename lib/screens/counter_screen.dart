@@ -730,7 +730,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             GestureDetector(
               onTap: () { setState(() {
                 token.count--;
-                _log(pi, LogEventType.tokenCountChange, token.name, value: -1, undoData: {'name': token.name});
+                _log(pi, LogEventType.tokenCountChange, token.name, value: -1, undoData: {'name': token.name, 'category': token.category.index});
                 if (token.count <= 0) {
                   final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': 0, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
                   playerTokens[pi].removeAt(ti);
@@ -742,7 +742,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             ),
             Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Text('${token.count}', style: TextStyle(fontSize: 13, color: Colors.white))),
             GestureDetector(
-              onTap: () { setState(() { token.count++; _log(pi, LogEventType.tokenCountChange, token.name, value: 1, undoData: {'name': token.name}); }); },
+              onTap: () { setState(() { token.count++; _log(pi, LogEventType.tokenCountChange, token.name, value: 1, undoData: {'name': token.name, 'category': token.category.index}); }); },
               child: Icon(Icons.add_circle, size: 18, color: Colors.green),
             ),
           ],
@@ -786,7 +786,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                     t.name == td.name && !_isTokenTriggering(t, playerIndex));
                   if (existingIdx >= 0) {
                     playerTokens[playerIndex][existingIdx].count++;
-                    _log(playerIndex, LogEventType.tokenCountChange, td.name, value: 1, undoData: {'name': td.name});
+                    _log(playerIndex, LogEventType.tokenCountChange, td.name, value: 1, undoData: {'name': td.name, 'category': td.category.index});
                     _playerOverlay[playerIndex] = -1;
                     return;
                   }
@@ -797,7 +797,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                   maxHealth: td.category == TokenCategory.ally ? td.health : null,
                   turnPlayed: turnCount, playerPlayed: playerIndex, phasePlayed: currentPhase,
                 ));
-                _log(playerIndex, LogEventType.tokenAdded, '${td.name} added', undoData: {'name': td.name});
+                _log(playerIndex, LogEventType.tokenAdded, '${td.name} added', undoData: {'name': td.name, 'category': td.category.index});
                 _playerOverlay[playerIndex] = -1;
               });
             },

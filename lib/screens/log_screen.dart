@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../data/game_log.dart';
+import '../data/token_library.dart';
 
 class LogScreen extends StatefulWidget {
   final GameLog gameLog;
@@ -20,55 +21,174 @@ class LogScreen extends StatefulWidget {
 
 class _LogScreenState extends State<LogScreen> {
 
-  String _getPlayerLabel(int index) {
+  Color _getPlayerColor(int index) {
+    return index == 0 ? Color.fromARGB(255, 40, 63, 136) : Color.fromARGB(255, 165, 72, 47);
+  }
+
+  String _getPlayerName(int index) {
     return 'Player ${index + 1}';
   }
 
-  IconData _getEventIcon(LogEventType type) {
-    switch (type) {
-      case LogEventType.healthChange:
-        return Icons.favorite;
-      case LogEventType.tokenAdded:
-        return Icons.add_circle;
-      case LogEventType.tokenDestroyed:
-        return Icons.remove_circle;
-      case LogEventType.tokenActivated:
-        return Icons.flash_on;
-      case LogEventType.tokenCountChange:
-        return Icons.numbers;
-      case LogEventType.allyHealthChange:
-        return Icons.shield;
-      case LogEventType.phaseChange:
-        return Icons.arrow_forward;
+  Widget _buildPlayerBadge(int index) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: _getPlayerColor(index),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        'P${index + 1}',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
+      ),
+    );
+  }
+
+  Color _getCategoryColor(int? categoryIndex, {bool undone = false}) {
+    if (undone) return Colors.grey;
+    if (categoryIndex == null) return Colors.white70;
+    switch (TokenCategory.values[categoryIndex]) {
+      case TokenCategory.debuffAura: return Colors.purpleAccent;
+      case TokenCategory.boonAura: return Colors.lightBlueAccent;
+      case TokenCategory.ally: return Colors.orange;
+      case TokenCategory.item: return Color(0xFFD2A679);
     }
   }
 
-  Color _getEventColor(LogEventType type) {
-    switch (type) {
-      case LogEventType.healthChange:
-        return Colors.red;
-      case LogEventType.tokenAdded:
-        return Colors.green;
-      case LogEventType.tokenDestroyed:
-        return Colors.orange;
-      case LogEventType.tokenActivated:
-        return Colors.amber;
-      case LogEventType.tokenCountChange:
-        return Colors.blue;
-      case LogEventType.allyHealthChange:
-        return Colors.purple;
-      case LogEventType.phaseChange:
-        return Colors.grey;
-    }
-  }
+  Widget _buildRichDescription(LogEntry entry) {
+    final playerColor = _getPlayerColor(entry.playerIndex);
+    final playerName = _getPlayerName(entry.playerIndex);
+    final bool isUndone = entry.undone;
+    final Color textColor = isUndone ? Colors.grey : Colors.white70;
+    final Color pColor = isUndone ? Colors.grey : playerColor;
+    final TextDecoration? decoration = isUndone ? TextDecoration.lineThrough : null;
+    final String fontFamily = Theme.of(context).textTheme.bodyMedium?.fontFamily ?? 'Sedan';
+    final Color gainColor = isUndone ? Colors.grey : Color(0xFF66DE93);
+    final Color lostColor = isUndone ? Colors.grey : Colors.red;
 
-  String _formatValue(LogEntry entry) {
-    if (entry.type == LogEventType.healthChange ||
-        entry.type == LogEventType.allyHealthChange ||
-        entry.type == LogEventType.tokenCountChange) {
-      return entry.value > 0 ? '+${entry.value}' : '${entry.value}';
+    List<TextSpan> spans;
+
+    switch (entry.type) {
+      case LogEventType.healthChange:
+        final Color valueColor = entry.value > 0 ? gainColor : lostColor;
+        if (entry.value > 0) {
+          spans = [
+            TextSpan(text: playerName, style: TextStyle(color: pColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' gained ', style: TextStyle(color: textColor, decoration: decoration)),
+            TextSpan(text: '${entry.value}', style: TextStyle(color: valueColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' health', style: TextStyle(color: valueColor, decoration: decoration)),
+          ];
+        } else {
+          spans = [
+            TextSpan(text: playerName, style: TextStyle(color: pColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' lost ', style: TextStyle(color: textColor, decoration: decoration)),
+            TextSpan(text: '${entry.value.abs()}', style: TextStyle(color: valueColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' health', style: TextStyle(color: valueColor, decoration: decoration)),
+          ];
+        }
+        break;
+      case LogEventType.tokenAdded:
+        final tokenName = entry.undoData?['name'] as String? ?? entry.description.replaceAll(' added', '');
+        final category = entry.undoData?['category'] as int?;
+        final Color tokenColor = _getCategoryColor(category, undone: isUndone);
+        String verb = 'gained';
+        String suffix = '';
+        if (category != null) {
+          switch (TokenCategory.values[category]) {
+            case TokenCategory.boonAura:
+              verb = 'gained';
+              break;
+            case TokenCategory.debuffAura:
+              verb = 'was inflicted with';
+              break;
+            case TokenCategory.item:
+              verb = 'acquired';
+              break;
+            case TokenCategory.ally:
+              verb = 'gained';
+              suffix = ' as an ally';
+              break;
+          }
+        }
+        spans = [
+          TextSpan(text: playerName, style: TextStyle(color: pColor, fontWeight: FontWeight.bold, decoration: decoration)),
+          TextSpan(text: ' $verb ', style: TextStyle(color: textColor, decoration: decoration)),
+          TextSpan(text: '1 ', style: TextStyle(color: tokenColor, fontWeight: FontWeight.bold, decoration: decoration)),
+          TextSpan(text: tokenName, style: TextStyle(color: tokenColor, fontWeight: FontWeight.bold, decoration: decoration)),
+          TextSpan(text: suffix, style: TextStyle(color: textColor, decoration: decoration)),
+        ];
+        break;
+      case LogEventType.tokenDestroyed:
+        final tokenName = entry.undoData?['name'] as String? ?? entry.description.replaceAll(' destroyed', '');
+        final category = entry.undoData?['category'] as int?;
+        final Color tokenColor = _getCategoryColor(category, undone: isUndone);
+        spans = [
+          TextSpan(text: playerName, style: TextStyle(color: pColor, fontWeight: FontWeight.bold, decoration: decoration)),
+          TextSpan(text: '\'s ', style: TextStyle(color: pColor, decoration: decoration)),
+          TextSpan(text: tokenName, style: TextStyle(color: tokenColor, fontWeight: FontWeight.bold, decoration: decoration)),
+          TextSpan(text: ' was destroyed', style: TextStyle(color: textColor, decoration: decoration)),
+        ];
+        break;
+      case LogEventType.tokenCountChange:
+        final tokenName = entry.undoData?['name'] as String? ?? entry.description;
+        final category = entry.undoData?['category'] as int?;
+        final Color tokenColor = _getCategoryColor(category, undone: isUndone);
+        final int count = entry.value.abs();
+        final bool isAlly = category != null && TokenCategory.values[category] == TokenCategory.ally;
+        if (entry.value > 0) {
+          spans = [
+            TextSpan(text: playerName, style: TextStyle(color: pColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' gained ', style: TextStyle(color: textColor, decoration: decoration)),
+            TextSpan(text: '$count ', style: TextStyle(color: tokenColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: tokenName, style: TextStyle(color: tokenColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            if (isAlly) TextSpan(text: count == 1 ? ' as an ally' : ' as allies', style: TextStyle(color: textColor, decoration: decoration)),
+          ];
+        } else {
+          spans = [
+            TextSpan(text: playerName, style: TextStyle(color: pColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' lost ', style: TextStyle(color: textColor, decoration: decoration)),
+            TextSpan(text: '$count ', style: TextStyle(color: tokenColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: tokenName, style: TextStyle(color: tokenColor, fontWeight: FontWeight.bold, decoration: decoration)),
+          ];
+        }
+        break;
+      case LogEventType.allyHealthChange:
+        final tokenName = entry.undoData?['name'] as String? ?? entry.description.replaceAll(' health', '');
+        final Color allyColor = isUndone ? Colors.grey : Colors.orange;
+        final Color valueColor = entry.value > 0 ? gainColor : lostColor;
+        if (entry.value > 0) {
+          spans = [
+            TextSpan(text: tokenName, style: TextStyle(color: allyColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' gained ', style: TextStyle(color: textColor, decoration: decoration)),
+            TextSpan(text: '${entry.value}', style: TextStyle(color: valueColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' health', style: TextStyle(color: valueColor, decoration: decoration)),
+          ];
+        } else {
+          spans = [
+            TextSpan(text: tokenName, style: TextStyle(color: allyColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' lost ', style: TextStyle(color: textColor, decoration: decoration)),
+            TextSpan(text: '${entry.value.abs()}', style: TextStyle(color: valueColor, fontWeight: FontWeight.bold, decoration: decoration)),
+            TextSpan(text: ' health', style: TextStyle(color: valueColor, decoration: decoration)),
+          ];
+        }
+        break;
+      case LogEventType.phaseChange:
+        spans = [
+          TextSpan(text: entry.description, style: TextStyle(color: textColor, decoration: decoration)),
+        ];
+        break;
+      case LogEventType.tokenActivated:
+        spans = [
+          TextSpan(text: entry.description, style: TextStyle(color: textColor, decoration: decoration)),
+        ];
+        break;
     }
-    return '';
+
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(fontSize: 13, height: 1.3, fontFamily: fontFamily),
+        children: spans,
+      ),
+    );
   }
 
   String _formatLogAsText() {
@@ -154,39 +274,14 @@ class _LogScreenState extends State<LogScreen> {
                     itemCount: reversedEntries.length,
                     itemBuilder: (context, index) {
                       final entry = reversedEntries[index];
-                      final valueText = _formatValue(entry);
-
                       return ListTile(
                         dense: true,
-                        leading: Icon(
-                          _getEventIcon(entry.type),
-                          color: _getEventColor(entry.type),
-                          size: 20,
-                        ),
-                        title: Text(
-                          entry.description,
-                          style: TextStyle(
-                            fontSize: 14,
-                            decoration: entry.undone ? TextDecoration.lineThrough : null,
-                            color: entry.undone ? Colors.grey : null,
-                          ),
-                        ),
+                        leading: _buildPlayerBadge(entry.playerIndex),
+                        title: _buildRichDescription(entry),
                         subtitle: Text(
-                          '${entry.timestamp} • ${_getPlayerLabel(entry.playerIndex)}${entry.phase != null ? ' • ${entry.phase}' : ''}',
-                          style: TextStyle(fontSize: 11, color: Colors.grey),
+                          '${entry.timestamp}${entry.phase != null ? ' • ${entry.phase}' : ''}',
+                          style: TextStyle(fontSize: 10, color: Colors.grey),
                         ),
-                        trailing: valueText.isNotEmpty
-                            ? Text(
-                                valueText,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: entry.value > 0
-                                      ? Colors.green
-                                      : Colors.red,
-                                ),
-                              )
-                            : null,
                       );
                     },
                   ),
