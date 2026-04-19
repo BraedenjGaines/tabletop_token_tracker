@@ -88,13 +88,14 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   Timer? _timer;
   bool _timerRunning = false;
 
-  // Dice roll overlay
+  // First turn chooser — always shown at game start
+  bool _showFirstTurnChooser = true;
   bool _showDiceOverlay = false;
 
   // Per-player overlay state: -1 = none, -2 = add token picker, 0-3 = category index
   late List<int> _playerOverlay;
 
-  final List<String> fabPhases = ['Start Phase', 'Draw Phase', 'Action Phase', 'End Phase'];
+  final List<String> fabPhases = ['Start Phase', 'Action Phase', 'End Phase'];
 
   final Map<TokenCategory, String> _categoryNames = {
     TokenCategory.ally: 'Allies',
@@ -220,36 +221,81 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     );
 
     _loadTokenPreferences();
-    _handleFirstTurn();
     WakelockPlus.enable();
+    // First turn chooser shows automatically — no _handleFirstTurn needed
   }
 
-  void _handleFirstTurn() {
-    if (widget.playerCount != 2) return;
-    final settings = context.read<GameSettingsProvider>();
-    switch (settings.firstTurnSetting) {
-      case 0:
-        activePlayer = 0;
-        _playerAP[activePlayer] = 1;
-        break;
-      case 1:
-        activePlayer = 1;
-        _playerAP[activePlayer] = 1;
-        break;
-      case 2:
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          setState(() { _showDiceOverlay = true; });
-        });
-        break;
-    }
+  void _onFirstTurnDirectChoice(int player) {
+    setState(() {
+      activePlayer = player;
+      _playerAP[activePlayer] = 1;
+      _showFirstTurnChooser = false;
+    });
   }
 
-  void _onFirstTurnChoice(int winner, bool goFirst) {
+  void _onDiceChoice(int winner, bool goFirst) {
     setState(() {
       activePlayer = goFirst ? winner : (winner == 0 ? 1 : 0);
       _playerAP[activePlayer] = 1;
       _showDiceOverlay = false;
+      _showFirstTurnChooser = false;
     });
+  }
+
+  void _showDiceRoll() {
+    setState(() { _showDiceOverlay = true; });
+  }
+
+  Widget _buildFirstTurnChooser() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.85),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Player 1 "Go First" — rotated 180°
+            RotatedBox(
+              quarterTurns: 2,
+              child: ElevatedButton(
+                onPressed: () => _onFirstTurnDirectChoice(0),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                ),
+                child: Text('Go First', style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            SizedBox(height: 32),
+            // Dice button — center
+            ElevatedButton(
+              onPressed: _showDiceRoll,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[700],
+                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.casino, color: Colors.white, size: 28),
+                  SizedBox(width: 12),
+                  Text('Roll Dice', style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            SizedBox(height: 32),
+            // Player 2 "Go First" — normal orientation
+            ElevatedButton(
+              onPressed: () => _onFirstTurnDirectChoice(1),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+              child: Text('Go First', style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -1101,9 +1147,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 activePlayer = 0; currentPhase = 0; turnCount = 0;
                 _playerPitch = List.filled(widget.playerCount, 0);
                 _playerAP = List.filled(widget.playerCount, 0);
-                _playerAP[activePlayer] = 1;
                 _playerArmor = List.generate(widget.playerCount, (_) => List.generate(4, (_) => ArmorSlotState()));
                 gameLog.clear();
+                _showFirstTurnChooser = true;
+                _showDiceOverlay = false;
               }); _resetTimer(); Navigator.pop(ctx); }, child: Text('Reset', style: TextStyle(color: Colors.red))),
             ]));
           })),
@@ -1115,10 +1162,12 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           Positioned(bottom: 24, left: 16, child: IconButton(icon: Icon(Icons.list_alt, color: Colors.white), onPressed: () {
             showDialog(context: context, builder: (ctx) => Dialog(insetPadding: EdgeInsets.all(16), child: LogScreen(gameLog: gameLog, onUndo: _undoLastEntry)));
           })),
+          // First turn chooser
+          if (_showFirstTurnChooser && !_showDiceOverlay) Positioned.fill(child: _buildFirstTurnChooser()),
           // Dice overlay
           if (_showDiceOverlay) Positioned.fill(child: DiceOverlay(
             onChoice: (int winner, bool goFirst) {
-              _onFirstTurnChoice(winner, goFirst);
+              _onDiceChoice(winner, goFirst);
             },
           )),
           // Player overlays

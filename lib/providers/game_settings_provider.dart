@@ -9,7 +9,6 @@ class GameSettingsProvider extends ChangeNotifier {
   ThemeMode themeMode = ThemeMode.system;
   int matchTimerMinutes = 50;
   int startingLife = 20;
-  int firstTurnSetting = 2;
   int resourceTrackerSetting = 0; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
   bool armorTrackingEnabled = true;
   int damageDisplayMode = 0; // 0=Floating, 1=Totals
@@ -26,7 +25,6 @@ class GameSettingsProvider extends ChangeNotifier {
     themeMode = ThemeMode.values[_prefs.getInt('themeMode') ?? 0];
     matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;
     startingLife = _prefs.getInt('startingLife') ?? 20;
-    firstTurnSetting = _prefs.getInt('firstTurnSetting') ?? 2;
     resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 0;
     armorTrackingEnabled = _prefs.getBool('armorTrackingEnabled') ?? true;
     damageDisplayMode = _prefs.getInt('damageDisplayMode') ?? 0;
@@ -67,12 +65,6 @@ class GameSettingsProvider extends ChangeNotifier {
   void updateStartingLife(int value) {
     startingLife = value;
     _prefs.setInt('startingLife', value);
-    notifyListeners();
-  }
-
-  void updateFirstTurnSetting(int value) {
-    firstTurnSetting = value;
-    _prefs.setInt('firstTurnSetting', value);
     notifyListeners();
   }
 

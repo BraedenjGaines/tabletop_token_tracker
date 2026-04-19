@@ -30,30 +30,6 @@ class SettingsScreen extends StatelessWidget {
                 onChanged: (value) => settings.updateTurnTracker(value),
               ),
 
-              // --- First Turn ---
-              SizedBox(height: 32),
-              Center(child: Text('First Turn', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold))),
-              SizedBox(height: 8),
-              Text('Determines who goes first in 2-player games', style: TextStyle(fontSize: 14, color: Colors.grey)),
-              SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: SegmentedButton<int>(
-                  showSelectedIcon: false,
-                  style: ButtonStyle(
-                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 10)),
-                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 14, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
-                  ),
-                  segments: [
-                    ButtonSegment(value: 0, label: Text('Player 1')),
-                    ButtonSegment(value: 2, label: Icon(Icons.casino, size: 28)),
-                    ButtonSegment(value: 1, label: Text('Player 2')),
-                  ],
-                  selected: {settings.firstTurnSetting},
-                  onSelectionChanged: (selection) => settings.updateFirstTurnSetting(selection.first),
-                ),
-              ),
-
               // --- Visual ---
               SizedBox(height: 32),
               Center(child: Text('Visual', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold))),
