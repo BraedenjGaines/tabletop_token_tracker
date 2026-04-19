@@ -14,6 +14,7 @@ import 'widgets/armor_slot_widget.dart';
 import 'widgets/timer_display.dart';
 import 'widgets/dice_overlay.dart';
 import 'dart:ui';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class _FloatingNumber {
   final int value;
@@ -220,6 +221,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
     _loadTokenPreferences();
     _handleFirstTurn();
+    WakelockPlus.enable();
   }
 
   void _handleFirstTurn() {
@@ -252,6 +254,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   @override
   void dispose() {
+    WakelockPlus.disable();
     _timer?.cancel();
     for (final f in _floatingNumbers) { f.controller.dispose(); }
     for (final t in _accumulatorTimers.values) { t.cancel(); }
