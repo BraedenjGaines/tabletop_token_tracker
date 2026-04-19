@@ -19,17 +19,15 @@ class _FloatingNumber {
   final int value;
   final AnimationController controller;
   final int playerIndex;
-  final double startX;
-  final double startY;
   final double arcDirection;
+  final double spawnOffset; // horizontal offset for staggered spawns
 
   _FloatingNumber({
     required this.value,
     required this.controller,
     required this.playerIndex,
-    required this.startX,
-    required this.startY,
     required this.arcDirection,
+    required this.spawnOffset,
   });
 }
 
@@ -67,7 +65,17 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   late List<List<ArmorSlotState>> _playerArmor;
 
   final List<_FloatingNumber> _floatingNumbers = [];
-  int _floatCounter = 0;
+  int _floatSpawnIndex = 0; // cycles 0,1,2 for staggered spawn points
+
+  // Accumulator tracking: running total per player per sign direction
+  // Key = "playerIndex_neg" or "playerIndex_pos"
+  final Map<String, int> _accumulatorValues = {};
+  final Map<String, Timer> _accumulatorTimers = {};
+
+  // Totals mode: stationary display per player per sign direction
+  final Map<String, int> _totalsValues = {};
+  final Map<String, AnimationController> _totalsControllers = {};
+  final Map<String, Timer> _totalsTimers = {};
 
   List<TokenData> customTokens = [];
   List<String> favoriteTokens = [];
@@ -246,6 +254,9 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   void dispose() {
     _timer?.cancel();
     for (final f in _floatingNumbers) { f.controller.dispose(); }
+    for (final t in _accumulatorTimers.values) { t.cancel(); }
+    for (final c in _totalsControllers.values) { c.dispose(); }
+    for (final t in _totalsTimers.values) { t.cancel(); }
     super.dispose();
   }
 
@@ -273,64 +284,134 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     setState(() { _timerRunning = false; _timerSecondsRemaining = widget.matchTimerMinutes * 60; });
   }
 
-  void _spawnFloatingNumber(int playerIndex, int value) {
-    _floatCounter++;
-    final direction = value < 0 ? -1.0 : 1.0;
-    final xOffset = (_floatCounter % 2 == 0) ? direction : -direction;
+  void _spawnFloatingNumber(int playerIndex, int delta) {
+    final settings = context.read<GameSettingsProvider>();
+    final bool isNeg = delta < 0;
+    final String key = '${playerIndex}_${isNeg ? 'neg' : 'pos'}';
 
-    final controller = AnimationController(
-      duration: Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
-    final floater = _FloatingNumber(
-      value: value,
-      controller: controller,
-      playerIndex: playerIndex,
-      startX: xOffset * 0.3,
-      startY: 0,
-      arcDirection: xOffset,
-    );
-
-    setState(() { _floatingNumbers.add(floater); });
-
-    controller.forward().then((_) {
-      controller.dispose();
-      if (mounted) {
-        setState(() { _floatingNumbers.remove(floater); });
-      }
+    // Update running accumulator
+    _accumulatorValues[key] = (_accumulatorValues[key] ?? 0) + delta;
+    final settings2 = context.read<GameSettingsProvider>();
+    final resetDuration = settings2.damageDisplayMode == 0 ? 2 : 3;
+    _accumulatorTimers[key]?.cancel();
+    _accumulatorTimers[key] = Timer(Duration(seconds: resetDuration), () {
+      _accumulatorValues.remove(key);
+      _accumulatorTimers.remove(key);
     });
+
+    final int currentTotal = _accumulatorValues[key]!;
+
+    if (settings.damageDisplayMode == 0) {
+      // Floating mode: spawn a new floater with the accumulated value
+      // Stagger across 3 spawn points
+      final spawnPoints = [-10.0, 0.0, 10.0];
+      final spawnOffset = spawnPoints[_floatSpawnIndex % 3];
+      _floatSpawnIndex++;
+
+      // Alternate arc direction: even = outward, odd = inward
+      final baseDir = isNeg ? -1.0 : 1.0;
+      final arcDir = (_floatSpawnIndex % 2 == 0) ? baseDir : -baseDir;
+
+      final controller = AnimationController(
+        duration: Duration(milliseconds: 2000),
+        vsync: this,
+      );
+
+      final floater = _FloatingNumber(
+        value: currentTotal,
+        controller: controller,
+        playerIndex: playerIndex,
+        arcDirection: arcDir,
+        spawnOffset: spawnOffset,
+      );
+
+      setState(() { _floatingNumbers.add(floater); });
+
+      controller.forward().then((_) {
+        controller.dispose();
+        if (mounted) {
+          setState(() { _floatingNumbers.remove(floater); });
+        }
+      });
+    } else {
+      // Totals mode: update stationary display
+      _totalsValues[key] = currentTotal;
+      _totalsControllers[key]?.dispose();
+      final controller = AnimationController(
+        duration: Duration(seconds: 4),
+        vsync: this,
+      );
+      _totalsControllers[key] = controller;
+      controller.forward();
+      _totalsTimers[key]?.cancel();
+      _totalsTimers[key] = Timer(Duration(seconds: 3), () {
+        _totalsValues.remove(key);
+        _totalsControllers[key]?.dispose();
+        _totalsControllers.remove(key);
+        _totalsTimers.remove(key);
+        if (mounted) setState(() {});
+      });
+      setState(() {});
+    }
   }
 
-  Widget _buildFloatingNumbers(int playerIndex) {
-    final playerFloaters = _floatingNumbers.where((f) => f.playerIndex == playerIndex).toList();
+  Widget _buildFloatingNumbersSide(int playerIndex, {required bool negative}) {
+    final playerFloaters = _floatingNumbers.where((f) =>
+      f.playerIndex == playerIndex && (negative ? f.value < 0 : f.value > 0)
+    ).toList();
     if (playerFloaters.isEmpty) return SizedBox.shrink();
 
     return IgnorePointer(
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           for (final f in playerFloaters)
             AnimatedBuilder(
               animation: f.controller,
               builder: (context, child) {
                 final t = f.controller.value;
-                final opacity = 1.0 - t;
+                final opacity = (1.0 - t).clamp(0.0, 1.0);
                 final yOffset = -80 * t;
-                final xOffset = 30 * sin(t * pi) * f.arcDirection;
+                final xOffset = f.spawnOffset + (25 * sin(t * pi) * f.arcDirection);
 
                 return Transform.translate(
                   offset: Offset(xOffset, yOffset),
                   child: Opacity(
-                    opacity: opacity.clamp(0.0, 1.0),
+                    opacity: opacity,
                     child: Text(
                       f.value > 0 ? '+${f.value}' : '${f.value}',
-                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.black, height: 1.0),
                     ),
                   ),
                 );
               },
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTotalsDisplaySide(int playerIndex, {required bool negative}) {
+    final key = '${playerIndex}_${negative ? 'neg' : 'pos'}';
+    final val = _totalsValues[key];
+    final ctrl = _totalsControllers[key];
+
+    if (val == null || ctrl == null) return SizedBox.shrink();
+
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: ctrl,
+        builder: (context, child) {
+          final t = ctrl.value;
+          final opacity = t < 0.5 ? 1.0 : (1.0 - ((t - 0.5) * 2.0)).clamp(0.0, 1.0);
+          return Opacity(
+            opacity: opacity,
+            child: Text(
+              negative ? '$val' : '+$val',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.black, height: 1.0),
+            ),
+          );
+        },
       ),
     );
   }
@@ -696,7 +777,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         onTap: () { setState(() { playerHealth[index] += delta; _log(index, LogEventType.healthChange, 'Health', value: delta); }); _spawnFloatingNumber(index, delta); },
         child: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
           child: Container(decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), border: border),
-            child: Align(alignment: labelAlignment, child: Padding(padding: labelPadding, child: Text(label, style: TextStyle(fontSize: 28, color: Colors.black.withValues(alpha: 0.4))))),
+            child: Align(
+              alignment: labelAlignment,
+              child: Padding(
+                padding: labelPadding,
+                child: Text(label, style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Colors.black.withValues(alpha: 0.85))),
+              ),
+            ),
           ),
         )),
       ),
@@ -720,8 +807,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           ),
           Positioned.fill(
             child: Row(children: [
-              _buildPlayerTapHalf(index: index, delta: -1, label: '-', labelAlignment: Alignment.centerRight, labelPadding: EdgeInsets.only(right: 60), border: Border(right: BorderSide(color: Colors.grey.withValues(alpha: 0.3), width: 0.5))),
-              _buildPlayerTapHalf(index: index, delta: 1, label: '+', labelAlignment: Alignment.centerLeft, labelPadding: EdgeInsets.only(left: 60), border: Border(left: BorderSide(color: Colors.grey.withValues(alpha: 0.3), width: 0.5))),
+              _buildPlayerTapHalf(index: index, delta: -1, label: '-', labelAlignment: Alignment.center, labelPadding: EdgeInsets.only(right: 1), border: Border(right: BorderSide(color: Colors.grey.withValues(alpha: 0.3), width: 0.5))),
+              _buildPlayerTapHalf(index: index, delta: 1, label: '+', labelAlignment: Alignment.center, labelPadding: EdgeInsets.only(left: 1), border: Border(left: BorderSide(color: Colors.grey.withValues(alpha: 0.3), width: 0.5))),
             ]),
           ),
           Positioned.fill(
@@ -729,21 +816,44 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           ),
           Center(
             child: Stack(
-              alignment: Alignment.center,
               clipBehavior: Clip.none,
+              alignment: Alignment.center,
               children: [
-                Text('${playerHealth[index]}', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.black)),
-                _buildFloatingNumbers(index),
+                // Health number — always centered, never displaced
+                Text('${playerHealth[index]}', style: TextStyle(fontSize: 80, fontWeight: FontWeight.w900, fontFamily: 'Sedan', color: Colors.black)),
+                // Totals display — negative above-left, positive above-right
+                Positioned(
+                  top: -1,
+                  left: -20,
+                  child: _buildTotalsDisplaySide(index, negative: true),
+                ),
+                Positioned(
+                  top: -1,
+                  right: -20,
+                  child: _buildTotalsDisplaySide(index, negative: false),
+                ),
+                // Floating numbers — left side (damage)
+                Positioned(
+                  left: -44,
+                  top: 0,
+                  child: _buildFloatingNumbersSide(index, negative: true),
+                ),
+                // Floating numbers — right side (healing)
+                Positioned(
+                  right: -44,
+                  top: 0,
+                  child: _buildFloatingNumbersSide(index, negative: false),
+                ),
               ],
             ),
           ),
           Positioned.fill(
             child: Align(
-              alignment: Alignment(0, 0.3),
+              alignment: Alignment(0, 0.55),
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () { setState(() { _playerOverlay[index] = -2; }); },
-                child: Padding(padding: EdgeInsets.all(12), child: Icon(Icons.add_box, size: 28, color: Colors.black)),
+                child: Padding(padding: EdgeInsets.all(12), child: Icon(Icons.add_box, size: 36, color: Colors.black)),
               ),
             ),
           ),

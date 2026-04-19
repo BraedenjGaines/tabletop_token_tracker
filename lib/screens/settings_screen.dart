@@ -111,6 +111,29 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
 
+              // --- Damage Display ---
+              SizedBox(height: 32),
+              SizedBox(width: double.infinity, child: Text('Damage Display', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+              SizedBox(height: 8),
+              Text('How life changes appear on the counter screen', style: TextStyle(fontSize: 14, color: Colors.grey)),
+              SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<int>(
+                  showSelectedIcon: false,
+                  style: ButtonStyle(
+                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 10)),
+                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 14, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+                  ),
+                  segments: [
+                    ButtonSegment(value: 0, label: Text('Floating')),
+                    ButtonSegment(value: 1, label: Text('Totals')),
+                  ],
+                  selected: {settings.damageDisplayMode},
+                  onSelectionChanged: (selection) => settings.updateDamageDisplayMode(selection.first),
+                ),
+              ),
+
               // --- Armor Tracking ---
               SizedBox(height: 32),
               SizedBox(width: double.infinity, child: Text('Armor Tracking', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold), textAlign: TextAlign.center)),

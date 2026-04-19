@@ -12,6 +12,7 @@ class GameSettingsProvider extends ChangeNotifier {
   int firstTurnSetting = 2;
   int resourceTrackerSetting = 0; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
   bool armorTrackingEnabled = true;
+  int damageDisplayMode = 0; // 0=Floating, 1=Totals
   bool isLoaded = false;
 
   late SharedPreferences _prefs;
@@ -28,6 +29,7 @@ class GameSettingsProvider extends ChangeNotifier {
     firstTurnSetting = _prefs.getInt('firstTurnSetting') ?? 2;
     resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 0;
     armorTrackingEnabled = _prefs.getBool('armorTrackingEnabled') ?? true;
+    damageDisplayMode = _prefs.getInt('damageDisplayMode') ?? 0;
     isLoaded = true;
     notifyListeners();
   }
@@ -83,6 +85,12 @@ class GameSettingsProvider extends ChangeNotifier {
   void updateArmorTracking(bool enabled) {
     armorTrackingEnabled = enabled;
     _prefs.setBool('armorTrackingEnabled', enabled);
+    notifyListeners();
+  }
+
+  void updateDamageDisplayMode(int value) {
+    damageDisplayMode = value;
+    _prefs.setInt('damageDisplayMode', value);
     notifyListeners();
   }
 }
