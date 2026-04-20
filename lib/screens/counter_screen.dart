@@ -15,7 +15,7 @@ import 'widgets/timer_display.dart';
 import 'widgets/dice_overlay.dart';
 import 'dart:ui';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:vibration/vibration.dart';
+import 'package:flutter/services.dart';
 
 class _FloatingNumber {
   final int value;
@@ -337,19 +337,16 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Timer ---
   void _doDoubleBuzz() async {
-    if (await Vibration.hasVibrator()) {
-      Vibration.vibrate(duration: 100);
-      await Future.delayed(Duration(milliseconds: 200));
-      Vibration.vibrate(duration: 100);
-    }
+    HapticFeedback.heavyImpact();
+    await Future.delayed(Duration(milliseconds: 200));
+    HapticFeedback.heavyImpact();
   }
 
   void _doFiveBuzzes() async {
-    if (await Vibration.hasVibrator()) {
-      for (int i = 0; i < 5; i++) {
-        Vibration.vibrate(duration: 80);
-        if (i < 4) await Future.delayed(Duration(milliseconds: 160));
-      }
+    for (int i = 0; i < 5; i++) {
+      if (!mounted) return;
+      HapticFeedback.heavyImpact();
+      if (i < 4) await Future.delayed(Duration(milliseconds: 200));
     }
   }
 
