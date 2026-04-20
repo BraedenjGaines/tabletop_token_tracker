@@ -15,7 +15,7 @@ import 'widgets/timer_display.dart';
 import 'widgets/dice_overlay.dart';
 import 'dart:ui';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:flutter/services.dart';
+import 'package:vibration/vibration.dart';
 
 class _FloatingNumber {
   final int value;
@@ -337,16 +337,14 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Timer ---
   void _doDoubleBuzz() async {
-    HapticFeedback.mediumImpact();
-    await Future.delayed(Duration(milliseconds: 150));
-    HapticFeedback.mediumImpact();
+    if (await Vibration.hasVibrator() ?? false) {
+      Vibration.vibrate(pattern: [0, 100, 100, 100]);
+    }
   }
 
   void _doFiveBuzzes() async {
-    for (int i = 0; i < 5; i++) {
-      if (!mounted) return;
-      HapticFeedback.mediumImpact();
-      if (i < 4) await Future.delayed(Duration(milliseconds: 200));
+    if (await Vibration.hasVibrator() ?? false) {
+      Vibration.vibrate(pattern: [0, 80, 80, 80, 80, 80, 80, 80, 80, 80]);
     }
   }
 
@@ -379,8 +377,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           // Start expired buzz and flash
           if (!_hasExpiredBuzzStarted) {
             _hasExpiredBuzzStarted = true;
-            _doDoubleBuzz();
             _timerFlashOn = false;
+            _doFiveBuzzes();
             _doFiveBuzzes();
             _flashTimer = Timer.periodic(Duration(milliseconds: 500), (t) {
               if (mounted) setState(() { _timerFlashOn = !_timerFlashOn; });
@@ -698,8 +696,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 5),
                   child: byCategory.containsKey(cat)
-                    ? _buildCategoryChip(cat, byCategory[cat]!.length, playerIndex, chipWidth, chipHeight)
-                    : SizedBox(width: chipWidth, height: chipHeight),
+? _buildCategoryChip(cat, playerTokens[playerIndex].where((t) => t.category == cat).fold<int>(0, (sum, t) => sum + t.count), playerIndex, chipWidth, chipHeight)                    : SizedBox(width: chipWidth, height: chipHeight),
                 ),
             ],
           ),
@@ -1367,7 +1364,7 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
                   itemBuilder: (context, index) {
                     final td = filtered[index];
                     final fav = currentFavorites.contains(td.name);
-                    final inPlayCount = widget.playerTokens.where((t) => t.name == td.name).length;
+                    final inPlayCount = widget.playerTokens.where((t) => t.name == td.name).fold<int>(0, (sum, t) => sum + t.count);
                     return ListTile(
                       dense: true, visualDensity: VisualDensity.compact,
                       leading: GestureDetector(
