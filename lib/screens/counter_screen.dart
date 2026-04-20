@@ -883,16 +883,17 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               ],
             ),
           )),
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment(0, 0.60),
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () { setState(() { _playerOverlay[index] = -2; }); },
-                child: Padding(padding: EdgeInsets.all(12), child: Icon(Icons.add_box, size: 36, color: Colors.black)),
+          if (context.read<GameSettingsProvider>().addTokenButtonEnabled)
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment(0, 0.60),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () { setState(() { _playerOverlay[index] = -2; }); },
+                  child: Padding(padding: EdgeInsets.all(12), child: Icon(Icons.add_box, size: 36, color: Colors.black)),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -1070,10 +1071,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         body: Stack(children: [
           _buildPlayerGrid(),
           // Timer top (rotated for P1)
-          Positioned(top: 35, left: 0, right: 0, child: Center(child: RotatedBox(quarterTurns: 2, child: TimerDisplay(
+          if (settings.clockEnabled) Positioned(top: 35, left: 0, right: 0, child: Center(child: RotatedBox(quarterTurns: 2, child: TimerDisplay(
             secondsRemaining: _timerSecondsRemaining, isRunning: _timerRunning, onReset: _resetTimer, onToggle: _timerRunning ? _pauseTimer : _startTimer,
           )))),
-          Positioned(bottom: 35, left: 0, right: 0, child: Center(child: TimerDisplay(
+          if (settings.clockEnabled) Positioned(bottom: 35, left: 0, right: 0, child: Center(child: TimerDisplay(
             secondsRemaining: _timerSecondsRemaining, isRunning: _timerRunning, onReset: _resetTimer, onToggle: _timerRunning ? _pauseTimer : _startTimer,
           ))),
           // Player 1 armor

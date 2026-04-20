@@ -11,6 +11,8 @@ class GameSettingsProvider extends ChangeNotifier {
   int startingLife = 20;
   int resourceTrackerSetting = 0; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
   bool armorTrackingEnabled = true;
+  bool clockEnabled = true;
+  bool addTokenButtonEnabled = true;
   int damageDisplayMode = 0; // 0=Floating, 1=Totals
   bool isLoaded = false;
 
@@ -27,6 +29,8 @@ class GameSettingsProvider extends ChangeNotifier {
     startingLife = _prefs.getInt('startingLife') ?? 20;
     resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 0;
     armorTrackingEnabled = _prefs.getBool('armorTrackingEnabled') ?? true;
+    clockEnabled = _prefs.getBool('clockEnabled') ?? true;
+    addTokenButtonEnabled = _prefs.getBool('addTokenButtonEnabled') ?? true;
     damageDisplayMode = _prefs.getInt('damageDisplayMode') ?? 0;
     isLoaded = true;
     notifyListeners();
@@ -77,6 +81,18 @@ class GameSettingsProvider extends ChangeNotifier {
   void updateArmorTracking(bool enabled) {
     armorTrackingEnabled = enabled;
     _prefs.setBool('armorTrackingEnabled', enabled);
+    notifyListeners();
+  }
+
+  void updateClockEnabled(bool enabled) {
+    clockEnabled = enabled;
+    _prefs.setBool('clockEnabled', enabled);
+    notifyListeners();
+  }
+
+  void updateAddTokenButtonEnabled(bool enabled) {
+    addTokenButtonEnabled = enabled;
+    _prefs.setBool('addTokenButtonEnabled', enabled);
     notifyListeners();
   }
 

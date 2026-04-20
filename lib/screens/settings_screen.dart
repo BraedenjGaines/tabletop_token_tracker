@@ -51,6 +51,36 @@ class SettingsScreen extends StatelessWidget {
               ),
               Text('Displays a turn-by-turn phase bar between players. Some tokens are automatically destroyed when their trigger phase is reached.', style: TextStyle(fontSize: 13, color: Colors.grey)),
 
+              // --- Armor Tracking ---
+              SizedBox(height: 32),
+              Center(child: Text('Armor Tracking', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Show equipment slot icons'),
+                value: settings.armorTrackingEnabled,
+                onChanged: (value) => settings.updateArmorTracking(value),
+              ),
+
+              // --- Clock ---
+              SizedBox(height: 32),
+              Center(child: Text('Clock', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Show match timer'),
+                value: settings.clockEnabled,
+                onChanged: (value) => settings.updateClockEnabled(value),
+              ),
+
+              // --- Add Token Button ---
+              SizedBox(height: 32),
+              Center(child: Text('Token Button', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Show add token button'),
+                value: settings.addTokenButtonEnabled,
+                onChanged: (value) => settings.updateAddTokenButtonEnabled(value),
+              ),
+
               // --- Resource Tracking ---
               SizedBox(height: 32),
               Center(child: Text('Resource Tracking', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
@@ -75,16 +105,6 @@ class SettingsScreen extends StatelessWidget {
               ),
               SizedBox(height: 8),
               Text('Enables tracking for action points, pitch values, both, or none.', style: TextStyle(fontSize: 13, color: Colors.grey)),
-
-              // --- Armor Tracking ---
-              SizedBox(height: 32),
-              Center(child: Text('Armor Tracking', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
-              SizedBox(height: 8),
-              SwitchListTile(
-                title: Text('Show equipment slot icons'),
-                value: settings.armorTrackingEnabled,
-                onChanged: (value) => settings.updateArmorTracking(value),
-              ),
 
               // --- Combat Text ---
               SizedBox(height: 32),
