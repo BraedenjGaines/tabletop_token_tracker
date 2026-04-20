@@ -58,7 +58,8 @@ class _LogScreenState extends State<LogScreen> {
     final playerColor = _getPlayerColor(entry.playerIndex);
     final playerName = _getPlayerName(entry.playerIndex);
     final bool isUndone = entry.undone;
-    final Color textColor = isUndone ? Colors.grey : Colors.white70;
+    final brightness = Theme.of(context).brightness;
+    final Color textColor = isUndone ? Colors.grey : (brightness == Brightness.dark ? Colors.white70 : Colors.black87);
     final Color pColor = isUndone ? Colors.grey : playerColor;
     final TextDecoration? decoration = isUndone ? TextDecoration.lineThrough : null;
     final String fontFamily = Theme.of(context).textTheme.bodyMedium?.fontFamily ?? 'Sedan';
