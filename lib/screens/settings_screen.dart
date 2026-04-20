@@ -60,26 +60,29 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.armorTrackingEnabled,
                 onChanged: (value) => settings.updateArmorTracking(value),
               ),
-
-              // --- Clock ---
-              SizedBox(height: 32),
-              Center(child: Text('Clock', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
-              SizedBox(height: 8),
-              SwitchListTile(
-                title: Text('Show match timer'),
-                value: settings.clockEnabled,
-                onChanged: (value) => settings.updateClockEnabled(value),
-              ),
+              Text('If you press and hold on an equipment slot, it will be destroyed.', style: TextStyle(fontSize: 13, color: Colors.grey)),
 
               // --- Add Token Button ---
               SizedBox(height: 32),
-              Center(child: Text('Token Button', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              Center(child: Text('Token Tracking', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
               SizedBox(height: 8),
               SwitchListTile(
                 title: Text('Show add token button'),
                 value: settings.addTokenButtonEnabled,
                 onChanged: (value) => settings.updateAddTokenButtonEnabled(value),
               ),
+              Text('Displays a button that will allow you to add tokens to the board. Some tokens are automatically destroyed when their trigger phase is reached, and you have Turn Tracking enabled.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+
+              // --- Clock ---
+              SizedBox(height: 32),
+              Center(child: Text('Match Timer', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              SizedBox(height: 8),
+              SwitchListTile(
+                title: Text('Show match timer'),
+                value: settings.clockEnabled,
+                onChanged: (value) => settings.updateClockEnabled(value),
+              ),
+              Text('Display a match timer that both players can start, pause, and reset.', style: TextStyle(fontSize: 13, color: Colors.grey)),
 
               // --- Resource Tracking ---
               SizedBox(height: 32),
