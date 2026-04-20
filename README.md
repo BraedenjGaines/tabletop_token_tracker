@@ -1,22 +1,19 @@
 # TableTop Token Tracker
  
-A fan-made companion app for **Flesh and Blood TCG** built with Flutter. Designed to replace pen-and-paper tracking during in-person games with a clean, fast, two-player interface.
+A fan-made companion app for **Flesh and Blood TCG** built with Flutter. Designed to help keep track of game states during in-person matches with a clean, fast, two-player interface.
  
 ## Features
  
 ### Life Tracking
 - Large, readable life totals with tap-to-adjust controls
-- Floating or static combat text showing accumulated damage/healing
 - Customizable starting life values
 ### Token Management
 - Built-in library of official Flesh and Blood tokens — buffs, debuffs, items, and allies
 - Automatic token destruction based on game phase triggers
-- Token stacking for non-ally tokens
-- Create and save custom tokens with full category and trigger support
+- Create and save custom tokens with trigger support
 - Favorite tokens for quick access
 ### Turn & Phase Tracking
 - Visual phase bar (Start → Action → End) between players
-- Automatic turn advancement with active player indication
 - Action Point and Pitch resource counters
 ### Armor Tracking
 - Equipment slot icons for Head, Chest, Arms, and Legs
@@ -24,20 +21,13 @@ A fan-made companion app for **Flesh and Blood TCG** built with Flutter. Designe
 - Long-press to mark equipment as destroyed
 ### Match Timer
 - Configurable countdown timer visible to both players
-- Color-coded warnings at 10 and 5 minutes remaining
-- Haptic alerts at time thresholds
-- Visual flash effect when time expires
 ### Game Log
 - Color-coded event log with rich text descriptions
-- Player-colored names and category-colored token names
 - Copy or share full game logs
 - Undo support for recent actions
 ### First Turn Selection
-- Choose who goes first or roll dice with an animated overlay
-- Dice roll with winner selection before every game
+- Choose who goes first or roll dice
 ### Customization
-- Light, Dark, and System theme modes
-- Frosted glass visual effect option
 - Toggle visibility of clock, token button, armor, and resource trackers
 - Floating or static combat text display modes
 - Custom player names
