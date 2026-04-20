@@ -737,10 +737,17 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 Padding(padding: EdgeInsets.all(16), child: Text('No ${_categoryNames[cat]?.toLowerCase()} in play', style: TextStyle(color: Colors.grey)))
               else
                 ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: 200),
-                  child: ListView(shrinkWrap: true, children: [
-                    for (int ti in tokens) _buildTokenManageRow(playerTokens[playerIndex][ti], playerIndex, ti),
-                  ]),
+                  constraints: BoxConstraints(maxHeight: 250),
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (int ti in tokens)
+                          _buildTokenTile(playerTokens[playerIndex][ti], playerIndex, ti, MediaQuery.of(context).size.width * 0.8),
+                      ],
+                    ),
+                  ),
                 ),
               SizedBox(height: 8),
               GestureDetector(
@@ -758,76 +765,114 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildTokenManageRow(ActiveToken token, int pi, int ti) {
+  Widget _buildTokenTile(ActiveToken token, int pi, int ti, double containerWidth) {
     final bool triggering = _isTokenTriggering(token, pi);
     final bool isAlly = token.category == TokenCategory.ally;
+    final int displayValue = isAlly ? (token.health ?? 0) : token.count;
+    final double tileWidth = (containerWidth - 48) / 4; // 4 per row, 8px spacing x3, minus padding
 
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 3),
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: _categoryColors[token.category]!.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(8),
-        border: triggering ? Border.all(color: Colors.amber, width: 2) : null,
-      ),
-      child: Row(
-        children: [
-          if (triggering) Padding(padding: EdgeInsets.only(right: 4), child: Icon(Icons.flash_on, size: 14, color: Colors.amber)),
-          Expanded(child: Text(token.name, style: TextStyle(fontSize: 13, color: Colors.white))),
-          if (isAlly) ...[
-            GestureDetector(
-              onTap: () { setState(() {
-                final int newHealth = token.health! - 1;
-                if (newHealth <= 0) {
-                  final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
-                  playerTokens[pi].removeAt(ti);
-                  _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
-                  _playerOverlay[pi] = -1;
-                } else {
-                  token.health = newHealth;
-                  _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: -1, undoData: {'name': token.name});
-                }
-              }); },
-              child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
-            ),
-            Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Text('${token.health}/${token.maxHealth}', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold))),
-            GestureDetector(
-              onTap: () { setState(() { token.health = token.health! + 1; _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: 1, undoData: {'name': token.name}); }); },
-              child: Icon(Icons.add_circle, size: 18, color: Colors.green),
-            ),
-          ] else ...[
-            GestureDetector(
-              onTap: () { setState(() {
-                token.count--;
-                _log(pi, LogEventType.tokenCountChange, token.name, value: -1, undoData: {'name': token.name, 'category': token.category.index});
-                if (token.count <= 0) {
-                  final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': 0, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
-                  playerTokens[pi].removeAt(ti);
-                  _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
-                  _playerOverlay[pi] = -1;
-                }
-              }); },
-              child: Icon(Icons.remove_circle, size: 18, color: Colors.red),
-            ),
-            Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Text('${token.count}', style: TextStyle(fontSize: 13, color: Colors.white))),
-            GestureDetector(
-              onTap: () { setState(() { token.count++; _log(pi, LogEventType.tokenCountChange, token.name, value: 1, undoData: {'name': token.name, 'category': token.category.index}); }); },
-              child: Icon(Icons.add_circle, size: 18, color: Colors.green),
-            ),
-          ],
-          SizedBox(width: 6),
-          GestureDetector(
-            onTap: () { setState(() {
-              final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
-              playerTokens[pi].removeAt(ti);
-              _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
-              if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1;
-            }); },
-            child: Icon(Icons.delete, size: 16, color: Colors.grey),
+    return SizedBox(
+      width: tileWidth,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Name above tile
+              Text(
+                token.name,
+                style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: 2),
+              // Tile
+              Container(
+                height: tileWidth * 0.8,
+                decoration: BoxDecoration(
+                  color: _categoryColors[token.category]!.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(6),
+                  border: triggering
+                      ? Border.all(color: Colors.amber, width: 2)
+                      : Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+                  boxShadow: triggering
+                      ? [BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 1)]
+                      : [],
+                ),
+                child: Row(
+                  children: [
+                    // Left half: subtract
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () { setState(() {
+                          if (isAlly) {
+                            final int newHealth = token.health! - 1;
+                            if (newHealth <= 0) {
+                              final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
+                              playerTokens[pi].removeAt(ti);
+                              _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
+                              if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1;
+                            } else {
+                              token.health = newHealth;
+                              _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: -1, undoData: {'name': token.name});
+                            }
+                          } else {
+                            token.count--;
+                            _log(pi, LogEventType.tokenCountChange, token.name, value: -1, undoData: {'name': token.name, 'category': token.category.index});
+                            if (token.count <= 0) {
+                              final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': 0, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
+                              playerTokens[pi].removeAt(ti);
+                              _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
+                              if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1;
+                            }
+                          }
+                        }); },
+                        child: Center(child: Text('-', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white.withValues(alpha: 0.7)))),
+                      ),
+                    ),
+                    // Center: count/health
+                    Text(
+                      '$displayValue',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+                    // Right half: add
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () { setState(() {
+                          if (isAlly) {
+                            token.health = token.health! + 1;
+                            _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: 1, undoData: {'name': token.name});
+                          } else {
+                            token.count++;
+                            _log(pi, LogEventType.tokenCountChange, token.name, value: 1, undoData: {'name': token.name, 'category': token.category.index});
+                          }
+                        }); },
+                        child: Center(child: Text('+', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white.withValues(alpha: 0.7)))),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Trash icon below-right
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () { setState(() {
+                    final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
+                    playerTokens[pi].removeAt(ti);
+                    _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
+                    if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1;
+                  }); },
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 2, right: 2),
+                    child: Icon(Icons.delete_outline, size: 14, color: Colors.white.withValues(alpha: 0.5)),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
   }
 
   // --- Add token picker overlay ---

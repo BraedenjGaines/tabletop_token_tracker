@@ -53,7 +53,10 @@ class _SetupScreenState extends State<SetupScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text('Game Setup'), centerTitle: true),
-      body: SingleChildScrollView(
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: SingleChildScrollView(
         child: Center(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -218,7 +221,7 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 }
