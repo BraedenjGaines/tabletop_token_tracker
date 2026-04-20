@@ -603,8 +603,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   Widget _buildTokenChips(int playerIndex) {
     final byCategory = _getTokensByCategory(playerIndex);
     final List<TokenCategory> order = [TokenCategory.boonAura, TokenCategory.debuffAura, TokenCategory.item, TokenCategory.ally];
-    final active = order.where((cat) => byCategory.containsKey(cat)).toList();
-    if (active.isEmpty) return SizedBox.shrink();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -618,10 +616,12 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               for (var cat in order)
-                if (byCategory.containsKey(cat))
-                  Padding(padding: EdgeInsets.symmetric(horizontal: 7), child: _buildCategoryChip(cat, byCategory[cat]!.length, playerIndex, chipWidth, chipHeight))
-                else
-                  SizedBox(width: chipWidth + 4),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 5),
+                  child: byCategory.containsKey(cat)
+                    ? _buildCategoryChip(cat, byCategory[cat]!.length, playerIndex, chipWidth, chipHeight)
+                    : SizedBox(width: chipWidth, height: chipHeight),
+                ),
             ],
           ),
         );
