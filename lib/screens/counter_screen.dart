@@ -33,14 +33,12 @@ class _FloatingNumber {
 }
 
 class CounterScreen extends StatefulWidget {
-  final int playerCount;
   final int startingLife;
   final List<String> playerHeroes;
   final int matchTimerMinutes;
 
   const CounterScreen({
     super.key,
-    required this.playerCount,
     required this.startingLife,
     required this.playerHeroes,
     required this.matchTimerMinutes,
@@ -113,14 +111,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   bool get _showTurnTracker {
     final settings = context.read<GameSettingsProvider>();
-    return settings.turnTrackerEnabled && settings.selectedGame == 'fab' && widget.playerCount == 2;
+    return settings.turnTrackerEnabled && settings.selectedGame == 'fab';
   }
 
   bool get _showMiddleBar {
     final settings = context.read<GameSettingsProvider>();
-    if (widget.playerCount != 2) return false;
     if (_showTurnTracker) return true;
-    return settings.resourceTrackerSetting != 3; // show if any resource tracking is on
+    return settings.resourceTrackerSetting != 3;
   }
 
   String? get _currentPhaseName =>
@@ -213,17 +210,16 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   @override
   void initState() {
     super.initState();
-    playerHealth = List.filled(widget.playerCount, widget.startingLife);
-    playerTokens = List.generate(widget.playerCount, (_) => []);
-    _playerOverlay = List.filled(widget.playerCount, -1);
+    playerHealth = List.filled(2, widget.startingLife);
+    playerTokens = List.generate(2, (_) => []);
+    _playerOverlay = List.filled(2, -1);
     _timerSecondsRemaining = widget.matchTimerMinutes * 60;
 
     // Fix #6: Size resource lists to actual player count
-    _playerPitch = List.filled(widget.playerCount, 0);
-    _playerAP = List.filled(widget.playerCount, 0);
+    _playerPitch = List.filled(2, 0);
+    _playerAP = List.filled(2, 0);
 
-    // Fix #5: Use ArmorSlotState model
-    _playerArmor = List.generate(widget.playerCount, (_) =>
+    _playerArmor = List.generate(2, (_) =>
       List.generate(4, (_) => ArmorSlotState()),
     );
 
@@ -479,22 +475,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     setState(() { customTokens = customs; favoriteTokens = favs; });
   }
 
-  // --- Layout helpers ---
-  bool _isMiddleRow(int pi) {
-    final rc = (playerHealth.length + 1) ~/ 2;
-    if (rc < 3) return false;
-    return (pi ~/ 2) == (rc ~/ 2);
-  }
-
   int? _getQuarterTurns(int index) {
-    if (playerHealth.length == 2) return index == 0 ? 2 : null;
-    final rc = (playerHealth.length + 1) ~/ 2;
-    final cr = index ~/ 2;
-    final isMiddle = _isMiddleRow(index);
-    final isTop = cr < (rc / 2).floor() && !isMiddle;
-    if (isTop) return 2;
-    if (isMiddle) return (index % 2 == 0) ? 1 : 3;
-    return null;
+    return index == 0 ? 2 : null;
   }
 
   // --- Phase / turn ---
@@ -811,16 +793,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   }
 
   Widget _buildPlayerOverlayPositioned(int index, Widget overlay) {
-    if (playerHealth.length == 2) {
-      final double halfHeight = MediaQuery.of(context).size.height / 2;
-      final int? qt = _getQuarterTurns(index);
-      return Positioned(
-        top: index == 0 ? 0 : halfHeight,
-        left: 0, right: 0, height: halfHeight,
-        child: qt != null ? RotatedBox(quarterTurns: qt, child: overlay) : overlay,
-      );
-    }
-    return Positioned.fill(child: overlay);
+    final double halfHeight = MediaQuery.of(context).size.height / 2;
+    final int? qt = _getQuarterTurns(index);
+    return Positioned(
+      top: index == 0 ? 0 : halfHeight,
+      left: 0, right: 0, height: halfHeight,
+      child: qt != null ? RotatedBox(quarterTurns: qt, child: overlay) : overlay,
+    );
   }
 
   // --- Player tap halves ---
@@ -1066,25 +1045,16 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Grid ---
   Widget _buildPlayerGrid() {
-    if (playerHealth.length == 2) {
-      if (_showMiddleBar) {
-        return Column(children: [
-          Expanded(child: _buildPlayerWidget(0)),
-          _buildTurnTrackerPanel(),
-          Expanded(child: _buildPlayerWidget(1)),
-        ]);
-      }
+    if (_showMiddleBar) {
       return Column(children: [
         Expanded(child: _buildPlayerWidget(0)),
+        _buildTurnTrackerPanel(),
         Expanded(child: _buildPlayerWidget(1)),
       ]);
     }
     return Column(children: [
-      for (int i = 0; i < playerHealth.length; i += 2)
-        Expanded(child: Row(children: [
-          Expanded(child: _buildPlayerWidget(i)),
-          if (i + 1 < playerHealth.length) Expanded(child: _buildPlayerWidget(i + 1)),
-        ])),
+      Expanded(child: _buildPlayerWidget(0)),
+      Expanded(child: _buildPlayerWidget(1)),
     ]);
   }
 
@@ -1107,7 +1077,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             secondsRemaining: _timerSecondsRemaining, isRunning: _timerRunning, onReset: _resetTimer, onToggle: _timerRunning ? _pauseTimer : _startTimer,
           ))),
           // Player 1 armor
-          if (widget.playerCount == 2 && settings.armorTrackingEnabled)
+          if (settings.armorTrackingEnabled)
             Positioned(
               top: 80, left: 8,
               child: RotatedBox(quarterTurns: 2, child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1115,7 +1085,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 ArmorSlotWidget(state: _playerArmor[0][1], slotIndex: 1, onIncrement: () { setState(() { _playerArmor[0][1].increment(); }); }, onDecrement: () { setState(() { _playerArmor[0][1].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[0][1].destroy(); }); }),
               ])),
             ),
-          if (widget.playerCount == 2 && settings.armorTrackingEnabled)
+          if (settings.armorTrackingEnabled)
             Positioned(
               top: 80, right: 8,
               child: RotatedBox(quarterTurns: 2, child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1124,7 +1094,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               ])),
             ),
           // Player 2 armor
-          if (widget.playerCount == 2 && settings.armorTrackingEnabled)
+          if (settings.armorTrackingEnabled)
             Positioned(
               bottom: 80, left: 8,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1132,7 +1102,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 ArmorSlotWidget(state: _playerArmor[1][1], slotIndex: 1, onIncrement: () { setState(() { _playerArmor[1][1].increment(); }); }, onDecrement: () { setState(() { _playerArmor[1][1].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[1][1].destroy(); }); }),
               ]),
             ),
-          if (widget.playerCount == 2 && settings.armorTrackingEnabled)
+          if (settings.armorTrackingEnabled)
             Positioned(
               bottom: 80, right: 8,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1154,13 +1124,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Reset Game'), content: Text('Reset all health, tokens, timer, and log?'), actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
               TextButton(onPressed: () { setState(() {
-                playerHealth = List.filled(widget.playerCount, widget.startingLife);
-                playerTokens = List.generate(widget.playerCount, (_) => []);
-                _playerOverlay = List.filled(widget.playerCount, -1);
+                playerHealth = List.filled(2, widget.startingLife);
+                playerTokens = List.generate(2, (_) => []);
+                _playerOverlay = List.filled(2, -1);
                 activePlayer = 0; currentPhase = 0; turnCount = 0;
-                _playerPitch = List.filled(widget.playerCount, 0);
-                _playerAP = List.filled(widget.playerCount, 0);
-                _playerArmor = List.generate(widget.playerCount, (_) => List.generate(4, (_) => ArmorSlotState()));
+                _playerPitch = List.filled(2, 0);
+                _playerAP = List.filled(2, 0);
+                _playerArmor = List.generate(2, (_) => List.generate(4, (_) => ArmorSlotState()));
                 gameLog.clear();
                 _showFirstTurnChooser = true;
                 _showDiceOverlay = false;
@@ -1184,10 +1154,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             },
           )),
           // Player overlays
-          for (int i = 0; i < widget.playerCount; i++)
+          for (int i = 0; i < 2; i++)
             if (_playerOverlay[i] >= 0 && _playerOverlay[i] < TokenCategory.values.length)
               _buildPlayerOverlayPositioned(i, _buildCategoryOverlay(i, TokenCategory.values[_playerOverlay[i]])),
-          for (int i = 0; i < widget.playerCount; i++)
+          for (int i = 0; i < 2; i++)
             if (_playerOverlay[i] == -2)
               _buildPlayerOverlayPositioned(i, _buildAddTokenOverlay(i)),
         ]),

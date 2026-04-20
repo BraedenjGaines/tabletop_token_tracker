@@ -11,7 +11,6 @@ class SetupScreen extends StatefulWidget {
 }
 
 class _SetupScreenState extends State<SetupScreen> {
-  int selectedPlayers = 2;
   late int selectedLife;
   final TextEditingController customLifeController = TextEditingController();
   late int matchTimerMinutes;
@@ -101,7 +100,7 @@ class _SetupScreenState extends State<SetupScreen> {
                 SizedBox(height: 30),
                 Text('Choose Heroes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 SizedBox(height: 12),
-                for (int p = 0; p < selectedPlayers; p++)
+                for (int p = 0; p < 2; p++)
                   Padding(
                     padding: EdgeInsets.symmetric(vertical: 6),
                     child: Row(
@@ -180,9 +179,8 @@ class _SetupScreenState extends State<SetupScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => CounterScreen(
-                                playerCount: selectedPlayers,
                                 startingLife: selectedLife,
-                                playerHeroes: playerHeroes.sublist(0, selectedPlayers),
+                                playerHeroes: playerHeroes.sublist(0, 2),
                                 matchTimerMinutes: matchTimerMinutes,
                               ),
                             ),
