@@ -33,9 +33,9 @@ class TimerDisplay extends StatelessWidget {
       decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(8)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         GestureDetector(onTap: onReset, child: Icon(Icons.replay, color: Colors.white, size: 18)),
-        SizedBox(width: 8),
-        Text(_format(), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: _color(), fontFeatures: [FontFeature.tabularFigures()])),
-        SizedBox(width: 8),
+        SizedBox(width: 27),
+        Text(_format(), style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _color(), fontFeatures: [FontFeature.tabularFigures()])),
+        SizedBox(width: 27),
         GestureDetector(onTap: onToggle, child: Icon(isRunning ? Icons.pause : Icons.play_arrow, color: Colors.white, size: 20)),
       ]),
     );

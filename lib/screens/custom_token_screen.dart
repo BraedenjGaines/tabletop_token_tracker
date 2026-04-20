@@ -16,10 +16,10 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> {
   String selectedGame = '';
 
   final Map<TokenCategory, String> categoryNames = {
-    TokenCategory.ally: 'Ally',
+    TokenCategory.boonAura: 'Buff',
+    TokenCategory.debuffAura: 'Debuff',
     TokenCategory.item: 'Item',
-    TokenCategory.boonAura: 'Boon Aura',
-    TokenCategory.debuffAura: 'Debuff Aura',
+    TokenCategory.ally: 'Ally',
   };
 
   final Map<DestroyTrigger, String> triggerNames = {

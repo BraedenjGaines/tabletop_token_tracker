@@ -71,6 +71,9 @@ flutter:
     - family: Sedan
       fonts:
         - asset: assets/fonts/Sedan-Regular.ttf
+    - family: Boldnose
+      fonts:
+        - asset: assets/fonts/Boldonse-Regular.ttf
 
   assets:
     - assets/images/home_background.jpg

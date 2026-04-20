@@ -100,7 +100,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   final Map<TokenCategory, String> _categoryNames = {
     TokenCategory.ally: 'Allies',
     TokenCategory.item: 'Items',
-    TokenCategory.boonAura: 'Boons',
+    TokenCategory.boonAura: 'Buffs',
     TokenCategory.debuffAura: 'Debuffs',
   };
 
@@ -435,7 +435,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                     opacity: opacity,
                     child: Text(
                       f.value > 0 ? '+${f.value}' : '${f.value}',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.black, height: 1.0),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: Colors.black, height: 1.0),
                     ),
                   ),
                 );
@@ -463,7 +463,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             opacity: opacity,
             child: Text(
               negative ? '$val' : '+$val',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.black, height: 1.0),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: Colors.black, height: 1.0),
             ),
           );
         },
@@ -612,15 +612,15 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   Widget _buildTokenChips(int playerIndex) {
     final byCategory = _getTokensByCategory(playerIndex);
-    final List<TokenCategory> order = [TokenCategory.boonAura, TokenCategory.ally, TokenCategory.item, TokenCategory.debuffAura];
+    final List<TokenCategory> order = [TokenCategory.boonAura, TokenCategory.debuffAura, TokenCategory.item, TokenCategory.ally];
     final active = order.where((cat) => byCategory.containsKey(cat)).toList();
     if (active.isEmpty) return SizedBox.shrink();
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double totalWidth = constraints.maxWidth * 0.9;
+        final double totalWidth = constraints.maxWidth * 0.8;
         final double chipWidth = totalWidth / 4;
-        final double chipHeight = chipWidth * 1.4;
+        final double chipHeight = chipWidth * 1.2;
 
         return SizedBox(
           height: chipHeight,
@@ -629,7 +629,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             children: [
               for (var cat in order)
                 if (byCategory.containsKey(cat))
-                  Padding(padding: EdgeInsets.symmetric(horizontal: 2), child: _buildCategoryChip(cat, byCategory[cat]!.length, playerIndex, chipWidth, chipHeight))
+                  Padding(padding: EdgeInsets.symmetric(horizontal: 7), child: _buildCategoryChip(cat, byCategory[cat]!.length, playerIndex, chipWidth, chipHeight))
                 else
                   SizedBox(width: chipWidth + 4),
             ],
@@ -836,7 +836,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               alignment: labelAlignment,
               child: Padding(
                 padding: labelPadding,
-                child: Text(label, style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, color: Colors.black.withValues(alpha: 0.85))),
+                child: Text(label, style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, fontFamily: 'Boldnose', color: Colors.black.withValues(alpha: 0.85))),
               ),
             ),
           ),
@@ -869,13 +869,15 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           Positioned.fill(
             child: Align(alignment: Alignment(0, -.955), child: _buildTokenChips(index)),
           ),
-          Center(
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment(0, -0.1),
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
                 // Health number — always centered, never displaced
-                Text('${playerHealth[index]}', style: TextStyle(fontSize: 80, fontWeight: FontWeight.w900, fontFamily: 'Sedan', color: Colors.black)),
+                Text('${playerHealth[index]}', style: TextStyle(fontSize: 102, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: const Color.fromARGB(255, 14, 21, 22))),
                 // Totals display — negative above-left, positive above-right
                 Positioned(
                   top: -1,
@@ -901,10 +903,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 ),
               ],
             ),
-          ),
+          )),
           Positioned.fill(
             child: Align(
-              alignment: Alignment(0, 0.55),
+              alignment: Alignment(0, 0.60),
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () { setState(() { _playerOverlay[index] = -2; }); },
@@ -1098,10 +1100,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         body: Stack(children: [
           _buildPlayerGrid(),
           // Timer top (rotated for P1)
-          Positioned(top: 40, left: 0, right: 0, child: Center(child: RotatedBox(quarterTurns: 2, child: TimerDisplay(
+          Positioned(top: 35, left: 0, right: 0, child: Center(child: RotatedBox(quarterTurns: 2, child: TimerDisplay(
             secondsRemaining: _timerSecondsRemaining, isRunning: _timerRunning, onReset: _resetTimer, onToggle: _timerRunning ? _pauseTimer : _startTimer,
           )))),
-          Positioned(bottom: 40, left: 0, right: 0, child: Center(child: TimerDisplay(
+          Positioned(bottom: 35, left: 0, right: 0, child: Center(child: TimerDisplay(
             secondsRemaining: _timerSecondsRemaining, isRunning: _timerRunning, onReset: _resetTimer, onToggle: _timerRunning ? _pauseTimer : _startTimer,
           ))),
           // Player 1 armor
@@ -1216,7 +1218,7 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
   final Set<TokenCategory> selectedCategories = {};
   final searchController = TextEditingController();
   late List<String> currentFavorites;
-  final Map<TokenCategory, String> catNames = {TokenCategory.ally: 'Allies', TokenCategory.item: 'Items', TokenCategory.boonAura: 'Boons', TokenCategory.debuffAura: 'Debuffs'};
+  final Map<TokenCategory, String> catNames = {TokenCategory.boonAura: 'Buffs', TokenCategory.debuffAura: 'Debuffs', TokenCategory.item: 'Items', TokenCategory.ally: 'Allies'};
 
   @override
   void initState() { super.initState(); currentFavorites = List.from(widget.favoriteTokens); }
@@ -1246,7 +1248,7 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
-            for (var c in TokenCategory.values)
+            for (var c in [TokenCategory.boonAura, TokenCategory.debuffAura, TokenCategory.item, TokenCategory.ally])
               Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text(catNames[c] ?? '', style: TextStyle(fontSize: 11)), selected: selectedCategories.contains(c), showCheckmark: false, onSelected: (_) { setState(() { selectedCategories.contains(c) ? selectedCategories.remove(c) : selectedCategories.add(c); }); }, visualDensity: VisualDensity.compact)),
           ]),
         ),
