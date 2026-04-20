@@ -337,14 +337,19 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Timer ---
   void _doDoubleBuzz() async {
-    if (await Vibration.hasVibrator() ?? false) {
-      Vibration.vibrate(pattern: [0, 100, 100, 100]);
+    if (await Vibration.hasVibrator()) {
+      Vibration.vibrate(duration: 100);
+      await Future.delayed(Duration(milliseconds: 200));
+      Vibration.vibrate(duration: 100);
     }
   }
 
   void _doFiveBuzzes() async {
-    if (await Vibration.hasVibrator() ?? false) {
-      Vibration.vibrate(pattern: [0, 80, 80, 80, 80, 80, 80, 80, 80, 80]);
+    if (await Vibration.hasVibrator()) {
+      for (int i = 0; i < 5; i++) {
+        Vibration.vibrate(duration: 80);
+        if (i < 4) await Future.delayed(Duration(milliseconds: 160));
+      }
     }
   }
 
