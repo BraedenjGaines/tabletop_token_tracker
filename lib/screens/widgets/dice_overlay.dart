@@ -4,8 +4,9 @@ import 'dart:math';
 
 class DiceOverlay extends StatefulWidget {
   final void Function(int winner, bool goFirst) onChoice;
+  final List<String> playerNames;
 
-  const DiceOverlay({super.key, required this.onChoice});
+  const DiceOverlay({super.key, required this.onChoice, required this.playerNames});
 
   @override
   State<DiceOverlay> createState() => _DiceOverlayState();
@@ -97,7 +98,7 @@ class _DiceOverlayState extends State<DiceOverlay> {
       color: Colors.black.withValues(alpha: 0.85),
       child: Column(children: [
         Expanded(child: RotatedBox(quarterTurns: 2, child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Player 1', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(widget.playerNames[0], style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 12),
           Row(mainAxisSize: MainAxisSize.min, children: [Icon(_dieIcon(_p1Dice[0]), size: 64, color: Colors.white), SizedBox(width: 16), Icon(_dieIcon(_p1Dice[1]), size: 64, color: Colors.white)]),
           SizedBox(height: 8),
@@ -106,7 +107,7 @@ class _DiceOverlayState extends State<DiceOverlay> {
           if (_showChoice && _winner == 0) ...[SizedBox(height: 16), choiceButtons],
         ])))),
         Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Player 2', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          Text(widget.playerNames[1], style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 12),
           Row(mainAxisSize: MainAxisSize.min, children: [Icon(_dieIcon(_p2Dice[0]), size: 64, color: Colors.white), SizedBox(width: 16), Icon(_dieIcon(_p2Dice[1]), size: 64, color: Colors.white)]),
           SizedBox(height: 8),

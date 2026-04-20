@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class TimerDisplay extends StatelessWidget {
   final int secondsRemaining;
   final bool isRunning;
+  final bool flashOn;
   final VoidCallback onReset;
   final VoidCallback onToggle;
 
@@ -10,6 +11,7 @@ class TimerDisplay extends StatelessWidget {
     super.key,
     required this.secondsRemaining,
     required this.isRunning,
+    this.flashOn = true,
     required this.onReset,
     required this.onToggle,
   });
@@ -21,8 +23,9 @@ class TimerDisplay extends StatelessWidget {
   }
 
   Color _color() {
-    if (secondsRemaining <= 0) return Colors.red;
-    if (secondsRemaining <= 300) return Colors.orange;
+    if (secondsRemaining <= 0) return flashOn ? Color(0xFFE53935) : Color(0xFF3A3A3A);
+    if (secondsRemaining <= 300) return Color(0xFFE53935);
+    if (secondsRemaining <= 600) return Colors.orange;
     return Colors.white;
   }
 

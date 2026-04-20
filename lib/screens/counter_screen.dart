@@ -15,6 +15,7 @@ import 'widgets/timer_display.dart';
 import 'widgets/dice_overlay.dart';
 import 'dart:ui';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:flutter/services.dart';
 
 class _FloatingNumber {
   final int value;
@@ -35,12 +36,14 @@ class _FloatingNumber {
 class CounterScreen extends StatefulWidget {
   final int startingLife;
   final List<String> playerHeroes;
+  final List<String> playerNames;
   final int matchTimerMinutes;
 
   const CounterScreen({
     super.key,
     required this.startingLife,
     required this.playerHeroes,
+    required this.playerNames,
     required this.matchTimerMinutes,
   });
 
@@ -85,6 +88,11 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   late int _timerSecondsRemaining;
   Timer? _timer;
   bool _timerRunning = false;
+  bool _timerFlashOn = true;
+  Timer? _flashTimer;
+  bool _has10MinBuzzed = false;
+  bool _has5MinBuzzed = false;
+  bool _hasExpiredBuzzStarted = false;
 
   // First turn chooser — always shown at game start
   bool _showFirstTurnChooser = true;
@@ -265,7 +273,14 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                   backgroundColor: Colors.green,
                   padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 ),
-                child: Text('Go First', style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold)),
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: '${widget.playerNames[0]}\n'),
+                    TextSpan(text: 'Goes First'),
+                  ]),
+                  style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
             SizedBox(height: 32),
@@ -293,7 +308,14 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 backgroundColor: Colors.green,
                 padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
-              child: Text('Go First', style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: '${widget.playerNames[1]}\n'),
+                    TextSpan(text: 'Goes First'),
+                  ]),
+                  style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
             ),
           ],
         ),
@@ -305,6 +327,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   void dispose() {
     WakelockPlus.disable();
     _timer?.cancel();
+    _flashTimer?.cancel();
     for (final f in _floatingNumbers) { f.controller.dispose(); }
     for (final t in _accumulatorTimers.values) { t.cancel(); }
     for (final c in _totalsControllers.values) { c.dispose(); }
@@ -313,27 +336,83 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   }
 
   // --- Timer ---
+  void _doDoubleBuzz() async {
+    HapticFeedback.mediumImpact();
+    await Future.delayed(Duration(milliseconds: 150));
+    HapticFeedback.mediumImpact();
+  }
+
+  void _doFiveBuzzes() async {
+    for (int i = 0; i < 5; i++) {
+      if (!mounted) return;
+      HapticFeedback.mediumImpact();
+      if (i < 4) await Future.delayed(Duration(milliseconds: 200));
+    }
+  }
+
   void _startTimer() {
-    if (_timerRunning || _timerSecondsRemaining <= 0) return;
+    if (_timerRunning) return;
+    if (_timerSecondsRemaining <= 0) {
+      _resetTimer();
+      return;
+    }
     _timerRunning = true;
+    _hasExpiredBuzzStarted = false;
+    _flashTimer?.cancel();
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
         if (_timerSecondsRemaining > 0) {
           _timerSecondsRemaining--;
+          // 10 minute warning
+          if (_timerSecondsRemaining == 600 && !_has10MinBuzzed) {
+            _has10MinBuzzed = true;
+            _doDoubleBuzz();
+          }
+          // 5 minute warning
+          if (_timerSecondsRemaining == 300 && !_has5MinBuzzed) {
+            _has5MinBuzzed = true;
+            _doDoubleBuzz();
+          }
         } else {
           _timer?.cancel();
           _timerRunning = false;
+          // Start expired buzz and flash
+          if (!_hasExpiredBuzzStarted) {
+            _hasExpiredBuzzStarted = true;
+            _doDoubleBuzz();
+            _timerFlashOn = false;
+            _doFiveBuzzes();
+            _flashTimer = Timer.periodic(Duration(milliseconds: 500), (t) {
+              if (mounted) setState(() { _timerFlashOn = !_timerFlashOn; });
+            });
+          }
         }
       });
     });
     setState(() {});
   }
 
-  void _pauseTimer() { _timer?.cancel(); setState(() { _timerRunning = false; }); }
+  void _pauseTimer() {
+    _timer?.cancel();
+    _flashTimer?.cancel();
+    setState(() {
+      _timerRunning = false;
+      _timerFlashOn = true;
+      _hasExpiredBuzzStarted = false;
+    });
+  }
 
   void _resetTimer() {
     _timer?.cancel();
-    setState(() { _timerRunning = false; _timerSecondsRemaining = widget.matchTimerMinutes * 60; });
+    _flashTimer?.cancel();
+    setState(() {
+      _timerRunning = false;
+      _timerSecondsRemaining = widget.matchTimerMinutes * 60;
+      _timerFlashOn = true;
+      _has10MinBuzzed = false;
+      _has5MinBuzzed = false;
+      _hasExpiredBuzzStarted = false;
+    });
   }
 
   void _spawnFloatingNumber(int playerIndex, int delta) {
@@ -506,7 +585,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
       playerTokens[pi].removeWhere((t) {
         if (t.destroyTrigger == null) return false;
         bool r = t.count <= 0 || _shouldAutoRemove(t, pi);
-        if (r) _log(pi, LogEventType.tokenDestroyed, '${t.name} destroyed');
+        if (r) _log(pi, LogEventType.tokenDestroyed, '${t.name} destroyed', undoData: {'name': t.name, 'category': t.category.index, 'destroyTrigger': t.destroyTrigger?.index, 'count': t.count, 'health': t.health, 'maxHealth': t.maxHealth, 'turnPlayed': t.turnPlayed, 'playerPlayed': t.playerPlayed});
         return r;
       });
     }
@@ -989,7 +1068,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text('Player ${activePlayer + 1}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+                    Text('${widget.playerNames[activePlayer].length > 8 ? '${widget.playerNames[activePlayer].substring(0, 8)}..' : widget.playerNames[activePlayer]}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
                     SizedBox(height: 2),
                     Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color: Colors.black, height: 1.0)),
                   ]),
@@ -1080,10 +1159,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           _buildPlayerGrid(),
           // Timer top (rotated for P1)
           if (settings.clockEnabled) Positioned(top: 35, left: 0, right: 0, child: Center(child: RotatedBox(quarterTurns: 2, child: TimerDisplay(
-            secondsRemaining: _timerSecondsRemaining, isRunning: _timerRunning, onReset: _resetTimer, onToggle: _timerRunning ? _pauseTimer : _startTimer,
+            secondsRemaining: _timerSecondsRemaining, isRunning: _timerRunning, flashOn: _timerFlashOn, onReset: _resetTimer, onToggle: _timerRunning ? _pauseTimer : _startTimer,
           )))),
           if (settings.clockEnabled) Positioned(bottom: 35, left: 0, right: 0, child: Center(child: TimerDisplay(
-            secondsRemaining: _timerSecondsRemaining, isRunning: _timerRunning, onReset: _resetTimer, onToggle: _timerRunning ? _pauseTimer : _startTimer,
+            secondsRemaining: _timerSecondsRemaining, isRunning: _timerRunning, flashOn: _timerFlashOn, onReset: _resetTimer, onToggle: _timerRunning ? _pauseTimer : _startTimer,
           ))),
           // Player 1 armor
           if (settings.armorTrackingEnabled)
@@ -1152,12 +1231,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           })),
           // Log
           Positioned(bottom: 24, left: 16, child: IconButton(icon: Icon(Icons.list_alt, color: Colors.white), onPressed: () {
-            showDialog(context: context, builder: (ctx) => Dialog(insetPadding: EdgeInsets.all(16), child: LogScreen(gameLog: gameLog, onUndo: _undoLastEntry)));
+            showDialog(context: context, builder: (ctx) => Dialog(insetPadding: EdgeInsets.all(16), child: LogScreen(gameLog: gameLog, onUndo: _undoLastEntry, playerNames: widget.playerNames)));
           })),
           // First turn chooser
           if (_showFirstTurnChooser && !_showDiceOverlay) Positioned.fill(child: _buildFirstTurnChooser()),
           // Dice overlay
           if (_showDiceOverlay) Positioned.fill(child: DiceOverlay(
+            playerNames: widget.playerNames,
             onChoice: (int winner, bool goFirst) {
               _onDiceChoice(winner, goFirst);
             },

@@ -15,6 +15,8 @@ class _SetupScreenState extends State<SetupScreen> {
   final TextEditingController customLifeController = TextEditingController();
   late int matchTimerMinutes;
   late TextEditingController timerController;
+  late TextEditingController player1NameController;
+  late TextEditingController player2NameController;
 
   static const List<String> heroArchetypes = [
     'Wizard', 'Knight', 'Warlock', 'Rogue',
@@ -32,12 +34,16 @@ class _SetupScreenState extends State<SetupScreen> {
     customLifeController.text = selectedLife.toString();
     matchTimerMinutes = settings.matchTimerMinutes;
     timerController = TextEditingController(text: matchTimerMinutes.toString());
+    player1NameController = TextEditingController(text: 'Player 1');
+    player2NameController = TextEditingController(text: 'Player 2');
   }
 
   @override
   void dispose() {
     customLifeController.dispose();
     timerController.dispose();
+    player1NameController.dispose();
+    player2NameController.dispose();
     super.dispose();
   }
 
@@ -106,7 +112,20 @@ class _SetupScreenState extends State<SetupScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(width: 90, child: Text('Player ${p + 1}', style: TextStyle(fontSize: 16))),
+                        SizedBox(
+                          width: 90,
+                          child: TextField(
+                            controller: p == 0 ? player1NameController : player2NameController,
+                            style: TextStyle(fontSize: 14),
+                            maxLength: 50,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              counterText: '',
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                            ),
+                          ),
+                        ),
                         SizedBox(width: 8),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
@@ -181,6 +200,10 @@ class _SetupScreenState extends State<SetupScreen> {
                               builder: (context) => CounterScreen(
                                 startingLife: selectedLife,
                                 playerHeroes: playerHeroes.sublist(0, 2),
+                                playerNames: [
+                                  player1NameController.text.isEmpty ? 'Player 1' : player1NameController.text,
+                                  player2NameController.text.isEmpty ? 'Player 2' : player2NameController.text,
+                                ],
                                 matchTimerMinutes: matchTimerMinutes,
                               ),
                             ),

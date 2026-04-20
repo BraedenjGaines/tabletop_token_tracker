@@ -8,11 +8,13 @@ class LogScreen extends StatefulWidget {
   final GameLog gameLog;
   final double? rotationAngle;
   final VoidCallback? onUndo;
+  final List<String> playerNames;
 
   const LogScreen({super.key, 
     required this.gameLog,
     this.rotationAngle,
     this.onUndo,
+    required this.playerNames,
   });
 
   @override
@@ -26,7 +28,7 @@ class _LogScreenState extends State<LogScreen> {
   }
 
   String _getPlayerName(int index) {
-    return 'Player ${index + 1}';
+    return widget.playerNames[index];
   }
 
   Widget _buildPlayerBadge(int index) {
@@ -37,7 +39,7 @@ class _LogScreenState extends State<LogScreen> {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        'P${index + 1}',
+        widget.playerNames[index].length <= 3 ? widget.playerNames[index] : widget.playerNames[index].substring(0, 3),
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0),
       ),
     );
@@ -197,7 +199,7 @@ class _LogScreenState extends State<LogScreen> {
     buffer.writeln('=== TableTop Token Tracker - Game Log ===');
     buffer.writeln('');
     for (final entry in widget.gameLog.entries) {
-      final player = 'Player ${entry.playerIndex + 1}';
+      final player = widget.playerNames[entry.playerIndex];
       final time = entry.timestamp;
       final phase = entry.phase != null ? ' [${entry.phase}]' : '';
       String detail = entry.description;
