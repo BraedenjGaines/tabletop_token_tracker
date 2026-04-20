@@ -34,8 +34,8 @@ class _SetupScreenState extends State<SetupScreen> {
     customLifeController.text = selectedLife.toString();
     matchTimerMinutes = settings.matchTimerMinutes;
     timerController = TextEditingController(text: matchTimerMinutes.toString());
-    player1NameController = TextEditingController(text: 'Player 1');
-    player2NameController = TextEditingController(text: 'Player 2');
+    player1NameController = TextEditingController(text: settings.player1Name);
+    player2NameController = TextEditingController(text: settings.player2Name);
   }
 
   @override
@@ -197,15 +197,17 @@ class _SetupScreenState extends State<SetupScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => CounterScreen(
+                              builder: (context) {
+                                final p1 = player1NameController.text.isEmpty ? 'Player 1' : player1NameController.text;
+                                final p2 = player2NameController.text.isEmpty ? 'Player 2' : player2NameController.text;
+                                settings.player1Name = p1;
+                                settings.player2Name = p2;
+                                return CounterScreen(
                                 startingLife: selectedLife,
                                 playerHeroes: playerHeroes.sublist(0, 2),
-                                playerNames: [
-                                  player1NameController.text.isEmpty ? 'Player 1' : player1NameController.text,
-                                  player2NameController.text.isEmpty ? 'Player 2' : player2NameController.text,
-                                ],
+                                playerNames: [p1, p2],
                                 matchTimerMinutes: matchTimerMinutes,
-                              ),
+                              );},
                             ),
                           );
                         }
