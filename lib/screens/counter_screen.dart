@@ -513,41 +513,49 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   }
 
   bool _shouldAutoRemove(ActiveToken t, int pi) {
+    // Phase indices: 0=Start, 1=Action, 2=End
     switch (t.destroyTrigger!) {
       case DestroyTrigger.startOfYourTurn:
-        return pi == activePlayer && turnCount > t.turnPlayed;
+        // Destroy at the END of the start phase on your next turn (so you see it activate first)
+        if (pi != activePlayer) return false;
+        if (turnCount > t.turnPlayed && currentPhase >= 1) return true;
+        return false;
       case DestroyTrigger.startOfOpponentTurn:
-        return pi != activePlayer && turnCount > t.turnPlayed;
+        if (pi == activePlayer) return false;
+        if (turnCount > t.turnPlayed && currentPhase >= 1) return true;
+        return false;
       case DestroyTrigger.beginningOfActionPhase:
         if (pi != activePlayer) return false;
-        if (turnCount > t.turnPlayed) return true;
-        if (turnCount == t.turnPlayed && t.phasePlayed < 2 && currentPhase >= 2) return true;
+        if (turnCount > t.turnPlayed && currentPhase >= 1) return true;
+        if (turnCount == t.turnPlayed && t.phasePlayed < 1 && currentPhase >= 1) return true;
         return false;
       case DestroyTrigger.beginningOfEndPhase:
         if (pi != activePlayer) return false;
-        if (turnCount > t.turnPlayed) return true;
-        if (turnCount == t.turnPlayed && t.phasePlayed < 3 && currentPhase >= 3) return true;
+        if (turnCount > t.turnPlayed && currentPhase >= 2) return true;
+        if (turnCount == t.turnPlayed && t.phasePlayed < 2 && currentPhase >= 2) return true;
         return false;
     }
   }
 
   bool _isTokenTriggering(ActiveToken t, int pi) {
     if (!_showTurnTracker || t.destroyTrigger == null) return false;
+    // Phase indices: 0=Start, 1=Action, 2=End
     bool isAct = pi == activePlayer;
     switch (t.destroyTrigger!) {
       case DestroyTrigger.startOfYourTurn:
-        return isAct && turnCount > t.turnPlayed;
+        // Highlight during Start Phase on next turn
+        return isAct && turnCount > t.turnPlayed && currentPhase == 0;
       case DestroyTrigger.startOfOpponentTurn:
-        return !isAct && turnCount > t.turnPlayed;
+        return !isAct && turnCount > t.turnPlayed && currentPhase == 0;
       case DestroyTrigger.beginningOfActionPhase:
         if (!isAct) return false;
-        if (turnCount > t.turnPlayed && currentPhase >= 2) return true;
-        if (turnCount == t.turnPlayed && t.phasePlayed < 2 && currentPhase >= 2) return true;
+        if (turnCount > t.turnPlayed && currentPhase == 1) return true;
+        if (turnCount == t.turnPlayed && t.phasePlayed < 1 && currentPhase == 1) return true;
         return false;
       case DestroyTrigger.beginningOfEndPhase:
         if (!isAct) return false;
-        if (turnCount > t.turnPlayed && currentPhase >= 3) return true;
-        if (turnCount == t.turnPlayed && t.phasePlayed < 3 && currentPhase >= 3) return true;
+        if (turnCount > t.turnPlayed && currentPhase == 2) return true;
+        if (turnCount == t.turnPlayed && t.phasePlayed < 2 && currentPhase == 2) return true;
         return false;
     }
   }
