@@ -1,0 +1,234 @@
+import 'package:flutter/services.dart' show rootBundle;
+
+enum HeroClass {
+  brute,
+  guardian,
+  illusionist,
+  mechanologist,
+  merchant,
+  ninja,
+  ranger,
+  runeblade,
+  warrior,
+  wizard,
+  assassin,
+  bard,
+  necromancer,
+  shapeshifter,
+  adjudicator,
+  generic,
+}
+
+enum HeroTalent {
+  none,
+  draconic,
+  earth,
+  elemental,
+  ice,
+  light,
+  lightning,
+  shadow,
+  royal,
+  mystic,
+}
+
+class HeroData {
+  final String id;
+  final String name;
+  final String title;
+  final HeroClass heroClass;
+  final List<HeroTalent> talents;
+  final bool isYoung;
+  final int intellect;
+  final int health;
+
+  const HeroData({
+    required this.id,
+    required this.name,
+    this.title = '',
+    required this.heroClass,
+    this.talents = const [HeroTalent.none],
+    required this.isYoung,
+    required this.intellect,
+    required this.health,
+  });
+
+  String get displayName => title.isNotEmpty ? '$name, $title' : name;
+
+  /// Preferred character-art path. Falls back to card scan via [resolveArtPath]
+  /// when no art file exists.
+  String get artPath => 'assets/images/heroes/$id.jpg';
+
+  /// Card scan path. Script saves as .png for most heroes; .jpg is a fallback
+  /// for any that were saved in that format.
+  String get cardPathPng => 'assets/images/heroes/${id}_card.png';
+  String get cardPathJpg => 'assets/images/heroes/${id}_card.jpg';
+}
+
+/// Returns the first asset path that exists for this hero, in priority order:
+/// 1. <id>.jpg (real character art — added later)
+/// 2. <id>_card.png (downloaded card scan, most common)
+/// 3. <id>_card.jpg (card scan fallback)
+/// Returns null if none exist — callers should show a placeholder.
+///
+/// Results are cached per id so we only probe the asset bundle once.
+final Map<String, String?> _resolvedArtCache = {};
+
+Future<String?> resolveHeroImage(HeroData hero) async {
+  if (_resolvedArtCache.containsKey(hero.id)) {
+    return _resolvedArtCache[hero.id];
+  }
+  final candidates = [hero.artPath, hero.cardPathPng, hero.cardPathJpg];
+  for (final path in candidates) {
+    try {
+      await rootBundle.load(path);
+      _resolvedArtCache[hero.id] = path;
+      return path;
+    } catch (_) {
+      // not found, try next
+    }
+  }
+  _resolvedArtCache[hero.id] = null;
+  return null;
+}
+
+// Master list — auto-generated from flesh-and-blood-cards JSON.
+final List<HeroData> heroLibrary = [
+  HeroData(id: 'arakni_young', name: 'Arakni', heroClass: HeroClass.assassin, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'arakni_5lp3d_7hru_7h3_cr4x', name: 'Arakni', title: '5L!p3d 7hRu 7h3 cR4X', heroClass: HeroClass.assassin, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 38),
+  HeroData(id: 'arakni_huntsman', name: 'Arakni', title: 'Huntsman', heroClass: HeroClass.assassin, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'arakni_marionette', name: 'Arakni', title: 'Marionette', heroClass: HeroClass.assassin, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'arakni_solitary_confinement_young', name: 'Arakni', title: 'Solitary Confinement', heroClass: HeroClass.assassin, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 19),
+  HeroData(id: 'arakni_web_of_deceit_young', name: 'Arakni', title: 'Web of Deceit', heroClass: HeroClass.assassin, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'aurora_young', name: 'Aurora', heroClass: HeroClass.runeblade, talents: [HeroTalent.elemental], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'aurora_shooting_star', name: 'Aurora', title: 'Shooting Star', heroClass: HeroClass.runeblade, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'azalea_young', name: 'Azalea', heroClass: HeroClass.ranger, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'azalea_ace_in_the_hole', name: 'Azalea', title: 'Ace in the Hole', heroClass: HeroClass.ranger, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'benji_the_piercing_wind_young', name: 'Benji', title: 'the Piercing Wind', heroClass: HeroClass.ninja, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 17),
+  HeroData(id: 'betsy_young', name: 'Betsy', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'betsy_skin_in_the_game', name: 'Betsy', title: 'Skin in the Game', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'blaze_firemind_young', name: 'Blaze', title: 'Firemind', heroClass: HeroClass.wizard, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 17),
+  HeroData(id: 'bolfar_bear_hands', name: 'Bolfar', title: 'Bear Hands', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 20),
+  HeroData(id: 'boltyn_young', name: 'Boltyn', heroClass: HeroClass.warrior, talents: [HeroTalent.light], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'bravo_young', name: 'Bravo', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'bravo_flattering_showman_young', name: 'Bravo', title: 'Flattering Showman', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'bravo_showstopper', name: 'Bravo', title: 'Showstopper', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'bravo_star_of_the_show', name: 'Bravo', title: 'Star of the Show', heroClass: HeroClass.guardian, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'brevant_civic_protector_young', name: 'Brevant', title: 'Civic Protector', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'briar_young', name: 'Briar', heroClass: HeroClass.runeblade, talents: [HeroTalent.elemental], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'briar_warden_of_thorns', name: 'Briar', title: 'Warden of Thorns', heroClass: HeroClass.runeblade, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'brutus_summa_rudis', name: 'Brutus', title: 'Summa Rudis', heroClass: HeroClass.adjudicator, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 20),
+  HeroData(id: 'chane_young', name: 'Chane', heroClass: HeroClass.runeblade, talents: [HeroTalent.shadow], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'chane_bound_by_shadow', name: 'Chane', title: 'Bound by Shadow', heroClass: HeroClass.runeblade, talents: [HeroTalent.shadow], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'cindra_young', name: 'Cindra', heroClass: HeroClass.ninja, talents: [HeroTalent.royal, HeroTalent.draconic], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'cindra_dracai_of_retribution', name: 'Cindra', title: 'Dracai of Retribution', heroClass: HeroClass.ninja, talents: [HeroTalent.royal, HeroTalent.draconic], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'dash_young', name: 'Dash', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'dash_io', name: 'Dash I/O', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 36),
+  HeroData(id: 'dash_database_young', name: 'Dash', title: 'Database', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 18),
+  HeroData(id: 'dash_inventor_extraordinaire', name: 'Dash', title: 'Inventor Extraordinaire', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'data_doll_mkii_young', name: 'Data Doll MKII', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'dorinthea_young', name: 'Dorinthea', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'dorinthea_ironsong', name: 'Dorinthea Ironsong', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'dorinthea_quicksilver_prodigy_young', name: 'Dorinthea', title: 'Quicksilver Prodigy', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'dromai_young', name: 'Dromai', heroClass: HeroClass.illusionist, talents: [HeroTalent.draconic], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'dromai_ash_artist', name: 'Dromai', title: 'Ash Artist', heroClass: HeroClass.illusionist, talents: [HeroTalent.draconic], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'emperor_dracai_of_aesir_young', name: 'Emperor', title: 'Dracai of Aesir', heroClass: HeroClass.warrior, talents: [HeroTalent.royal, HeroTalent.draconic], isYoung: true, intellect: 0, health: 15),
+  HeroData(id: 'enigma_young', name: 'Enigma', heroClass: HeroClass.illusionist, talents: [HeroTalent.mystic], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'enigma_ledger_of_ancestry', name: 'Enigma', title: 'Ledger of Ancestry', heroClass: HeroClass.illusionist, talents: [HeroTalent.mystic], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'enigma_new_moon_young', name: 'Enigma', title: 'New Moon', heroClass: HeroClass.illusionist, talents: [HeroTalent.mystic], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'fai_young', name: 'Fai', heroClass: HeroClass.ninja, talents: [HeroTalent.draconic], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'fai_rising_rebellion', name: 'Fai', title: 'Rising Rebellion', heroClass: HeroClass.ninja, talents: [HeroTalent.draconic], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'fang_young', name: 'Fang', heroClass: HeroClass.warrior, talents: [HeroTalent.royal, HeroTalent.draconic], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'fang_dracai_of_blades', name: 'Fang', title: 'Dracai of Blades', heroClass: HeroClass.warrior, talents: [HeroTalent.royal, HeroTalent.draconic], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'fightmaster_kox', name: 'Fightmaster Kox', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 19),
+  HeroData(id: 'florian_young', name: 'Florian', heroClass: HeroClass.runeblade, talents: [HeroTalent.elemental], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'florian_rotwood_harbinger', name: 'Florian', title: 'Rotwood Harbinger', heroClass: HeroClass.runeblade, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'frankie_make_ends_meat_young', name: 'Frankie', title: 'Make Ends Meat', heroClass: HeroClass.necromancer, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'genis_wotchuneed_young', name: 'Genis Wotchuneed', heroClass: HeroClass.merchant, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'gravy_bones_young', name: 'Gravy Bones', heroClass: HeroClass.necromancer, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'gravy_bones_shipwrecked_looter', name: 'Gravy Bones', title: 'Shipwrecked Looter', heroClass: HeroClass.necromancer, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'groundbreaker_crix', name: 'Groundbreaker Crix', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 20),
+  HeroData(id: 'hala_young', name: 'Hala', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'hala_bladesaint_of_the_vow', name: 'Hala', title: 'Bladesaint of the Vow', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'ira_crimson_haze_young', name: 'Ira', title: 'Crimson Haze', heroClass: HeroClass.ninja, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'ira_scarlet_revenger', name: 'Ira', title: 'Scarlet Revenger', heroClass: HeroClass.ninja, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'iyslander_young', name: 'Iyslander', heroClass: HeroClass.wizard, talents: [HeroTalent.elemental], isYoung: true, intellect: 0, health: 18),
+  HeroData(id: 'iyslander_stormbind', name: 'Iyslander', title: 'Stormbind', heroClass: HeroClass.wizard, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 36),
+  HeroData(id: 'jarl_vetreii', name: 'Jarl Vetreiði', heroClass: HeroClass.guardian, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'kano_young', name: 'Kano', heroClass: HeroClass.wizard, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 15),
+  HeroData(id: 'kano_dracai_of_aether', name: 'Kano', title: 'Dracai of Aether', heroClass: HeroClass.wizard, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 30),
+  HeroData(id: 'kassai_young', name: 'Kassai', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'kassai_of_the_golden_sand', name: 'Kassai of the Golden Sand', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'kassai_cintari_sellsword_young', name: 'Kassai', title: 'Cintari Sellsword', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'katsu_young', name: 'Katsu', heroClass: HeroClass.ninja, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'katsu_the_wanderer', name: 'Katsu', title: 'the Wanderer', heroClass: HeroClass.ninja, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'kavdaen_trader_of_skins_young', name: 'Kavdaen', title: 'Trader of Skins', heroClass: HeroClass.merchant, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'kayo_young', name: 'Kayo', heroClass: HeroClass.brute, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'kayo_armed_and_dangerous', name: 'Kayo', title: 'Armed and Dangerous', heroClass: HeroClass.brute, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'kayo_berserker_runt_young', name: 'Kayo', title: 'Berserker Runt', heroClass: HeroClass.brute, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 19),
+  HeroData(id: 'kayo_strongarm_young', name: 'Kayo', title: 'Strong-arm', heroClass: HeroClass.brute, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'kayo_underhanded_cheat', name: 'Kayo', title: 'Underhanded Cheat', heroClass: HeroClass.brute, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'levia_young', name: 'Levia', heroClass: HeroClass.brute, talents: [HeroTalent.shadow], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'levia_shadowborn_abomination', name: 'Levia', title: 'Shadowborn Abomination', heroClass: HeroClass.brute, talents: [HeroTalent.shadow], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'lexi_young', name: 'Lexi', heroClass: HeroClass.ranger, talents: [HeroTalent.elemental], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'lexi_livewire', name: 'Lexi', title: 'Livewire', heroClass: HeroClass.ranger, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'lyath_goldmane_young', name: 'Lyath Goldmane', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'lyath_goldmane_vile_savant', name: 'Lyath Goldmane', title: 'Vile Savant', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'marlynn_young', name: 'Marlynn', heroClass: HeroClass.ranger, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'marlynn_treasure_hunter', name: 'Marlynn', title: 'Treasure Hunter', heroClass: HeroClass.ranger, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'maxx_the_hype_nitro', name: "Maxx 'The Hype' Nitro", heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'maxx_nitro_young', name: 'Maxx Nitro', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'melody_singalong_young', name: 'Melody', title: 'Sing-along', heroClass: HeroClass.bard, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'nuu_young', name: 'Nuu', heroClass: HeroClass.assassin, talents: [HeroTalent.mystic], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'nuu_alluring_desire', name: 'Nuu', title: 'Alluring Desire', heroClass: HeroClass.assassin, talents: [HeroTalent.mystic], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'oldhim_young', name: 'Oldhim', heroClass: HeroClass.guardian, talents: [HeroTalent.elemental], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'oldhim_grandfather_of_eternity', name: 'Oldhim', title: 'Grandfather of Eternity', heroClass: HeroClass.guardian, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'olympia_young', name: 'Olympia', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'olympia_prized_fighter', name: 'Olympia', title: 'Prized Fighter', heroClass: HeroClass.warrior, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'oscilio_young', name: 'Oscilio', heroClass: HeroClass.wizard, talents: [HeroTalent.elemental], isYoung: true, intellect: 0, health: 18),
+  HeroData(id: 'oscilio_constella_intelligence', name: 'Oscilio', title: 'Constella Intelligence', heroClass: HeroClass.wizard, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 36),
+  HeroData(id: 'pleiades_young', name: 'Pleiades', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'pleiades_superstar', name: 'Pleiades', title: 'Superstar', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'prism_young', name: 'Prism', heroClass: HeroClass.illusionist, talents: [HeroTalent.light], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'prism_advent_of_thrones_young', name: 'Prism', title: 'Advent of Thrones', heroClass: HeroClass.illusionist, talents: [HeroTalent.light], isYoung: true, intellect: 0, health: 16),
+  HeroData(id: 'prism_awakener_of_sol', name: 'Prism', title: 'Awakener of Sol', heroClass: HeroClass.illusionist, talents: [HeroTalent.light], isYoung: false, intellect: 0, health: 32),
+  HeroData(id: 'prism_sculptor_of_arc_light', name: 'Prism', title: 'Sculptor of Arc Light', heroClass: HeroClass.illusionist, talents: [HeroTalent.light], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'professor_teklovossen_young', name: 'Professor Teklovossen', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'puffin_young', name: 'Puffin', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'puffin_hightail', name: 'Puffin', title: 'Hightail', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'reya_the_unyielding', name: 'Reya', title: 'the Unyielding', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 21),
+  HeroData(id: 'rhinar_young', name: 'Rhinar', heroClass: HeroClass.brute, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'rhinar_reckless_rampage', name: 'Rhinar', title: 'Reckless Rampage', heroClass: HeroClass.brute, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'riptide_young', name: 'Riptide', heroClass: HeroClass.ranger, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 19),
+  HeroData(id: 'riptide_lurker_of_the_deep', name: 'Riptide', title: 'Lurker of the Deep', heroClass: HeroClass.ranger, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 38),
+  HeroData(id: 'ruudi_gem_keeper', name: "Ruu'di", title: 'Gem Keeper', heroClass: HeroClass.merchant, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'scurv_stowaway_young', name: 'Scurv', title: 'Stowaway', heroClass: HeroClass.generic, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'ser_boltyn_breaker_of_dawn', name: 'Ser Boltyn', title: 'Breaker of Dawn', heroClass: HeroClass.warrior, talents: [HeroTalent.light], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'shiyana_diamond_gemini_young', name: 'Shiyana', title: 'Diamond Gemini', heroClass: HeroClass.shapeshifter, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'squizzy_floof_young', name: 'Squizzy & Floof', heroClass: HeroClass.merchant, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'taipanis_dracai_of_judgement', name: 'Taipanis', title: 'Dracai of Judgement', heroClass: HeroClass.adjudicator, talents: [HeroTalent.draconic], isYoung: false, intellect: 0, health: 20),
+  HeroData(id: 'taylor_young', name: 'Taylor', heroClass: HeroClass.shapeshifter, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 18),
+  HeroData(id: 'teklovossen_young', name: 'Teklovossen', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'teklovossen_esteemed_magnate', name: 'Teklovossen', title: 'Esteemed Magnate', heroClass: HeroClass.mechanologist, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'terra_young', name: 'Terra', heroClass: HeroClass.guardian, talents: [HeroTalent.elemental], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'theryon_magister_of_justice', name: 'Theryon', title: 'Magister of Justice', heroClass: HeroClass.adjudicator, talents: [HeroTalent.light], isYoung: false, intellect: 0, health: 20),
+  HeroData(id: 'tuffnut_young', name: 'Tuffnut', heroClass: HeroClass.brute, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'tuffnut_bumbling_hulkster', name: 'Tuffnut', title: 'Bumbling Hulkster', heroClass: HeroClass.brute, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'uzuri_young', name: 'Uzuri', heroClass: HeroClass.assassin, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'uzuri_switchblade', name: 'Uzuri', title: 'Switchblade', heroClass: HeroClass.assassin, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'valda_brightaxe_young', name: 'Valda Brightaxe', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 21),
+  HeroData(id: 'valda_seismic_impact', name: 'Valda', title: 'Seismic Impact', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'verdance_young', name: 'Verdance', heroClass: HeroClass.wizard, talents: [HeroTalent.elemental], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'verdance_thorn_of_the_rose', name: 'Verdance', title: 'Thorn of the Rose', heroClass: HeroClass.wizard, talents: [HeroTalent.elemental], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'victor_goldmane_young', name: 'Victor Goldmane', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'victor_goldmane_high_and_mighty', name: 'Victor Goldmane', title: 'High and Mighty', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'victor_goldmane_match_fixer', name: 'Victor Goldmane', title: 'Match Fixer', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 20),
+  HeroData(id: 'viserai_young', name: 'Viserai', heroClass: HeroClass.runeblade, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'viserai_rune_blood', name: 'Viserai', title: 'Rune Blood', heroClass: HeroClass.runeblade, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'vynnset_young', name: 'Vynnset', heroClass: HeroClass.runeblade, talents: [HeroTalent.shadow], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'vynnset_iron_maiden', name: 'Vynnset', title: 'Iron Maiden', heroClass: HeroClass.runeblade, talents: [HeroTalent.shadow], isYoung: false, intellect: 0, health: 40),
+  HeroData(id: 'yoji_royal_protector_young', name: 'Yoji', title: 'Royal Protector', heroClass: HeroClass.guardian, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 22),
+  HeroData(id: 'yorick_weaver_of_tales_young', name: 'Yorick', title: 'Weaver of Tales', heroClass: HeroClass.bard, talents: [HeroTalent.none], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'zen_young', name: 'Zen', heroClass: HeroClass.ninja, talents: [HeroTalent.mystic], isYoung: true, intellect: 0, health: 20),
+  HeroData(id: 'zen_tamer_of_purpose', name: 'Zen', title: 'Tamer of Purpose', heroClass: HeroClass.ninja, talents: [HeroTalent.none], isYoung: false, intellect: 0, health: 40),
+];

@@ -13,6 +13,8 @@ class GameSettingsProvider extends ChangeNotifier {
   bool armorTrackingEnabled = true;
   String player1Name = 'Player 1';
   String player2Name = 'Player 2';
+  String? player1HeroId;
+  String? player2HeroId;
   bool clockEnabled = true;
   bool addTokenButtonEnabled = true;
   int damageDisplayMode = 0; // 0=Floating, 1=Totals

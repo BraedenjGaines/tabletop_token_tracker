@@ -25,7 +25,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           Positioned.fill(
             child: Image.asset(
-              'assets/images/home_background.jpg',
+              'assets/images/backgrounds/map_background.jpg',
               fit: BoxFit.cover,
               errorBuilder: (c, e, s) => Container(color: Colors.grey[900]),
             ),

@@ -77,15 +77,10 @@ flutter:
         - asset: assets/fonts/Boldonse-Regular.ttf
 
   assets:
+    - assets/images/heroes/
+    - assets/images/tokens/
+    - assets/images/backgrounds/
     - assets/images/home_background.jpg
-    - assets/images/Wizard.jpg
-    - assets/images/Knight.jpg
-    - assets/images/Warlock.jpg
-    - assets/images/Rogue.jpg
-    - assets/images/Mage.jpg
-    - assets/images/Druid.jpg
-    - assets/images/Runeknight.jpg
-    - assets/images/Paladin.jpg
     - assets/images/armor_helmet.png
     - assets/images/armor_chest.png
     - assets/images/armor_gauntlet.png

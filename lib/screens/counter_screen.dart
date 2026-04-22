@@ -15,7 +15,8 @@ import 'widgets/timer_display.dart';
 import 'widgets/dice_overlay.dart';
 import 'dart:ui';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:flutter/services.dart';
+import '../data/hero_library.dart';
+import 'widgets/hero_image.dart';
 
 class _FloatingNumber {
   final int value;
@@ -90,8 +91,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   bool _timerRunning = false;
   bool _timerFlashOn = true;
   Timer? _flashTimer;
-  bool _has10MinBuzzed = false;
-  bool _has5MinBuzzed = false;
   bool _hasExpiredBuzzStarted = false;
 
   // First turn chooser — always shown at game start
@@ -335,21 +334,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     super.dispose();
   }
 
-  // --- Timer ---
-  void _doDoubleBuzz() async {
-    HapticFeedback.heavyImpact();
-    await Future.delayed(Duration(milliseconds: 200));
-    HapticFeedback.heavyImpact();
-  }
-
-  void _doFiveBuzzes() async {
-    for (int i = 0; i < 5; i++) {
-      if (!mounted) return;
-      HapticFeedback.heavyImpact();
-      if (i < 4) await Future.delayed(Duration(milliseconds: 200));
-    }
-  }
-
   void _startTimer() {
     if (_timerRunning) return;
     if (_timerSecondsRemaining <= 0) {
@@ -363,16 +347,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
       setState(() {
         if (_timerSecondsRemaining > 0) {
           _timerSecondsRemaining--;
-          // 10 minute warning
-          if (_timerSecondsRemaining == 600 && !_has10MinBuzzed) {
-            _has10MinBuzzed = true;
-            _doDoubleBuzz();
-          }
-          // 5 minute warning
-          if (_timerSecondsRemaining == 300 && !_has5MinBuzzed) {
-            _has5MinBuzzed = true;
-            _doDoubleBuzz();
-          }
         } else {
           _timer?.cancel();
           _timerRunning = false;
@@ -380,8 +354,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           if (!_hasExpiredBuzzStarted) {
             _hasExpiredBuzzStarted = true;
             _timerFlashOn = false;
-            _doFiveBuzzes();
-            _doFiveBuzzes();
             _flashTimer = Timer.periodic(Duration(milliseconds: 500), (t) {
               if (mounted) setState(() { _timerFlashOn = !_timerFlashOn; });
             });
@@ -409,8 +381,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
       _timerRunning = false;
       _timerSecondsRemaining = widget.matchTimerMinutes * 60;
       _timerFlashOn = true;
-      _has10MinBuzzed = false;
-      _has5MinBuzzed = false;
       _hasExpiredBuzzStarted = false;
     });
   }
@@ -840,11 +810,15 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                         behavior: HitTestBehavior.opaque,
                         onTap: () { setState(() {
                           if (isAlly) {
-                            token.health = token.health! + 1;
-                            _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: 1, undoData: {'name': token.name});
+                            if (token.health! < 99) {
+                              token.health = token.health! + 1;
+                              _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: 1, undoData: {'name': token.name});
+                            }
                           } else {
-                            token.count++;
-                            _log(pi, LogEventType.tokenCountChange, token.name, value: 1, undoData: {'name': token.name, 'category': token.category.index});
+                            if (token.count < 99) {
+                              token.count++;
+                              _log(pi, LogEventType.tokenCountChange, token.name, value: 1, undoData: {'name': token.name, 'category': token.category.index});
+                            }
                           }
                         }); },
                         child: Center(child: Text('+', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white.withValues(alpha: 0.7)))),
@@ -939,14 +913,20 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     final double blurSigma = settings.frostedGlass ? 5.0 : 0.0;
     return Expanded(
       child: GestureDetector(
-        onTap: () { setState(() { playerHealth[index] += delta; _log(index, LogEventType.healthChange, 'Health', value: delta); }); _spawnFloatingNumber(index, delta); },
+        onTap: () {
+          final newHealth = (playerHealth[index] + delta).clamp(-99, 99);
+          if (newHealth == playerHealth[index]) return;
+          final actualDelta = newHealth - playerHealth[index];
+          setState(() { playerHealth[index] = newHealth; _log(index, LogEventType.healthChange, 'Health', value: actualDelta); });
+          _spawnFloatingNumber(index, actualDelta);
+        },
         child: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
           child: Container(decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), border: border),
             child: Align(
               alignment: labelAlignment,
               child: Padding(
                 padding: labelPadding,
-                child: Text(label, style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, fontFamily: 'Boldnose', color: Colors.black.withValues(alpha: 0.85))),
+                child: Text(label, style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: Colors.black.withValues(alpha: 0.85))),
               ),
             ),
           ),
@@ -964,10 +944,22 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
       child: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/images/${widget.playerHeroes[index]}.jpg',
-              fit: BoxFit.cover,
-              errorBuilder: (c, e, s) => Container(color: Colors.grey[900]),
+            child: Builder(
+              builder: (context) {
+                final heroId = widget.playerHeroes[index];
+                final hero = heroLibrary.cast<HeroData?>().firstWhere(
+                  (h) => h?.id == heroId,
+                  orElse: () => null,
+                );
+                if (hero == null) {
+                  return Container(color: Colors.grey[900]);
+                }
+                return HeroImage(
+                  hero: hero,
+                  fit: BoxFit.cover,
+                  placeholder: Container(color: Colors.grey[900]),
+                );
+              },
             ),
           ),
           Positioned.fill(
@@ -1065,7 +1057,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             ]),
           ),
           GestureDetector(
-            onTap: () { setState(() { _playerPitch[playerIndex]++; }); },
+            onTap: () { if (_playerPitch[playerIndex] < 99) setState(() { _playerPitch[playerIndex]++; }); },
             child: Icon(Icons.add, size: iconSize, color: Colors.black54),
           ),
         ],
@@ -1091,7 +1083,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             ]),
           ),
           GestureDetector(
-            onTap: () { setState(() { _playerAP[playerIndex]++; }); },
+            onTap: () { if (_playerAP[playerIndex] < 99) setState(() { _playerAP[playerIndex]++; }); },
             child: Icon(Icons.add, size: iconSize, color: Colors.black54),
           ),
         ],
