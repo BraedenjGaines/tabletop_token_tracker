@@ -19,6 +19,9 @@ class TokenData {
     this.destroyTrigger,
     this.health,
   });
+
+  String get id => name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\s]'), '').replaceAll(RegExp(r'\s+'), '_');
+  String get cardArtPath => 'assets/images/tokens/${id}_token.jpg';
 }
 
 final Map<String, List<TokenData>> tokenLibrary = {
@@ -28,7 +31,7 @@ final Map<String, List<TokenData>> tokenLibrary = {
     TokenData(name: 'Blasmophet, the Soul Harvester', category: TokenCategory.ally, health: 6),
     TokenData(name: 'Cintari Sellsword', category: TokenCategory.ally, health: 2),
     TokenData(name: 'Nasreth, the Soul Harrower', category: TokenCategory.ally, health: 6),
-    TokenData(name: 'Usur, the Soul Raper', category: TokenCategory.ally, health: 6),
+    TokenData(name: 'Ursur, the Soul Reaper', category: TokenCategory.ally, health: 6),
 
     // Items
     TokenData(name: 'Copper', category: TokenCategory.item),

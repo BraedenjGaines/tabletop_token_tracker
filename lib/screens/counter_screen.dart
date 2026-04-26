@@ -718,15 +718,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                     ),
                   ),
                 ),
-              SizedBox(height: 8),
-              GestureDetector(
-                onTap: () { setState(() { _playerOverlay[playerIndex] = -2; }); },
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(color: _categoryColors[cat], borderRadius: BorderRadius.circular(8)),
-                  child: Text('+ Add ${_categoryNames[cat]}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ),
             ],
           ),
         ),
@@ -738,25 +729,32 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     final bool triggering = _isTokenTriggering(token, pi);
     final bool isAlly = token.category == TokenCategory.ally;
     final int displayValue = isAlly ? (token.health ?? 0) : token.count;
-    final double tileWidth = (containerWidth - 48) / 4; // 4 per row, 8px spacing x3, minus padding
+    final double tileWidth = (containerWidth - 32) / 3; // 3 per row, 8px spacing x2, minus padding
 
     return SizedBox(
       width: tileWidth,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Name above tile
-              Text(
-                token.name,
-                style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              // Name above tile — fixed height so tiles align
+              SizedBox(
+                height: 26,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Text(
+                    token.name,
+                    style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
               SizedBox(height: 2),
               // Tile
               Container(
-                height: tileWidth * 0.8,
+                height: tileWidth * 1.2,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: _categoryColors[token.category]!.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(6),
@@ -767,7 +765,18 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                       ? [BoxShadow(color: Colors.amber.withValues(alpha: 0.4), blurRadius: 8, spreadRadius: 1)]
                       : [],
                 ),
-                child: Row(
+                child: Stack(
+                  children: [
+                    // Token card art background — cropped to art region
+                    Positioned.fill(
+                      child: _TokenArtBackground(tokenName: token.name),
+                    ),
+                    // Dark overlay for readability
+                    Positioned.fill(
+                      child: Container(color: Colors.black.withValues(alpha: 0.3)),
+                    ),
+                    // Controls
+                    Row(
                   children: [
                     // Left half: subtract
                     Expanded(
@@ -824,6 +833,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                         child: Center(child: Text('+', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white.withValues(alpha: 0.7)))),
                       ),
                     ),
+                  ],
+                  ),
                   ],
                 ),
               ),
@@ -1287,6 +1298,67 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               _buildPlayerOverlayPositioned(i, _buildAddTokenOverlay(i)),
         ]),
       ),
+    );
+  }
+}
+
+class _TokenArtBackground extends StatelessWidget {
+  final String tokenName;
+
+  const _TokenArtBackground({required this.tokenName});
+
+  String _getTokenId(String name) {
+    return name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\s]'), '').replaceAll(RegExp(r'\s+'), '_');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final id = _getTokenId(tokenName);
+    final path = 'assets/images/tokens/${id}_token.jpg';
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Crop values for token card art region
+        const double cropLeft = 0.10;
+        const double cropTop = 0.18;
+        const double cropRight = 0.90;
+        const double cropBottom = 0.48;
+        const double cropW = cropRight - cropLeft;
+        const double cropH = cropBottom - cropTop;
+
+        final double viewW = constraints.maxWidth;
+        final double viewH = constraints.maxHeight;
+
+        final double scaleByWidth = viewW / cropW;
+        final double scaleByHeight = viewH / cropH;
+        final double scale = scaleByWidth > scaleByHeight ? scaleByWidth : scaleByHeight;
+
+        // Source card aspect ratio (standard card is roughly 5:7)
+        const double cardAspect = 5.0 / 7.0;
+        final double imgW = scale * cardAspect;
+        final double imgH = scale;
+        final double artWPx = cropW * imgW;
+        final double artHPx = cropH * imgH;
+        final double adjustedOffsetX = -cropLeft * imgW + (viewW - artWPx) / 2;
+        final double adjustedOffsetY = -cropTop * imgH + (viewH - artHPx) / 2;
+
+        return Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            Positioned(
+              left: adjustedOffsetX,
+              top: adjustedOffsetY,
+              width: imgW,
+              height: imgH,
+              child: Image.asset(
+                path,
+                fit: BoxFit.fill,
+                errorBuilder: (c, e, s) => const SizedBox.shrink(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
