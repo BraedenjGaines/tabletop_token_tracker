@@ -9,6 +9,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<GameSettingsProvider>();
+    const descStyle = TextStyle(fontSize: 14, color: Colors.grey, fontFamily: 'CormorantGaramond');
 
     return Scaffold(
       appBar: AppBar(title: Text('Settings'), centerTitle: true),
@@ -28,7 +29,7 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.turnTrackerEnabled,
                 onChanged: (value) => settings.updateTurnTracker(value),
               ),
-              Text('Displays a turn-by-turn phase bar between players. Some tokens are automatically destroyed when their trigger phase is reached.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              Text('Displays a turn-by-turn phase bar between players. Some tokens are automatically destroyed when their trigger phase is reached.', style: descStyle),
 
               // --- Armor Tracking ---
               SizedBox(height: 32),
@@ -39,7 +40,7 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.armorTrackingEnabled,
                 onChanged: (value) => settings.updateArmorTracking(value),
               ),
-              Text('If you press and hold on an equipment slot, it will be destroyed.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              Text('If you press and hold on an equipment slot, it will be destroyed.', style: descStyle),
 
               // --- Add Token Button ---
               SizedBox(height: 32),
@@ -50,7 +51,7 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.addTokenButtonEnabled,
                 onChanged: (value) => settings.updateAddTokenButtonEnabled(value),
               ),
-              Text('Displays a button that will allow you to add tokens to the board. Some tokens are automatically destroyed when their trigger phase is reached, and you have Turn Tracking enabled.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              Text('Displays a button that will allow you to add tokens to the board. Some tokens are automatically destroyed when their trigger phase is reached, and you have Turn Tracking enabled.', style: descStyle),
 
               // --- Clock ---
               SizedBox(height: 32),
@@ -61,7 +62,7 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.clockEnabled,
                 onChanged: (value) => settings.updateClockEnabled(value),
               ),
-              Text('Display a match timer that both players can start, pause, and reset.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              Text('Display a match timer that both players can start, pause, and reset.', style: descStyle),
 
               // --- Resource Tracking ---
               SizedBox(height: 32),
@@ -86,7 +87,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 8),
-              Text('Enables tracking for action points, pitch values, both, or none.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              Text('Enables tracking for action points, pitch values, both, or none.', style: descStyle),
 
               // --- Combat Text ---
               SizedBox(height: 32),
@@ -109,7 +110,7 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 8),
-              Text('How the text will appear when taking or gaining health.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              Text('How the text will appear when taking or gaining health.', style: descStyle),
 
               // --- Frosted Glass ---
               SizedBox(height: 32),
@@ -120,7 +121,7 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.frostedGlass,
                 onChanged: (value) => settings.updateFrostedGlass(value),
               ),
-              Text('Applies a frosted glass blur effect to the player panels on the counter screen.', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              Text('Applies a frosted glass blur effect to the player panels on the counter screen.', style: descStyle),
 
               // --- Custom Tokens ---
               SizedBox(height: 32),

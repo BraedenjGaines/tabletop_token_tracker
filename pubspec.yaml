@@ -60,19 +60,13 @@ flutter:
   uses-material-design: true
 
   fonts:
-    - family: EagleLake
+    - family: Cinzel
       fonts:
-        - asset: assets/fonts/EagleLake-Regular.ttf
-    - family: Jacquard12
+        - asset: assets/fonts/Cinzel-Medium.ttf
+    - family: CormorantGaramond
       fonts:
-        - asset: assets/fonts/Jacquard12-Regular.ttf
-    - family: MedievalSharp
-      fonts:
-        - asset: assets/fonts/MedievalSharp-Regular.ttf
-    - family: Sedan
-      fonts:
-        - asset: assets/fonts/Sedan-Regular.ttf
-    - family: Boldnose
+        - asset: assets/fonts/CormorantGaramond-Medium.ttf
+    - family: Boldonse
       fonts:
         - asset: assets/fonts/Boldonse-Regular.ttf
 

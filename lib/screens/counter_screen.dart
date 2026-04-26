@@ -641,7 +641,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (hasTriggering) Icon(Icons.flash_on, size: 14, color: Colors.amber),
-            Text(_categoryNames[cat] ?? '', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+            Text(_categoryNames[cat] ?? '', style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
             Text('$count', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
@@ -743,7 +743,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                   alignment: Alignment.bottomCenter,
                   child: Text(
                     token.name,
-                    style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold, fontFamily: 'CormorantGaramond'),
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -934,10 +934,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         child: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
           child: Container(decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), border: border),
             child: Align(
-              alignment: labelAlignment,
+              alignment: Alignment(labelAlignment.x, -0.1),
               child: Padding(
                 padding: labelPadding,
-                child: Text(label, style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: Colors.black.withValues(alpha: 0.85))),
+                child: Text(label, style: TextStyle(fontSize: 36, fontWeight: FontWeight.w500, fontFamily: 'Boldonse', color: Colors.black.withValues(alpha: 0.85))),
               ),
             ),
           ),
@@ -990,7 +990,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 alignment: Alignment.center,
                 children: [
                 // Health number — always centered, never displaced
-                Text('${playerHealth[index]}', style: TextStyle(fontSize: 102, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: const Color.fromARGB(255, 14, 21, 22))),
+                Text('${playerHealth[index]}', style: TextStyle(fontSize: 76, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: const Color.fromARGB(255, 14, 21, 22))),
                 // Totals display — negative above-left, positive above-right
                 Positioned(
                   top: -1,
@@ -1063,7 +1063,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('Pitch', style: TextStyle(fontSize: labelSize, color: Colors.black54, height: 1.0, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+              Text('Pitch', style: TextStyle(fontSize: labelSize, color: Colors.black54, height: 1.0, fontFamily: 'CormorantGaramond')),
               Text('${_playerPitch[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
             ]),
           ),
@@ -1089,7 +1089,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('AP', style: TextStyle(fontSize: labelSize, color: Colors.black54, height: 1.0, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
+              Text('AP', style: TextStyle(fontSize: labelSize, color: Colors.black54, height: 1.0, fontFamily: 'CormorantGaramond')),
               Text('${_playerAP[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
             ]),
           ),

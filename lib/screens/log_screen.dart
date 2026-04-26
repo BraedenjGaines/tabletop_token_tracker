@@ -283,7 +283,7 @@ class _LogScreenState extends State<LogScreen> {
                         title: _buildRichDescription(entry),
                         subtitle: Text(
                           '${entry.timestamp}${entry.phase != null ? ' • ${entry.phase}' : ''}',
-                          style: TextStyle(fontSize: 10, color: Colors.grey),
+                          style: TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'CormorantGaramond'),
                         ),
                       );
                     },

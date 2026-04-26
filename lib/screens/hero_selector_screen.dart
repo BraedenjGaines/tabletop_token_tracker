@@ -185,7 +185,7 @@ class _HeroSelectorScreenState extends State<HeroSelectorScreen> {
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 2),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('${filtered.length} heroes', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                child: Text('${filtered.length} heroes', style: TextStyle(fontSize: 12, color: Colors.grey, fontFamily: 'CormorantGaramond')),
               ),
             ),
             // Hero grid
@@ -242,7 +242,7 @@ class _HeroSelectorScreenState extends State<HeroSelectorScreen> {
                                     ),
                                     Text(
                                       '${classNames[hero.heroClass]}${hero.isYoung ? ' (Y)' : ''}',
-                                      style: TextStyle(fontSize: 9, color: Colors.grey),
+                                      style: TextStyle(fontSize: 9, color: Colors.grey, fontFamily: 'CormorantGaramond'),
                                       textAlign: TextAlign.center,
                                     ),
                                   ],
