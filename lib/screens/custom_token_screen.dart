@@ -1,311 +1,429 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../data/token_preferences.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import '../data/token_library.dart';
+import '../data/token_preferences.dart';
+import '../data/hero_library.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class CustomTokenScreen extends StatefulWidget {
   final String currentGame;
-
   const CustomTokenScreen({super.key, required this.currentGame});
 
   @override
   State<CustomTokenScreen> createState() => _CustomTokenScreenState();
 }
 
-class _CustomTokenScreenState extends State<CustomTokenScreen> {
+class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   List<TokenData> customTokens = [];
-  String selectedGame = '';
-
-  final Map<TokenCategory, String> categoryNames = {
-    TokenCategory.boonAura: 'Buff',
-    TokenCategory.debuffAura: 'Debuff',
-    TokenCategory.item: 'Item',
-    TokenCategory.ally: 'Ally',
-  };
-
-  final Map<DestroyTrigger, String> triggerNames = {
-    DestroyTrigger.startOfYourTurn: 'Start of your turn',
-    DestroyTrigger.startOfOpponentTurn: "Start of opponent's turn",
-    DestroyTrigger.beginningOfActionPhase: 'Beginning of action phase',
-    DestroyTrigger.beginningOfEndPhase: 'Beginning of end phase',
-  };
+  List<Map<String, dynamic>> customHeroes = [];
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    selectedGame = widget.currentGame.isEmpty ? 'fab' : widget.currentGame;
-    _loadTokens();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadData();
   }
 
-  Future<void> _loadTokens() async {
-    final tokens = await TokenPreferences.getCustomTokens(selectedGame);
-    setState(() { customTokens = tokens; });
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
-  String _getSubtitle(TokenData token) {
-    String subtitle = categoryNames[token.category] ?? 'Unknown';
-    if (token.category == TokenCategory.ally && token.health != null) {
-      subtitle += ' • ${token.health} HP';
-    }
-    if (token.destroyTrigger != null) {
-      subtitle += ' • ${triggerNames[token.destroyTrigger]}';
-    }
-    return subtitle;
+  Future<void> _loadData() async {
+    final tokens = await TokenPreferences.getCustomTokens(widget.currentGame);
+    final heroes = await _loadCustomHeroes();
+    setState(() {
+      customTokens = tokens;
+      customHeroes = heroes;
+    });
   }
 
-  void _showEditDialog(int index) {
-    final token = customTokens[index];
-    final nameController = TextEditingController(text: token.name);
-    final healthController = TextEditingController(text: token.health?.toString() ?? '');
-    TokenCategory selectedCategory = token.category;
-    DestroyTrigger? selectedTrigger = token.destroyTrigger;
+  Future<List<Map<String, dynamic>>> _loadCustomHeroes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonStr = prefs.getString('custom_heroes') ?? '[]';
+    final List<dynamic> list = jsonDecode(jsonStr);
+    return list.cast<Map<String, dynamic>>();
+  }
 
-    showDialog(
+  Future<void> _saveCustomHeroes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('custom_heroes', jsonEncode(customHeroes));
+  }
+
+  Future<String?> _pickAndSaveImage(String prefix) async {
+    final source = await showDialog<ImageSource>(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text('Edit Token'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(controller: nameController, decoration: InputDecoration(hintText: 'Token name')),
-                    SizedBox(height: 16),
-                    Text('Category'),
-                    SizedBox(height: 8),
-                    DropdownButton<TokenCategory>(
-                      value: selectedCategory,
-                      isExpanded: true,
-                      items: TokenCategory.values.map((cat) {
-                        return DropdownMenuItem(value: cat, child: Text(categoryNames[cat] ?? 'Unknown'));
-                      }).toList(),
-                      onChanged: (TokenCategory? value) {
-                        if (value != null) {
-                          setDialogState(() {
-                            selectedCategory = value;
-                            if (value != TokenCategory.boonAura && value != TokenCategory.debuffAura) {
-                              selectedTrigger = null;
-                            }
-                            if (value != TokenCategory.ally) {
-                              healthController.clear();
-                            }
-                          });
-                        }
-                      },
-                    ),
-                    if (selectedCategory == TokenCategory.ally) ...[
-                      SizedBox(height: 16),
-                      Text('Health'),
-                      SizedBox(height: 8),
-                      TextField(controller: healthController, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'Health value')),
-                    ],
-                    if (selectedCategory == TokenCategory.boonAura || selectedCategory == TokenCategory.debuffAura) ...[
-                      SizedBox(height: 16),
-                      Text('Auto-destroy'),
-                      SizedBox(height: 8),
-                      DropdownButton<DestroyTrigger?>(
-                        value: selectedTrigger,
-                        isExpanded: true,
-                        items: [
-                          DropdownMenuItem(value: null, child: Text('None (manual only)')),
-                          ...DestroyTrigger.values.map((trigger) {
-                            return DropdownMenuItem(value: trigger, child: Text(triggerNames[trigger] ?? ''));
-                          }),
-                        ],
-                        onChanged: (DestroyTrigger? value) {
-                          setDialogState(() { selectedTrigger = value; });
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-                TextButton(
-                  onPressed: () async {
-                    final newName = nameController.text.trim();
-                    final health = int.tryParse(healthController.text);
-                    if (newName.isNotEmpty) {
-                      if (selectedCategory == TokenCategory.ally && (health == null || health <= 0)) return;
-                      await TokenPreferences.removeCustomToken(selectedGame, token.name);
-                      final newToken = TokenData(
-                        name: newName,
-                        category: selectedCategory,
-                        destroyTrigger: selectedTrigger,
-                        health: selectedCategory == TokenCategory.ally ? health : null,
-                      );
-                      await TokenPreferences.addCustomToken(selectedGame, newToken);
-                      await _loadTokens();
-                    }
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                  child: Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showDeleteDialog(int index) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Delete Token'),
-          content: Text('Remove "${customTokens[index].name}"?'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-            TextButton(
-              onPressed: () async {
-                await TokenPreferences.removeCustomToken(selectedGame, customTokens[index].name);
-                await _loadTokens();
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: Text('Delete', style: TextStyle(color: Colors.red)),
+      builder: (ctx) => AlertDialog(
+        title: Text('Select Image'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.camera_alt),
+              title: Text('Take Photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library),
+              title: Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
+
+    if (source == null) return null;
+
+    final XFile? image = await _picker.pickImage(source: source, maxWidth: 1024, maxHeight: 1024, imageQuality: 85);
+    if (image == null) return null;
+
+    final dir = await getApplicationDocumentsDirectory();
+    final fileName = '${prefix}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final savedPath = p.join(dir.path, 'custom_images', fileName);
+    await Directory(p.dirname(savedPath)).create(recursive: true);
+    await File(image.path).copy(savedPath);
+    return savedPath;
   }
 
-  void _showAddDialog() {
+  // --- Custom Hero ---
+  void _showAddHeroDialog() {
     final nameController = TextEditingController();
-    final healthController = TextEditingController();
-    TokenCategory selectedCategory = TokenCategory.boonAura;
-    DestroyTrigger? selectedTrigger;
+    HeroClass selectedClass = HeroClass.warrior;
+    HeroTalent selectedTalent = HeroTalent.none;
+    String? imagePath;
+
+    final classNames = {
+      HeroClass.brute: 'Brute',
+      HeroClass.guardian: 'Guardian',
+      HeroClass.illusionist: 'Illusionist',
+      HeroClass.mechanologist: 'Mechanologist',
+      HeroClass.merchant: 'Merchant',
+      HeroClass.ninja: 'Ninja',
+      HeroClass.ranger: 'Ranger',
+      HeroClass.runeblade: 'Runeblade',
+      HeroClass.warrior: 'Warrior',
+      HeroClass.wizard: 'Wizard',
+      HeroClass.assassin: 'Assassin',
+      HeroClass.bard: 'Bard',
+      HeroClass.necromancer: 'Necromancer',
+      HeroClass.shapeshifter: 'Shapeshifter',
+      HeroClass.adjudicator: 'Adjudicator',
+      HeroClass.generic: 'Generic',
+    };
+
+    final talentNames = {
+      HeroTalent.none: 'None',
+      HeroTalent.draconic: 'Draconic',
+      HeroTalent.earth: 'Earth',
+      HeroTalent.elemental: 'Elemental',
+      HeroTalent.ice: 'Ice',
+      HeroTalent.light: 'Light',
+      HeroTalent.lightning: 'Lightning',
+      HeroTalent.shadow: 'Shadow',
+      HeroTalent.royal: 'Royal',
+      HeroTalent.mystic: 'Mystic',
+    };
 
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text('Add Custom Token'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(controller: nameController, decoration: InputDecoration(hintText: 'Token name')),
-                    SizedBox(height: 16),
-                    Text('Category'),
-                    SizedBox(height: 8),
-                    DropdownButton<TokenCategory>(
-                      value: selectedCategory,
-                      isExpanded: true,
-                      items: TokenCategory.values.map((cat) {
-                        return DropdownMenuItem(value: cat, child: Text(categoryNames[cat] ?? 'Unknown'));
-                      }).toList(),
-                      onChanged: (TokenCategory? value) {
-                        if (value != null) {
-                          setDialogState(() {
-                            selectedCategory = value;
-                            if (value != TokenCategory.boonAura && value != TokenCategory.debuffAura) {
-                              selectedTrigger = null;
-                            }
-                            if (value != TokenCategory.ally) {
-                              healthController.clear();
-                            }
-                          });
-                        }
-                      },
-                    ),
-                    if (selectedCategory == TokenCategory.ally) ...[
-                      SizedBox(height: 16),
-                      Text('Health'),
-                      SizedBox(height: 8),
-                      TextField(controller: healthController, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'Health value')),
-                    ],
-                    if (selectedCategory == TokenCategory.boonAura || selectedCategory == TokenCategory.debuffAura) ...[
-                      SizedBox(height: 16),
-                      Text('Auto-destroy'),
-                      SizedBox(height: 8),
-                      DropdownButton<DestroyTrigger?>(
-                        value: selectedTrigger,
-                        isExpanded: true,
-                        items: [
-                          DropdownMenuItem(value: null, child: Text('None (manual only)')),
-                          ...DestroyTrigger.values.map((trigger) {
-                            return DropdownMenuItem(value: trigger, child: Text(triggerNames[trigger] ?? ''));
-                          }),
-                        ],
-                        onChanged: (DestroyTrigger? value) {
-                          setDialogState(() { selectedTrigger = value; });
-                        },
-                      ),
-                    ],
-                  ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Add Custom Hero'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: 'Hero Name', border: OutlineInputBorder()),
                 ),
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-                TextButton(
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    final health = int.tryParse(healthController.text);
-                    if (name.isNotEmpty && !customTokens.any((t) => t.name == name)) {
-                      if (selectedCategory == TokenCategory.ally && (health == null || health <= 0)) return;
-                      final newToken = TokenData(
-                        name: name,
-                        category: selectedCategory,
-                        destroyTrigger: selectedTrigger,
-                        health: selectedCategory == TokenCategory.ally ? health : null,
-                      );
-                      await TokenPreferences.addCustomToken(selectedGame, newToken);
-                      await _loadTokens();
-                    }
-                    if (context.mounted) Navigator.pop(context);
+                SizedBox(height: 12),
+                DropdownButtonFormField<HeroClass>(
+                  value: selectedClass,
+                  decoration: InputDecoration(labelText: 'Class', border: OutlineInputBorder()),
+                  items: classNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                  onChanged: (val) { if (val != null) setDialogState(() { selectedClass = val; }); },
+                ),
+                SizedBox(height: 12),
+                DropdownButtonFormField<HeroTalent>(
+                  value: selectedTalent,
+                  decoration: InputDecoration(labelText: 'Talent', border: OutlineInputBorder()),
+                  items: talentNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                  onChanged: (val) { if (val != null) setDialogState(() { selectedTalent = val; }); },
+                ),
+                SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () async {
+                    final path = await _pickAndSaveImage('hero');
+                    if (path != null) setDialogState(() { imagePath = path; });
                   },
-                  child: Text('Add'),
+                  child: Container(
+                    width: double.infinity,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: imagePath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(7),
+                            child: Image.file(File(imagePath!), fit: BoxFit.cover),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_a_photo, size: 32, color: Colors.grey),
+                              SizedBox(height: 4),
+                              Text('Add Photo', style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                  ),
                 ),
               ],
-            );
-          },
-        );
-      },
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+            TextButton(
+              onPressed: () {
+                if (nameController.text.trim().isEmpty) return;
+                final id = 'custom_${nameController.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9\s]'), '').replaceAll(RegExp(r'\s+'), '_')}_${DateTime.now().millisecondsSinceEpoch}';
+                final heroMap = {
+                  'id': id,
+                  'name': nameController.text.trim(),
+                  'heroClass': selectedClass.index,
+                  'talent': selectedTalent.index,
+                  'imagePath': imagePath,
+                };
+                setState(() { customHeroes.add(heroMap); });
+                _saveCustomHeroes();
+                Navigator.pop(ctx);
+              },
+              child: Text('Add'),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  void _deleteCustomHero(int index) {
+    final hero = customHeroes[index];
+    if (hero['imagePath'] != null) {
+      final file = File(hero['imagePath']);
+      if (file.existsSync()) file.deleteSync();
+    }
+    setState(() { customHeroes.removeAt(index); });
+    _saveCustomHeroes();
+  }
+
+  // --- Custom Token ---
+  void _showAddTokenDialog() {
+    final nameController = TextEditingController();
+    TokenCategory selectedCategory = TokenCategory.boonAura;
+    DestroyTrigger? selectedTrigger;
+    String? imagePath;
+
+    final catNames = {
+      TokenCategory.boonAura: 'Buff',
+      TokenCategory.debuffAura: 'Debuff',
+      TokenCategory.item: 'Item',
+      TokenCategory.ally: 'Ally',
+    };
+
+    final triggerNames = {
+      null: 'None (Manual)',
+      DestroyTrigger.startOfYourTurn: 'Start of Your Turn',
+      DestroyTrigger.startOfOpponentTurn: 'Start of Opponent Turn',
+      DestroyTrigger.beginningOfActionPhase: 'Beginning of Action Phase',
+      DestroyTrigger.beginningOfEndPhase: 'Beginning of End Phase',
+    };
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Add Custom Token'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(labelText: 'Token Name', border: OutlineInputBorder()),
+                ),
+                SizedBox(height: 12),
+                DropdownButtonFormField<TokenCategory>(
+                  value: selectedCategory,
+                  decoration: InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                  items: catNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                  onChanged: (val) { if (val != null) setDialogState(() { selectedCategory = val; }); },
+                ),
+                SizedBox(height: 12),
+                DropdownButtonFormField<DestroyTrigger?>(
+                  value: selectedTrigger,
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: 'Destroy Trigger', border: OutlineInputBorder()),
+                  items: triggerNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))).toList(),
+                  onChanged: (val) { setDialogState(() { selectedTrigger = val; }); },
+                ),
+                SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () async {
+                    final path = await _pickAndSaveImage('token');
+                    if (path != null) setDialogState(() { imagePath = path; });
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: imagePath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(7),
+                            child: Image.file(File(imagePath!), fit: BoxFit.cover),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_a_photo, size: 32, color: Colors.grey),
+                              SizedBox(height: 4),
+                              Text('Add Photo', style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+            TextButton(
+              onPressed: () {
+                if (nameController.text.trim().isEmpty) return;
+                final token = TokenData(
+                  name: nameController.text.trim(),
+                  category: selectedCategory,
+                  destroyTrigger: selectedTrigger,
+                );
+                setState(() { customTokens.add(token); });
+                TokenPreferences.addCustomToken(widget.currentGame, token);
+                Navigator.pop(ctx);
+              },
+              child: Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _deleteCustomToken(int index) {
+    final tokenName = customTokens[index].name;
+    setState(() { customTokens.removeAt(index); });
+    TokenPreferences.removeCustomToken(widget.currentGame, tokenName);
   }
 
   @override
   Widget build(BuildContext context) {
+    final classNames = {
+      HeroClass.brute: 'Brute', HeroClass.guardian: 'Guardian', HeroClass.illusionist: 'Illusionist',
+      HeroClass.mechanologist: 'Mechanologist', HeroClass.merchant: 'Merchant', HeroClass.ninja: 'Ninja',
+      HeroClass.ranger: 'Ranger', HeroClass.runeblade: 'Runeblade', HeroClass.warrior: 'Warrior',
+      HeroClass.wizard: 'Wizard', HeroClass.assassin: 'Assassin', HeroClass.bard: 'Bard',
+      HeroClass.necromancer: 'Necromancer', HeroClass.shapeshifter: 'Shapeshifter',
+      HeroClass.adjudicator: 'Adjudicator', HeroClass.generic: 'Generic',
+    };
+
+    final catNames = {
+      TokenCategory.boonAura: 'Buff', TokenCategory.debuffAura: 'Debuff',
+      TokenCategory.item: 'Item', TokenCategory.ally: 'Ally',
+    };
+
     return Scaffold(
-      appBar: AppBar(title: Text('Custom Tokens'), centerTitle: true),
-      floatingActionButton: FloatingActionButton(onPressed: _showAddDialog, child: Icon(Icons.add)),
-      body: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 12),
-            Expanded(
-              child: customTokens.isEmpty
-                  ? Center(child: Text('No custom tokens for this game', style: TextStyle(color: Colors.grey)))
-                  : ListView.builder(
-                      itemCount: customTokens.length,
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          title: Text(customTokens[index].name),
-                          subtitle: Text(_getSubtitle(customTokens[index]), style: TextStyle(fontSize: 12, color: Colors.grey)),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(icon: Icon(Icons.edit, color: Colors.blue), onPressed: () => _showEditDialog(index)),
-                              IconButton(icon: Icon(Icons.delete, color: Colors.red), onPressed: () => _showDeleteDialog(index)),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-            ),
+      appBar: AppBar(
+        title: Text('Library'),
+        centerTitle: true,
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: 'Custom Heroes'),
+            Tab(text: 'Custom Tokens'),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          if (_tabController.index == 0) {
+            _showAddHeroDialog();
+          } else {
+            _showAddTokenDialog();
+          }
+        },
+        child: Icon(Icons.add),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // --- Custom Heroes Tab ---
+          customHeroes.isEmpty
+              ? Center(child: Text('No custom heroes yet.\nTap + to add one.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  padding: EdgeInsets.all(16),
+                  itemCount: customHeroes.length,
+                  itemBuilder: (context, index) {
+                    final hero = customHeroes[index];
+                    final heroClassName = classNames[HeroClass.values[hero['heroClass'] ?? 0]] ?? 'Unknown';
+                    return Card(
+                      child: ListTile(
+                        leading: hero['imagePath'] != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: Image.file(File(hero['imagePath']), width: 48, height: 48, fit: BoxFit.cover),
+                              )
+                            : Container(width: 48, height: 48, color: Colors.grey[800], child: Icon(Icons.person, color: Colors.grey)),
+                        title: Text(hero['name'] ?? 'Unknown'),
+                        subtitle: Text(heroClassName),
+                        trailing: IconButton(
+                          icon: Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _deleteCustomHero(index),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+          // --- Custom Tokens Tab ---
+          customTokens.isEmpty
+              ? Center(child: Text('No custom tokens yet.\nTap + to add one.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  padding: EdgeInsets.all(16),
+                  itemCount: customTokens.length,
+                  itemBuilder: (context, index) {
+                    final token = customTokens[index];
+                    return Card(
+                      child: ListTile(
+                        title: Text(token.name),
+                        subtitle: Text(catNames[token.category] ?? 'Unknown'),
+                        trailing: IconButton(
+                          icon: Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _deleteCustomToken(index),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ],
       ),
     );
   }

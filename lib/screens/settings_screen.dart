@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/game_settings_provider.dart';
-import 'custom_token_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -122,22 +121,6 @@ class SettingsScreen extends StatelessWidget {
                 onChanged: (value) => settings.updateFrostedGlass(value),
               ),
               Text('Applies a frosted glass blur effect to the player panels on the counter screen.', style: descStyle),
-
-              // --- Custom Tokens ---
-              SizedBox(height: 32),
-              Center(child: Text('Custom Tokens', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
-              SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity, height: 48,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => CustomTokenScreen(currentGame: settings.selectedGame),
-                    ));
-                  },
-                  child: Text('Manage Custom Tokens'),
-                ),
-              ),
               SizedBox(height: 32),
             ],
           ),

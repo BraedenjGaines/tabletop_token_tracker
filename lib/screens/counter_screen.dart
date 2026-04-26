@@ -579,9 +579,11 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         if (turnCount == t.turnPlayed && t.phasePlayed < 1 && currentPhase >= 1) return true;
         return false;
       case DestroyTrigger.beginningOfEndPhase:
-        if (pi != activePlayer) return false;
-        if (turnCount > t.turnPlayed && currentPhase >= 2) return true;
-        if (turnCount == t.turnPlayed && t.phasePlayed < 2 && currentPhase >= 2) return true;
+        // Activates during end phase, destroyed when advancing past it (turn wraps)
+        if (pi != activePlayer) {
+          if (turnCount > t.turnPlayed) return true;
+          if (turnCount == t.turnPlayed && t.phasePlayed <= 2) return true;
+        }
         return false;
     }
   }
@@ -602,9 +604,12 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         if (turnCount == t.turnPlayed && t.phasePlayed < 1 && currentPhase == 1) return true;
         return false;
       case DestroyTrigger.beginningOfEndPhase:
+        // Highlight during End Phase on the active player's turn
         if (!isAct) return false;
-        if (turnCount > t.turnPlayed && currentPhase == 2) return true;
-        if (turnCount == t.turnPlayed && t.phasePlayed < 2 && currentPhase == 2) return true;
+        if (currentPhase == 2) {
+          if (turnCount > t.turnPlayed) return true;
+          if (turnCount == t.turnPlayed && t.phasePlayed < 2) return true;
+        }
         return false;
     }
   }
@@ -1040,6 +1045,26 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     return content;
   }
 
+  Widget _turnTrackerContainer({required Widget child}) {
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        Transform.flip(
+          child: Image.asset(
+            'assets/images/ui/turn_tracker_overlay.png',
+            width: MediaQuery.of(context).size.width * 2.5,
+            fit: BoxFit.fitWidth,
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+          child: child,
+        ),
+      ],
+    );
+  }
+
   // --- Turn tracker ---
   Widget _buildTurnTrackerPanel() {
     final settings = context.read<GameSettingsProvider>();
@@ -1058,18 +1083,18 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         children: [
           GestureDetector(
             onTap: () { if (_playerPitch[playerIndex] > 0) setState(() { _playerPitch[playerIndex]--; }); },
-            child: Icon(Icons.remove, size: iconSize, color: Colors.black54),
+            child: Icon(Icons.remove, size: iconSize, color:  Color(0xFFF5E8C4)),
           ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('Pitch', style: TextStyle(fontSize: labelSize, color: Colors.black54, height: 1.0, fontFamily: 'CormorantGaramond')),
-              Text('${_playerPitch[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+              Text('Pitch', style: TextStyle(fontSize: labelSize, color:  Color(0xFFF5E8C4), height: 1.0, fontFamily: 'CormorantGaramond')),
+              Text('${_playerPitch[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color:  Color(0xFFF5E8C4), height: 1.0)),
             ]),
           ),
           GestureDetector(
             onTap: () { if (_playerPitch[playerIndex] < 99) setState(() { _playerPitch[playerIndex]++; }); },
-            child: Icon(Icons.add, size: iconSize, color: Colors.black54),
+            child: Icon(Icons.add, size: iconSize, color:  Color(0xFFF5E8C4)),
           ),
         ],
       );
@@ -1084,18 +1109,18 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         children: [
           GestureDetector(
             onTap: () { if (_playerAP[playerIndex] > 0) setState(() { _playerAP[playerIndex]--; }); },
-            child: Icon(Icons.remove, size: iconSize, color: Colors.black54),
+            child: Icon(Icons.remove, size: iconSize, color:  Color(0xFFF5E8C4)),
           ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text('AP', style: TextStyle(fontSize: labelSize, color: Colors.black54, height: 1.0, fontFamily: 'CormorantGaramond')),
-              Text('${_playerAP[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+              Text('AP', style: TextStyle(fontSize: labelSize, color:  Color(0xFFF5E8C4), height: 1.0, fontFamily: 'CormorantGaramond')),
+              Text('${_playerAP[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color:  Color(0xFFF5E8C4), height: 1.0)),
             ]),
           ),
           GestureDetector(
             onTap: () { if (_playerAP[playerIndex] < 99) setState(() { _playerAP[playerIndex]++; }); },
-            child: Icon(Icons.add, size: iconSize, color: Colors.black54),
+            child: Icon(Icons.add, size: iconSize, color:  Color(0xFFF5E8C4)),
           ),
         ],
       );
@@ -1111,16 +1136,16 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                IconButton(icon: Icon(Icons.arrow_left, color: Colors.black, size: 20), onPressed: _retreatPhase, padding: EdgeInsets.zero, constraints: BoxConstraints()),
+                IconButton(icon: Icon(Icons.arrow_left, color:  Color(0xFFF5E8C4), size: 20), onPressed: _retreatPhase, padding: EdgeInsets.zero, constraints: BoxConstraints()),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text('${widget.playerNames[activePlayer].length > 8 ? '${widget.playerNames[activePlayer].substring(0, 8)}..' : widget.playerNames[activePlayer]}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black, height: 1.0)),
+                    Text('${widget.playerNames[activePlayer].length > 8 ? '${widget.playerNames[activePlayer].substring(0, 8)}..' : widget.playerNames[activePlayer]}\'s Turn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color:  Color(0xFFF5E8C4), height: 1.0)),
                     SizedBox(height: 2),
-                    Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color: Colors.black, height: 1.0)),
+                    Text(fabPhases[currentPhase], style: TextStyle(fontSize: 14, color:  Color(0xFFF5E8C4), height: 1.0)),
                   ]),
                 ),
-                IconButton(icon: Icon(Icons.arrow_right, color: Colors.black, size: 20), onPressed: _advancePhase, padding: EdgeInsets.zero, constraints: BoxConstraints()),
+                IconButton(icon: Icon(Icons.arrow_right, color:  Color(0xFFF5E8C4), size: 20), onPressed: _advancePhase, padding: EdgeInsets.zero, constraints: BoxConstraints()),
               ],
             ),
           ],
@@ -1131,46 +1156,46 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     }
 
     if (!showPitch && !showAP) {
-      return Container(
-        padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
-        child: centerContent,
-      );
+      return _turnTrackerContainer(child: centerContent);
     }
 
     if (bothVisible) {
-      return Container(
-        padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
-        child: Row(
-          children: [
-            Column(mainAxisSize: MainAxisSize.min, children: [
-              RotatedBox(quarterTurns: 2, child: pitchCounter(0)),
-              SizedBox(height: 4),
-              pitchCounter(1),
-            ]),
-            Expanded(child: centerContent),
-            Column(mainAxisSize: MainAxisSize.min, children: [
-              RotatedBox(quarterTurns: 2, child: apCounter(0)),
-              SizedBox(height: 4),
-              apCounter(1),
-            ]),
-          ],
+      final double inset = _showTurnTracker ? 16.0 : 70.0;
+      return _turnTrackerContainer(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: inset),
+          child: Row(
+            children: [
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                RotatedBox(quarterTurns: 2, child: pitchCounter(0)),
+                SizedBox(height: 4),
+                pitchCounter(1),
+              ]),
+              Expanded(child: centerContent),
+              Column(mainAxisSize: MainAxisSize.min, children: [
+                RotatedBox(quarterTurns: 2, child: apCounter(0)),
+                SizedBox(height: 4),
+                apCounter(1),
+              ]),
+            ],
+          ),
         ),
       );
     }
 
     if (singleVisible) {
       Widget Function(int, {bool large}) counter = showAP ? apCounter : pitchCounter;
-      return Container(
-        padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(8)),
-        child: Row(
-          children: [
-            RotatedBox(quarterTurns: 2, child: counter(0, large: true)),
-            Expanded(child: centerContent),
-            counter(1, large: true),
-          ],
+      final double inset = _showTurnTracker ? 16.0 : 70.0;
+      return _turnTrackerContainer(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: inset),
+          child: Row(
+            children: [
+              RotatedBox(quarterTurns: 2, child: counter(0, large: true)),
+              Expanded(child: centerContent),
+              counter(1, large: true),
+            ],
+          ),
         ),
       );
     }
@@ -1181,11 +1206,29 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   // --- Grid ---
   Widget _buildPlayerGrid() {
     if (_showMiddleBar) {
-      return Column(children: [
-        Expanded(child: _buildPlayerWidget(0)),
-        _buildTurnTrackerPanel(),
-        Expanded(child: _buildPlayerWidget(1)),
-      ]);
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Column(children: [
+            Expanded(child: _buildPlayerWidget(0)),
+            SizedBox(height: 55),
+            Expanded(child: _buildPlayerWidget(1)),
+          ]),
+          Positioned(
+            left: -20,
+            right: -20,
+            top: 0,
+            bottom: 0,
+            child: Column(
+              children: [
+                Expanded(child: IgnorePointer(child: SizedBox.expand())),
+                _buildTurnTrackerPanel(),
+                Expanded(child: IgnorePointer(child: SizedBox.expand())),
+              ],
+            ),
+          ),
+        ],
+      );
     }
     return Column(children: [
       Expanded(child: _buildPlayerWidget(0)),

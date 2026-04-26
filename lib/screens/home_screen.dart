@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'setup_screen.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
+import 'custom_token_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -12,7 +13,7 @@ class HomeScreen extends StatelessWidget {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text(
-          'TableTop\nToken Tracker',
+          'Flesh And Blood\nLife Counter',
           style: TextStyle(color: Colors.black, fontSize: 32, fontWeight: FontWeight.w900, shadows: [Shadow(color: Colors.white70, blurRadius: 10), Shadow(color: Colors.white54, blurRadius: 20)]),
           textAlign: TextAlign.center,
         ),
@@ -34,33 +35,17 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  width: 220,
-                  height: 60,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const SetupScreen()),
-                      );
-                    },
-                    child: Text('Play', style: TextStyle(fontSize: 22)),
-                  ),
-                ),
+                _buildCustomButton('Play', () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const SetupScreen()));
+                }),
                 SizedBox(height: 20),
-                SizedBox(
-                  width: 220,
-                  height: 60,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                      );
-                    },
-                    child: Text('Settings', style: TextStyle(fontSize: 22)),
-                  ),
-                ),
+                _buildCustomButton('Library', () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomTokenScreen(currentGame: 'fab')));
+                }),
+                SizedBox(height: 20),
+                _buildCustomButton('Settings', () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                }),
               ],
             ),
           ),
@@ -81,4 +66,34 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+Widget _buildCustomButton(String text, VoidCallback onPressed) {
+  return GestureDetector(
+    onTap: onPressed,
+    child: SizedBox(
+      width: 300,
+      height: 55,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Image.asset(
+            'assets/images/ui/play_button.png',
+            width: 300,
+            height: 45,
+            fit: BoxFit.fill,
+          ),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

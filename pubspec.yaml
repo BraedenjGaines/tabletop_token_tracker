@@ -40,6 +40,9 @@ dependencies:
   provider: ^6.1.5+1
   wakelock_plus: ^1.5.2
   package_info_plus: ^9.0.1
+  image_picker: ^1.2.1
+  path_provider: ^2.1.5
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +77,7 @@ flutter:
     - assets/images/heroes/
     - assets/images/tokens/
     - assets/images/backgrounds/
+    - assets/images/ui/
     - assets/images/home_background.jpg
     - assets/images/armor_helmet.png
     - assets/images/armor_chest.png

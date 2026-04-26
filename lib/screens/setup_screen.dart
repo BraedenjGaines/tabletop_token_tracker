@@ -311,14 +311,8 @@ class _SetupScreenState extends State<SetupScreen> {
 
                         // --- Start Game ---
                         SizedBox(height: 48),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey[400],
-                            foregroundColor: Colors.black,
-                            padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                            textStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily),
-                          ),
-                          onPressed: selectedLife >= 1
+                        GestureDetector(
+                          onTap: selectedLife >= 1
                               ? () {
                                   Navigator.push(
                                     context,
@@ -342,7 +336,30 @@ class _SetupScreenState extends State<SetupScreen> {
                                   );
                                 }
                               : null,
-                          child: Text('Start Game'),
+                          child: SizedBox(
+                            width: 300,
+                            height: 55,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Image.asset(
+                                  'assets/images/ui/play_button.png',
+                                  width: 300,
+                                  height: 45,
+                                  fit: BoxFit.fill,
+                                ),
+                                Text(
+                                  'Start Game',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
                     ),
