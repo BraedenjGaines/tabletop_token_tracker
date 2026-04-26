@@ -1,5 +1,3 @@
-import 'package:flutter/services.dart' show rootBundle;
-
 enum HeroClass {
   brute,
   guardian,
@@ -59,37 +57,6 @@ class HeroData {
   /// when no art file exists.
   String get artPath => 'assets/images/heroes/$id.jpg';
 
-  /// Card scan path. Script saves as .png for most heroes; .jpg is a fallback
-  /// for any that were saved in that format.
-  String get cardPathPng => 'assets/images/heroes/${id}_card.png';
-  String get cardPathJpg => 'assets/images/heroes/${id}_card.jpg';
-}
-
-/// Returns the first asset path that exists for this hero, in priority order:
-/// 1. <id>.jpg (real character art — added later)
-/// 2. <id>_card.png (downloaded card scan, most common)
-/// 3. <id>_card.jpg (card scan fallback)
-/// Returns null if none exist — callers should show a placeholder.
-///
-/// Results are cached per id so we only probe the asset bundle once.
-final Map<String, String?> _resolvedArtCache = {};
-
-Future<String?> resolveHeroImage(HeroData hero) async {
-  if (_resolvedArtCache.containsKey(hero.id)) {
-    return _resolvedArtCache[hero.id];
-  }
-  final candidates = [hero.artPath, hero.cardPathPng, hero.cardPathJpg];
-  for (final path in candidates) {
-    try {
-      await rootBundle.load(path);
-      _resolvedArtCache[hero.id] = path;
-      return path;
-    } catch (_) {
-      // not found, try next
-    }
-  }
-  _resolvedArtCache[hero.id] = null;
-  return null;
 }
 
 // Master list — auto-generated from flesh-and-blood-cards JSON.

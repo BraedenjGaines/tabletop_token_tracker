@@ -26,7 +26,8 @@ class SetupBackgrounds {
               key.toLowerCase().endsWith('.png'))
           .toList()
         ..sort();
-      // print removed — was used for debugging
+      // ignore: avoid_print
+      print('SetupBackgrounds found ${_cached!.length} images: $_cached');
     } catch (e) {
       // ignore: avoid_print
       print('SetupBackgrounds failed to load manifest: $e');

@@ -24,6 +24,7 @@ class _SetupScreenState extends State<SetupScreen> {
   late TextEditingController player2NameController;
 
   late List<HeroData?> playerHeroes;
+  String? _backgroundPath;
 
   @override
   void initState() {
@@ -56,6 +57,12 @@ class _SetupScreenState extends State<SetupScreen> {
       player1NameController = TextEditingController(text: settings.player1Name);
       player2NameController = TextEditingController(text: settings.player2Name);
     }
+    _loadBackground();
+  }
+
+  void _loadBackground() async {
+    final path = await SetupBackgrounds.sessionPick();
+    if (mounted) setState(() { _backgroundPath = path; });
   }
 
   @override
@@ -85,20 +92,14 @@ class _SetupScreenState extends State<SetupScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: FutureBuilder<String?>(
-              future: SetupBackgrounds.sessionPick(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data == null) {
-                  return Container(color: Theme.of(context).scaffoldBackgroundColor);
-                }
-                return Image.asset(
-                  snapshot.data!,
+            child: _backgroundPath != null
+              ? Image.asset(
+                  _backgroundPath!,
                   fit: BoxFit.cover,
                   errorBuilder: (c, e, s) =>
                       Container(color: Theme.of(context).scaffoldBackgroundColor),
-                );
-              },
-            ),
+                )
+              : Container(color: Theme.of(context).scaffoldBackgroundColor),
           ),
           Positioned.fill(
             child: Container(color: Colors.black.withValues(alpha: 0.35)),
