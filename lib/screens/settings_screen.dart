@@ -18,27 +18,6 @@ class SettingsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- Theme ---
-              SizedBox(height: 16),
-              Center(child: Text('Choose a theme:', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
-              SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: SegmentedButton<ThemeMode>(
-                  showSelectedIcon: false,
-                  style: ButtonStyle(
-                    padding: WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 16, horizontal: 10)),
-                    textStyle: WidgetStatePropertyAll(TextStyle(fontSize: 14, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily)),
-                  ),
-                  segments: [
-                    ButtonSegment(value: ThemeMode.system, label: Text('System')),
-                    ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-                  ],
-                  selected: {settings.themeMode},
-                  onSelectionChanged: (selection) => settings.updateThemeMode(selection.first),
-                ),
-              ),
 
               // --- Turn Tracker ---
               SizedBox(height: 32),
@@ -134,14 +113,14 @@ class SettingsScreen extends StatelessWidget {
 
               // --- Frosted Glass ---
               SizedBox(height: 32),
-              Center(child: Text('Visual', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+              Center(child: Text('Blur Heroes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
               SizedBox(height: 8),
               SwitchListTile(
                 title: Text('Frosted Glass Effect'),
-                subtitle: Text('Applies a frosted glass blur effect to the player panels on the counter screen'),
                 value: settings.frostedGlass,
                 onChanged: (value) => settings.updateFrostedGlass(value),
               ),
+              Text('Applies a frosted glass blur effect to the player panels on the counter screen.', style: TextStyle(fontSize: 13, color: Colors.grey)),
 
               // --- Custom Tokens ---
               SizedBox(height: 32),

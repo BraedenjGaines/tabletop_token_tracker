@@ -13,7 +13,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'TableTop\nToken Tracker',
-          style: TextStyle(color: Colors.black, fontSize: 32, fontWeight: FontWeight.w900),
+          style: TextStyle(color: Colors.black, fontSize: 32, fontWeight: FontWeight.w900, shadows: [Shadow(color: Colors.white70, blurRadius: 10), Shadow(color: Colors.white54, blurRadius: 20)]),
           textAlign: TextAlign.center,
         ),
         centerTitle: true,

@@ -46,10 +46,10 @@ class MyApp extends StatelessWidget {
               );
             },
             debugShowCheckedModeBanner: false,
-            themeMode: settings.themeMode,
+            themeMode: ThemeMode.dark,
             theme: ThemeData(
               fontFamily: settings.selectedFont,
-              brightness: Brightness.light,
+              brightness: Brightness.dark,
               colorSchemeSeed: Colors.blue,
             ),
             darkTheme: ThemeData(

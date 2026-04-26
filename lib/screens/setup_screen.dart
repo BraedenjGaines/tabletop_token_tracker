@@ -77,32 +77,32 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = context.read<GameSettingsProvider>();
+    final TextStyle headingStyle = TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black, shadows: [Shadow(color: Colors.white70, blurRadius: 10), Shadow(color: Colors.white54, blurRadius: 20)]);
+    final TextStyle labelStyle = TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black, shadows: [Shadow(color: Colors.white70, blurRadius: 10), Shadow(color: Colors.white54, blurRadius: 20)]);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       resizeToAvoidBottomInset: false,
       extendBodyBehindAppBar: true,
       extendBody: true,
       appBar: AppBar(
-        title: Text('Game Setup'),
-        centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
       body: Stack(
         children: [
           Positioned.fill(
             child: _backgroundPath != null
-              ? Image.asset(
-                  _backgroundPath!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (c, e, s) =>
-                      Container(color: Theme.of(context).scaffoldBackgroundColor),
-                )
-              : Container(color: Theme.of(context).scaffoldBackgroundColor),
+                ? Image.asset(
+                    _backgroundPath!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) => Container(color: Theme.of(context).scaffoldBackgroundColor),
+                  )
+                : Container(color: Theme.of(context).scaffoldBackgroundColor),
           ),
           Positioned.fill(
-            child: Container(color: Colors.black.withValues(alpha: 0.35)),
+            child: Container(color: Colors.black.withValues(alpha: 0.45)),
           ),
           Positioned.fill(
             child: GestureDetector(
@@ -111,22 +111,17 @@ class _SetupScreenState extends State<SetupScreen> {
               child: SingleChildScrollView(
                 child: Center(
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      16,
-                      MediaQuery.of(context).padding.top + kToolbarHeight + 16,
-                      16,
-                      24,
-                    ),
+                    padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 16, 16, 24),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('Starting Life',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        // --- Starting Life ---
+                        Text('Starting Life', style: headingStyle),
                         SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('Life: ', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            Text('Life: ', style: labelStyle),
                             SizedBox(width: 8),
                             SizedBox(
                               width: 80,
@@ -135,11 +130,11 @@ class _SetupScreenState extends State<SetupScreen> {
                                 keyboardType: TextInputType.number,
                                 textAlign: TextAlign.center,
                                 maxLength: 2,
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w800),
                                 decoration: InputDecoration(
                                   filled: true,
-                                  fillColor: Colors.grey[850],
-                                  border: OutlineInputBorder(),
+                                  fillColor: Colors.grey[400],
+                                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
                                   counterText: '',
                                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 ),
@@ -154,16 +149,16 @@ class _SetupScreenState extends State<SetupScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
                           children: [
                             for (int life in [20, 25, 30, 40])
                               ChoiceChip(
-                                label: Text('$life', style: TextStyle(color: Colors.white)),
+                                label: Text('$life', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w700)),
                                 selected: selectedLife == life,
-                                backgroundColor: Colors.grey[850],
-                                selectedColor: Colors.grey[700],
+                                backgroundColor: Colors.grey[400],
+                                selectedColor: Colors.grey[500],
                                 onSelected: (_) {
                                   setState(() { selectedLife = life; customLifeController.text = life.toString(); });
                                   settings.updateStartingLife(life);
@@ -171,9 +166,10 @@ class _SetupScreenState extends State<SetupScreen> {
                               ),
                           ],
                         ),
-                        SizedBox(height: 30),
-                        Text('Choose Heroes',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+
+                        // --- Choose Heroes ---
+                        SizedBox(height: 36),
+                        Text('Choose Heroes', style: headingStyle),
                         SizedBox(height: 12),
                         for (int p = 0; p < 2; p++)
                           Padding(
@@ -185,15 +181,15 @@ class _SetupScreenState extends State<SetupScreen> {
                                   width: 90,
                                   child: TextField(
                                     controller: p == 0 ? player1NameController : player2NameController,
-                                    style: TextStyle(fontSize: 14, color: Colors.white),
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black),
                                     maxLength: 50,
                                     decoration: InputDecoration(
                                       isDense: true,
                                       filled: true,
-                                      fillColor: Colors.grey[850],
+                                      fillColor: Colors.grey[400],
                                       counterText: '',
                                       contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.black)),
                                     ),
                                     onChanged: (value) {
                                       if (p == 0) {
@@ -234,11 +230,11 @@ class _SetupScreenState extends State<SetupScreen> {
                                       border: Border.all(color: Colors.grey),
                                     ),
                                     child: playerHeroes[p] != null
-                                      ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(7),
-                                          child: HeroImage(hero: playerHeroes[p]!, fit: BoxFit.cover),
-                                        )
-                                      : Center(child: Icon(Icons.add, size: 28, color: Colors.grey)),
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(7),
+                                            child: HeroImage(hero: playerHeroes[p]!, fit: BoxFit.cover),
+                                          )
+                                        : Center(child: Icon(Icons.add, size: 28, color: Colors.grey)),
                                   ),
                                 ),
                                 SizedBox(width: 8),
@@ -247,24 +243,27 @@ class _SetupScreenState extends State<SetupScreen> {
                                   child: Text(
                                     playerHeroes[p]?.displayName ?? 'Select Hero',
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      color: playerHeroes[p] != null ? Colors.white : Colors.grey[400],
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: playerHeroes[p] != null ? Colors.black : Colors.grey[600],
+                                      shadows: [Shadow(color: Colors.white54, blurRadius: 8)],
                                     ),
-                                    maxLines: 2,
+                                    maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        SizedBox(height: 30),
-                        Text('Match Timer',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+
+                        // --- Match Timer ---
+                        SizedBox(height: 36),
+                        Text('Match Timer', style: headingStyle),
                         SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text('Minutes: ', style: TextStyle(fontSize: 16, color: Colors.white)),
+                            Text('Minutes: ', style: labelStyle),
                             SizedBox(width: 8),
                             SizedBox(
                               width: 80,
@@ -273,11 +272,11 @@ class _SetupScreenState extends State<SetupScreen> {
                                 keyboardType: TextInputType.number,
                                 textAlign: TextAlign.center,
                                 maxLength: 2,
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w700),
                                 decoration: InputDecoration(
                                   filled: true,
-                                  fillColor: Colors.grey[850],
-                                  border: OutlineInputBorder(),
+                                  fillColor: Colors.grey[400],
+                                  border: OutlineInputBorder(borderSide: BorderSide(color: Colors.black)),
                                   counterText: '',
                                   contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 ),
@@ -292,16 +291,16 @@ class _SetupScreenState extends State<SetupScreen> {
                             ),
                           ],
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
                           children: [
                             for (int preset in [30, 35, 55, 60])
                               ChoiceChip(
-                                label: Text('$preset', style: TextStyle(color: Colors.white)),
+                                label: Text('$preset', style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w700)),
                                 selected: matchTimerMinutes == preset,
-                                backgroundColor: Colors.grey[850],
-                                selectedColor: Colors.grey[700],
+                                backgroundColor: Colors.grey[400],
+                                selectedColor: Colors.grey[500],
                                 onSelected: (_) {
                                   setState(() { matchTimerMinutes = preset; timerController.text = preset.toString(); });
                                   settings.updateMatchTimer(preset);
@@ -309,11 +308,15 @@ class _SetupScreenState extends State<SetupScreen> {
                               ),
                           ],
                         ),
-                        SizedBox(height: 30),
+
+                        // --- Start Game ---
+                        SizedBox(height: 48),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey[700],
-                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.grey[400],
+                            foregroundColor: Colors.black,
+                            padding: EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                            textStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily),
                           ),
                           onPressed: selectedLife >= 1
                               ? () {
