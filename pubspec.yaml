@@ -66,9 +66,9 @@ flutter:
     - family: CormorantGaramond
       fonts:
         - asset: assets/fonts/CormorantGaramond-Medium.ttf
-    - family: Boldonse
+    - family: Inter
       fonts:
-        - asset: assets/fonts/Boldonse-Regular.ttf
+        - asset: assets/fonts/Inter_28pt-ExtraBold.ttf
 
   assets:
     - assets/images/heroes/

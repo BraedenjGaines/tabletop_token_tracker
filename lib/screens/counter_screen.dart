@@ -480,7 +480,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                     opacity: opacity,
                     child: Text(
                       f.value > 0 ? '+${f.value}' : '${f.value}',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: Colors.black, height: 1.0),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, fontFamily: 'Inter', color: Colors.black, height: 1.0),
                     ),
                   ),
                 );
@@ -508,7 +508,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             opacity: opacity,
             child: Text(
               negative ? '$val' : '+$val',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: Colors.black, height: 1.0),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, fontFamily: 'Inter', color: Colors.black, height: 1.0),
             ),
           );
         },
@@ -937,7 +937,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               alignment: Alignment(labelAlignment.x, -0.1),
               child: Padding(
                 padding: labelPadding,
-                child: Text(label, style: TextStyle(fontSize: 36, fontWeight: FontWeight.w500, fontFamily: 'Boldonse', color: Colors.black.withValues(alpha: 0.85))),
+                child: Text(label, style: TextStyle(fontSize: 36, fontWeight: FontWeight.w500, fontFamily: 'Inter', color: Colors.black.withValues(alpha: 0.85))),
               ),
             ),
           ),
@@ -990,7 +990,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 alignment: Alignment.center,
                 children: [
                 // Health number — always centered, never displaced
-                Text('${playerHealth[index]}', style: TextStyle(fontSize: 76, fontWeight: FontWeight.w900, fontFamily: 'Boldonse', color: const Color.fromARGB(255, 14, 21, 22))),
+                Text('${playerHealth[index]}', style: TextStyle(fontSize: 106, fontWeight: FontWeight.w900, fontFamily: 'Inter', color: const Color.fromARGB(255, 14, 21, 22))),
                 // Totals display — negative above-left, positive above-right
                 Positioned(
                   top: -1,
@@ -1214,7 +1214,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           // Player 1 armor
           if (settings.armorTrackingEnabled)
             Positioned(
-              top: 80, left: 8,
+              top: 90, left: 8,
               child: RotatedBox(quarterTurns: 2, child: Column(mainAxisSize: MainAxisSize.min, children: [
                 ArmorSlotWidget(state: _playerArmor[0][0], slotIndex: 0, onIncrement: () { setState(() { _playerArmor[0][0].increment(); }); }, onDecrement: () { setState(() { _playerArmor[0][0].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[0][0].destroy(); }); }),
                 ArmorSlotWidget(state: _playerArmor[0][1], slotIndex: 1, onIncrement: () { setState(() { _playerArmor[0][1].increment(); }); }, onDecrement: () { setState(() { _playerArmor[0][1].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[0][1].destroy(); }); }),
@@ -1222,7 +1222,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             ),
           if (settings.armorTrackingEnabled)
             Positioned(
-              top: 80, right: 8,
+              top: 90, right: 8,
               child: RotatedBox(quarterTurns: 2, child: Column(mainAxisSize: MainAxisSize.min, children: [
                 ArmorSlotWidget(state: _playerArmor[0][2], slotIndex: 2, onIncrement: () { setState(() { _playerArmor[0][2].increment(); }); }, onDecrement: () { setState(() { _playerArmor[0][2].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[0][2].destroy(); }); }),
                 ArmorSlotWidget(state: _playerArmor[0][3], slotIndex: 3, onIncrement: () { setState(() { _playerArmor[0][3].increment(); }); }, onDecrement: () { setState(() { _playerArmor[0][3].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[0][3].destroy(); }); }),
@@ -1231,7 +1231,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           // Player 2 armor
           if (settings.armorTrackingEnabled)
             Positioned(
-              bottom: 80, left: 8,
+              bottom: 90, left: 8,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 ArmorSlotWidget(state: _playerArmor[1][0], slotIndex: 0, onIncrement: () { setState(() { _playerArmor[1][0].increment(); }); }, onDecrement: () { setState(() { _playerArmor[1][0].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[1][0].destroy(); }); }),
                 ArmorSlotWidget(state: _playerArmor[1][1], slotIndex: 1, onIncrement: () { setState(() { _playerArmor[1][1].increment(); }); }, onDecrement: () { setState(() { _playerArmor[1][1].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[1][1].destroy(); }); }),
@@ -1239,7 +1239,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             ),
           if (settings.armorTrackingEnabled)
             Positioned(
-              bottom: 80, right: 8,
+              bottom: 90, right: 8,
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 ArmorSlotWidget(state: _playerArmor[1][2], slotIndex: 2, onIncrement: () { setState(() { _playerArmor[1][2].increment(); }); }, onDecrement: () { setState(() { _playerArmor[1][2].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[1][2].destroy(); }); }),
                 ArmorSlotWidget(state: _playerArmor[1][3], slotIndex: 3, onIncrement: () { setState(() { _playerArmor[1][3].increment(); }); }, onDecrement: () { setState(() { _playerArmor[1][3].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[1][3].destroy(); }); }),

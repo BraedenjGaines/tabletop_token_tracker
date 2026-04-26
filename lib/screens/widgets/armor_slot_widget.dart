@@ -45,12 +45,6 @@ class ArmorSlotWidget extends StatelessWidget {
               ),
             ),
           ),
-          // Damage overlay
-          if (state.isDamaged)
-            Positioned.fill(child: Container(color: Colors.orange.withValues(alpha: 0.3))),
-          // Buff overlay
-          if (state.isBuffed)
-            Positioned.fill(child: Container(color: Colors.green.withValues(alpha: 0.3))),
           // Top half: + button
           Positioned(
             top: 0, left: 0, right: 0, height: 40,
@@ -84,26 +78,28 @@ class ArmorSlotWidget extends StatelessWidget {
             ),
           ),
           // Counter badge - damaged
-          if (state.isDamaged)
-            Positioned(
-              bottom: 4, right: 4,
+          if (state.isDamaged || state.isBuffed)
+            Positioned.fill(
               child: IgnorePointer(
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6)),
-                  child: Text('${state.counters}', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold, height: 1.0)),
-                ),
-              ),
-            ),
-          // Counter badge - buffed
-          if (state.isBuffed)
-            Positioned(
-              bottom: 4, right: 4,
-              child: IgnorePointer(
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(6)),
-                  child: Text('+${state.counters}', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold, height: 1.0)),
+                child: Center(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: state.isBuffed ? Colors.green : Colors.red,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      state.isBuffed
+                          ? '+${state.counters}'
+                          : '${state.counters}',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
