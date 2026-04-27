@@ -300,6 +300,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           ),
 
                         // --- Match Timer ---
+                        if (settings.clockEnabled) ...[
                         SizedBox(height: 36),
                         Text('Match Timer', style: headingStyle),
                         SizedBox(height: 12),
@@ -353,6 +354,7 @@ class _SetupScreenState extends State<SetupScreen> {
                         ),
 
                         // --- Start Game ---
+                        ],
                         SizedBox(height: 48),
                         GestureDetector(
                           onTap: selectedLife >= 1

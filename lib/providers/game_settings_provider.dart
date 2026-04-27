@@ -9,8 +9,8 @@ class GameSettingsProvider extends ChangeNotifier {
   ThemeMode themeMode = ThemeMode.system;
   int matchTimerMinutes = 50;
   int startingLife = 20;
-  int resourceTrackerSetting = 0; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
-  bool armorTrackingEnabled = true;
+  int resourceTrackerSetting = 3; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
+  bool armorTrackingEnabled = false;
   String player1Name = 'Player 1';
   String player2Name = 'Player 2';
   String? player1HeroId;

@@ -78,7 +78,6 @@ flutter:
     - assets/images/tokens/
     - assets/images/backgrounds/
     - assets/images/ui/
-    - assets/images/home_background.jpg
     - assets/images/armor_helmet.png
     - assets/images/armor_chest.png
     - assets/images/armor_gauntlet.png

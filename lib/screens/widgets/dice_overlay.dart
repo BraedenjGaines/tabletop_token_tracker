@@ -82,13 +82,13 @@ class _DiceOverlayState extends State<DiceOverlay> {
       children: [
         ElevatedButton(
           onPressed: () => widget.onChoice(_winner, true),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+          style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 60, 143, 63), padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
           child: Text('Go First', style: TextStyle(fontSize: 18, color: Colors.white)),
         ),
         SizedBox(width: 24),
         ElevatedButton(
           onPressed: () => widget.onChoice(_winner, false),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+          style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 52, 120, 175), padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
           child: Text('Go Second', style: TextStyle(fontSize: 18, color: Colors.white)),
         ),
       ],

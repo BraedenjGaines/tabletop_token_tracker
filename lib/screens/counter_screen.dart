@@ -294,70 +294,104 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   }
 
   Widget _buildFirstTurnChooser() {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.85),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Player 1 "Go First" — rotated 180°
-            RotatedBox(
-              quarterTurns: 2,
+  return Container(
+    color: Colors.black.withValues(alpha: 0.85),
+    child: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Player 1 "Go First" — rotated 180°
+          RotatedBox(
+            quarterTurns: 2,
+            child: SizedBox(
+              width: 300,
               child: ElevatedButton(
                 onPressed: () => _onFirstTurnDirectChoice(0),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  backgroundColor: const Color.fromARGB(255, 60, 143, 63),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 ),
                 child: Text.rich(
                   TextSpan(children: [
                     TextSpan(text: '${widget.playerNames[0]}\n'),
                     TextSpan(text: 'Goes First'),
                   ]),
-                  style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
+                  softWrap: true,
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-            SizedBox(height: 32),
-            // Dice button — center
-            ElevatedButton(
+          ),
+
+          SizedBox(height: 32),
+
+          // Dice button — center
+          SizedBox(
+            width: 220,
+            child: ElevatedButton(
               onPressed: _showDiceRoll,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[700],
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.casino, color: Colors.white, size: 28),
                   SizedBox(width: 12),
-                  Text('Roll Dice', style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold)),
+                  Flexible(
+                    child: Text(
+                      'Roll Dice',
+                      textAlign: TextAlign.center,
+                      softWrap: true,
+                      style: TextStyle(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
-            SizedBox(height: 32),
-            // Player 2 "Go First" — normal orientation
-            ElevatedButton(
+          ),
+
+          SizedBox(height: 32),
+
+          // Player 2 "Go First" — normal orientation
+          SizedBox(
+            width: 300,
+            child: ElevatedButton(
               onPressed: () => _onFirstTurnDirectChoice(1),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                backgroundColor: const Color.fromARGB(255, 60, 143, 63),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               child: Text.rich(
-                  TextSpan(children: [
-                    TextSpan(text: '${widget.playerNames[1]}\n'),
-                    TextSpan(text: 'Goes First'),
-                  ]),
-                  style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
+                TextSpan(children: [
+                  TextSpan(text: '${widget.playerNames[1]}\n'),
+                  TextSpan(text: 'Goes First'),
+                ]),
+                textAlign: TextAlign.center,
+                softWrap: true,
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   @override
   void dispose() {
@@ -708,11 +742,21 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 if (hasTriggering) Icon(Icons.flash_on, size: 12, color: Colors.amber),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 2),
-                  child: Text(_categoryNames[cat] ?? '', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  child: Stack(
+                    children: [
+                      Text(_categoryNames[cat] ?? '', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 1.5..color = Colors.black), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(_categoryNames[cat] ?? '', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
                 ),
                 Expanded(
                   child: Center(
-                    child: Text('$count', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                    child: Stack(
+                      children: [
+                        Text('$count', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
+                        Text('$count', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -879,13 +923,18 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                             }
                           }
                         }); },
-                        child: Center(child: Text('-', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'InterExtraBold'))),
+                        child: Center(child: Stack(children: [
+                          Text('-', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Inter', foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
+                          Text('-', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Inter')),
+                        ])),
                       ),
                     ),
                     // Center: count/health
-                    Text(
-                      '$displayValue',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'Inter'),
+                    Stack(
+                      children: [
+                        Text('$displayValue', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'Inter', foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
+                        Text('$displayValue', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'Inter')),
+                      ],
                     ),
                     // Right half: add
                     Expanded(
@@ -904,7 +953,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                             }
                           }
                         }); },
-                        child: Center(child: Text('+', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'InterExtraBold'))),
+                        child: Center(child: Stack(children: [
+                          Text('+', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Inter', foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
+                          Text('+', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Inter')),
+                        ])),
                       ),
                     ),
                   ],
@@ -1240,10 +1292,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         children: [
           // Pitch icon background
           Positioned.fill(
-            child: Image.asset(
-              pitchIconPath,
-              fit: BoxFit.cover,
+            child: Transform.scale(
+              scale: 1.3,
+              child: Image.asset(
+                pitchIconPath,
+                fit: BoxFit.contain,
               errorBuilder: (c, e, s) => Container(color: Colors.black.withValues(alpha: 0.5)),
+              ),
             ),
           ),
           // Dark overlay
@@ -1261,15 +1316,24 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             children: [
               GestureDetector(
                 onTap: () { if (_playerPitch[playerIndex] > 0) setState(() { _playerPitch[playerIndex]--; }); },
-                child: Icon(Icons.remove, size: iconSize, color: pitchColor),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text('${_playerPitch[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: pitchColor, height: 1.0)),
-              ),
-              GestureDetector(
-                onTap: () { if (_playerPitch[playerIndex] < 99) setState(() { _playerPitch[playerIndex]++; }); },
-                child: Icon(Icons.add, size: iconSize, color: pitchColor),
+                child: Stack(children: [
+                Icon(Icons.remove, size: iconSize, color: Colors.black),
+                Icon(Icons.remove, size: iconSize, color: pitchColor),
+              ]),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Stack(children: [
+                Text('${_playerPitch[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, height: 1.0, foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
+                Text('${_playerPitch[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: pitchColor, height: 1.0)),
+              ]),
+            ),
+            GestureDetector(
+              onTap: () { if (_playerPitch[playerIndex] < 99) setState(() { _playerPitch[playerIndex]++; }); },
+              child: Stack(children: [
+                Icon(Icons.add, size: iconSize, color: Colors.black),
+                Icon(Icons.add, size: iconSize, color: pitchColor),
+              ]),
               ),
             ],
           ),
@@ -1644,7 +1708,7 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
           scrollDirection: Axis.horizontal,
           child: Row(children: [
             for (var c in [TokenCategory.boonAura, TokenCategory.debuffAura, TokenCategory.item, TokenCategory.ally])
-              Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text(catNames[c] ?? '', style: TextStyle(fontSize: 11)), selected: selectedCategories.contains(c), showCheckmark: false, onSelected: (_) { setState(() { selectedCategories.contains(c) ? selectedCategories.remove(c) : selectedCategories.add(c); }); }, visualDensity: VisualDensity.compact)),
+              Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text(catNames[c] ?? '', style: TextStyle(fontSize: 14)), selected: selectedCategories.contains(c), showCheckmark: false, onSelected: (_) { setState(() { selectedCategories.contains(c) ? selectedCategories.remove(c) : selectedCategories.add(c); }); }, visualDensity: VisualDensity.compact)),
           ]),
         ),
         SizedBox(height: 6),
