@@ -269,6 +269,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     _loadTokenPreferences();
     _loadCustomHeroesCache();
     WakelockPlus.enable();
+    // Precache pitch icons
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      precacheImage(AssetImage('assets/images/ui/pitch_value_zero.png'), context);
+      precacheImage(AssetImage('assets/images/ui/pitch_value_one.png'), context);
+      precacheImage(AssetImage('assets/images/ui/pitch_value_two.png'), context);
+      precacheImage(AssetImage('assets/images/ui/pitch_value_three.png'), context);
+    });
     // First turn chooser shows automatically — no _handleFirstTurn needed
   }
 
@@ -1080,6 +1087,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Single player panel ---
   Widget _buildPlayerPanel(int index) {
+    final settings = context.read<GameSettingsProvider>();
+    final double screenWidth = MediaQuery.of(context).size.width;
     final bool isActive = _showTurnTracker && activePlayer == index;
 
     return Container(
@@ -1165,8 +1174,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           )),
           if (context.read<GameSettingsProvider>().addTokenButtonEnabled)
             Positioned(
-              left: index == 1 ? null : ((context.read<GameSettingsProvider>().resourceTrackerSetting == 0 || context.read<GameSettingsProvider>().resourceTrackerSetting == 2) ? 86 : 143),
-              right: index == 1 ? ((context.read<GameSettingsProvider>().resourceTrackerSetting == 0 || context.read<GameSettingsProvider>().resourceTrackerSetting == 2) ? 86 : 143) : null,
+              left: index == 1 ? null : ((settings.resourceTrackerSetting == 0 || settings.resourceTrackerSetting == 2) ? screenWidth * 0.22 : screenWidth * 0.365),
+              right: index == 1 ? ((settings.resourceTrackerSetting == 0 || settings.resourceTrackerSetting == 2) ? screenWidth * 0.22 : screenWidth * 0.365) : null,
               bottom: 0,
               top: 0,
               child: Align(
@@ -1174,8 +1183,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 child: GestureDetector(
                   onTap: () { setState(() { _playerOverlay[index] = -2; }); },
                   child: Container(
-                    width: 100,
-                    height: 50,
+                    width: screenWidth * 0.26,
+                    height: screenWidth * 0.13,
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
@@ -1212,15 +1221,15 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           // Pitch counter on player panel — rendered last so it's on top of tap halves
           if (context.read<GameSettingsProvider>().resourceTrackerSetting == 0 || context.read<GameSettingsProvider>().resourceTrackerSetting == 2)
             Positioned(
-              left: index == 1 ? (context.read<GameSettingsProvider>().addTokenButtonEnabled ? 86 : 145) : null,
-              right: index == 0 ? (context.read<GameSettingsProvider>().addTokenButtonEnabled ? 86 : 145) : null,
+              left: index == 1 ? (settings.addTokenButtonEnabled ? screenWidth * 0.22 : screenWidth * 0.365) : null,
+              right: index == 0 ? (settings.addTokenButtonEnabled ? screenWidth * 0.22 : screenWidth * 0.365) : null,
               bottom: 0,
               top: 0,
               child: IgnorePointer(
                 ignoring: false,
                 child: Align(
                   alignment: Alignment(0, 0.50),
-                  child: _buildPitchCounter(index),
+                  child: _buildPitchCounter(index, screenWidth: screenWidth),
                 ),
               ),
             ),
@@ -1254,7 +1263,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildPitchCounter(int playerIndex) {
+  Widget _buildPitchCounter(int playerIndex, {double? screenWidth}) {
     const double iconSize = 20.0;
     const double numSize = 22.0;
     final int pitchValue = _playerPitch[playerIndex];
@@ -1279,9 +1288,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
       pitchIconPath = 'assets/images/ui/pitch_value_zero.png';
     }
 
+    final double w = screenWidth ?? 390;
     return Container(
-      width: 100,
-      height: 50,
+      width: w * 0.26,
+      height: w * 0.13,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
