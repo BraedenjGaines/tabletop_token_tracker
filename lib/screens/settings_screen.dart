@@ -39,7 +39,7 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.armorTrackingEnabled,
                 onChanged: (value) => settings.updateArmorTracking(value),
               ),
-              Text('If you press and hold on an equipment slot, it will be destroyed.', style: descStyle),
+              Text('If you press and hold on an equipment slot, it will be destroyed. Tap it again to bring it back.', style: descStyle),
 
               // --- Add Token Button ---
               SizedBox(height: 32),
@@ -116,11 +116,11 @@ class SettingsScreen extends StatelessWidget {
               Center(child: Text('Blur Heroes', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
               SizedBox(height: 8),
               SwitchListTile(
-                title: Text('Frosted Glass Effect'),
+                title: Text('Blur hero art'),
                 value: settings.frostedGlass,
                 onChanged: (value) => settings.updateFrostedGlass(value),
               ),
-              Text('Applies a frosted glass blur effect to the player panels on the counter screen.', style: descStyle),
+              Text('Applies a blur effect to the player panels for better visibility.', style: descStyle),
               SizedBox(height: 32),
             ],
           ),

@@ -1264,92 +1264,147 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   }
 
   Widget _buildPitchCounter(int playerIndex, {double? screenWidth}) {
-    const double iconSize = 20.0;
-    const double numSize = 22.0;
-    final int pitchValue = _playerPitch[playerIndex];
-    Color pitchColor;
-    if (pitchValue >= 3) {
-      pitchColor = const Color.fromARGB(255, 60, 163, 247);
-    } else if (pitchValue == 2) {
-      pitchColor = const Color.fromARGB(255, 241, 229, 117);
-    } else if (pitchValue == 1) {
-      pitchColor = const Color.fromARGB(255, 190, 50, 40);
-    } else {
-      pitchColor = Colors.white;
-    }
-    String pitchIconPath;
-    if (pitchValue >= 3) {
-      pitchIconPath = 'assets/images/ui/pitch_value_three.png';
-    } else if (pitchValue == 2) {
-      pitchIconPath = 'assets/images/ui/pitch_value_two.png';
-    } else if (pitchValue == 1) {
-      pitchIconPath = 'assets/images/ui/pitch_value_one.png';
-    } else {
-      pitchIconPath = 'assets/images/ui/pitch_value_zero.png';
-    }
+  const double iconSize = 20.0;
+  const double numSize = 22.0;
+  final int pitchValue = _playerPitch[playerIndex];
+  Color pitchColor;
+  if (pitchValue >= 3) {
+    pitchColor = const Color.fromARGB(255, 60, 163, 247);
+  } else if (pitchValue == 2) {
+    pitchColor = const Color.fromARGB(255, 241, 229, 117);
+  } else if (pitchValue == 1) {
+    pitchColor = const Color.fromARGB(255, 190, 50, 40);
+  } else {
+    pitchColor = Colors.white;
+  }
+  String pitchIconPath;
+  if (pitchValue >= 3) {
+    pitchIconPath = 'assets/images/ui/pitch_value_three.png';
+  } else if (pitchValue == 2) {
+    pitchIconPath = 'assets/images/ui/pitch_value_two.png';
+  } else if (pitchValue == 1) {
+    pitchIconPath = 'assets/images/ui/pitch_value_one.png';
+  } else {
+    pitchIconPath = 'assets/images/ui/pitch_value_zero.png';
+  }
 
-    final double w = screenWidth ?? 390;
-    return Container(
-      width: w * 0.26,
-      height: w * 0.13,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Pitch icon background
-          Positioned.fill(
-            child: Transform.scale(
-              scale: 1.3,
-              child: Image.asset(
-                pitchIconPath,
-                fit: BoxFit.contain,
-              errorBuilder: (c, e, s) => Container(color: Colors.black.withValues(alpha: 0.5)),
-              ),
+  // Shadow offsets reproduce the prior 2-Icon/2-Text stack: black layer drawn
+  // with no offset behind the colored layer, also with no offset. The original
+  // had them perfectly stacked (no offset), so a single shadow at Offset.zero
+  // with a small blur reproduces the visible outline.
+  final List<Shadow> iconShadows = const [
+    Shadow(color: Colors.black, offset: Offset(0, 0), blurRadius: 0),
+  ];
+  final List<Shadow> numberShadows = [
+    Shadow(color: Colors.black, offset: const Offset(-1.5, 0), blurRadius: 0),
+    Shadow(color: Colors.black, offset: const Offset(1.5, 0), blurRadius: 0),
+    Shadow(color: Colors.black, offset: const Offset(0, -1.5), blurRadius: 0),
+    Shadow(color: Colors.black, offset: const Offset(0, 1.5), blurRadius: 0),
+  ];
+
+  final double w = screenWidth ?? 390;
+  return Container(
+    width: w * 0.26,
+    height: w * 0.13,
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        // Pitch icon background
+        Positioned.fill(
+          child: Transform.scale(
+            scale: 1.3,
+            child: Image.asset(
+              pitchIconPath,
+              fit: BoxFit.contain,
+              errorBuilder: (c, e, s) =>
+                  Container(color: Colors.black.withValues(alpha: 0.5)),
             ),
           ),
-          // Dark overlay
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
+        ),
+
+        // Dark overlay
+        Positioned.fill(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
-          // Controls
-          Row(
-            mainAxisSize: MainAxisSize.min,
+        ),
+
+        // Full-area tap layer: left half decrements, right half increments
+        Positioned.fill(
+          child: Row(
             children: [
-              GestureDetector(
-                onTap: () { if (_playerPitch[playerIndex] > 0) setState(() { _playerPitch[playerIndex]--; }); },
-                child: Stack(children: [
-                Icon(Icons.remove, size: iconSize, color: Colors.black),
-                Icon(Icons.remove, size: iconSize, color: pitchColor),
-              ]),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Stack(children: [
-                Text('${_playerPitch[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, height: 1.0, foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
-                Text('${_playerPitch[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: pitchColor, height: 1.0)),
-              ]),
-            ),
-            GestureDetector(
-              onTap: () { if (_playerPitch[playerIndex] < 99) setState(() { _playerPitch[playerIndex]++; }); },
-              child: Stack(children: [
-                Icon(Icons.add, size: iconSize, color: Colors.black),
-                Icon(Icons.add, size: iconSize, color: pitchColor),
-              ]),
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    if (_playerPitch[playerIndex] > 0) {
+                      setState(() => _playerPitch[playerIndex]--);
+                    }
+                  },
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Icon(
+                        Icons.remove,
+                        size: iconSize,
+                        color: pitchColor,
+                        shadows: iconShadows,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    if (_playerPitch[playerIndex] < 99) {
+                      setState(() => _playerPitch[playerIndex]++);
+                    }
+                  },
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Icon(
+                        Icons.add,
+                        size: iconSize,
+                        color: pitchColor,
+                        shadows: iconShadows,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+
+        // Center number — non-interactive, sits on top
+        IgnorePointer(
+          child: Text(
+            '${_playerPitch[playerIndex]}',
+            style: TextStyle(
+              fontSize: numSize,
+              fontWeight: FontWeight.bold,
+              color: pitchColor,
+              height: 1.0,
+              shadows: numberShadows,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildTurnTrackerControls() {
     return _buildTurnTrackerPanel();
