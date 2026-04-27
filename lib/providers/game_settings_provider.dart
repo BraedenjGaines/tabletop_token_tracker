@@ -6,7 +6,6 @@ class GameSettingsProvider extends ChangeNotifier {
   String selectedGame = 'fab';
   bool turnTrackerEnabled = true;
   bool frostedGlass = false;
-  ThemeMode themeMode = ThemeMode.system;
   int matchTimerMinutes = 50;
   int startingLife = 20;
   int resourceTrackerSetting = 3; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
@@ -28,11 +27,10 @@ class GameSettingsProvider extends ChangeNotifier {
     selectedGame = _prefs.getString('selectedGame') ?? 'fab';
     turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? true;
     frostedGlass = _prefs.getBool('frostedGlass') ?? false;
-    themeMode = ThemeMode.values[_prefs.getInt('themeMode') ?? 0];
     matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;
     startingLife = _prefs.getInt('startingLife') ?? 20;
-    resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 0;
-    armorTrackingEnabled = _prefs.getBool('armorTrackingEnabled') ?? true;
+    resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 3;
+    armorTrackingEnabled = _prefs.getBool('armorTrackingEnabled') ?? false;
     clockEnabled = _prefs.getBool('clockEnabled') ?? true;
     addTokenButtonEnabled = _prefs.getBool('addTokenButtonEnabled') ?? true;
     damageDisplayMode = _prefs.getInt('damageDisplayMode') ?? 0;
@@ -55,12 +53,6 @@ class GameSettingsProvider extends ChangeNotifier {
   void updateFrostedGlass(bool enabled) {
     frostedGlass = enabled;
     _prefs.setBool('frostedGlass', enabled);
-    notifyListeners();
-  }
-
-  void updateThemeMode(ThemeMode mode) {
-    themeMode = mode;
-    _prefs.setInt('themeMode', mode.index);
     notifyListeners();
   }
 

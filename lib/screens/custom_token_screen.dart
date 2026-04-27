@@ -147,14 +147,14 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                 ),
                 SizedBox(height: 12),
                 DropdownButtonFormField<HeroClass>(
-                  value: selectedClass,
+                  initialValue: selectedClass,
                   decoration: InputDecoration(labelText: 'Class', border: OutlineInputBorder()),
                   items: classNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                   onChanged: (val) { if (val != null) setDialogState(() { selectedClass = val; }); },
                 ),
                 SizedBox(height: 12),
                 DropdownButtonFormField<HeroTalent>(
-                  value: selectedTalent,
+                  initialValue: selectedTalent,
                   decoration: InputDecoration(labelText: 'Talent', border: OutlineInputBorder()),
                   items: talentNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                   onChanged: (val) { if (val != null) setDialogState(() { selectedTalent = val; }); },
@@ -262,14 +262,14 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                 ),
                 SizedBox(height: 12),
                 DropdownButtonFormField<TokenCategory>(
-                  value: selectedCategory,
+                  initialValue: selectedCategory,
                   decoration: InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
                   items: catNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                   onChanged: (val) { if (val != null) setDialogState(() { selectedCategory = val; }); },
                 ),
                 SizedBox(height: 12),
                 DropdownButtonFormField<DestroyTrigger?>(
-                  value: selectedTrigger,
+                  initialValue: selectedTrigger,
                   isExpanded: true,
                   decoration: InputDecoration(labelText: 'Destroy Trigger', border: OutlineInputBorder()),
                   items: triggerNames.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))).toList(),
@@ -397,7 +397,16 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                         subtitle: Text(heroClassName),
                         trailing: IconButton(
                           icon: Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () => _deleteCustomHero(index),
+                          onPressed: () {
+                            showDialog(context: context, builder: (ctx) => AlertDialog(
+                              title: Text('Delete Hero'),
+                              content: Text('Delete ${hero['name']}?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+                                TextButton(onPressed: () { Navigator.pop(ctx); _deleteCustomHero(index); }, child: Text('Delete', style: TextStyle(color: Colors.red))),
+                              ],
+                            ));
+                          },
                         ),
                       ),
                     );
@@ -424,7 +433,16 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                         subtitle: Text(catNames[token.category] ?? 'Unknown'),
                         trailing: IconButton(
                           icon: Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: () => _deleteCustomToken(index),
+                          onPressed: () {
+                            showDialog(context: context, builder: (ctx) => AlertDialog(
+                              title: Text('Delete Token'),
+                              content: Text('Delete ${token.name}?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+                                TextButton(onPressed: () { Navigator.pop(ctx); _deleteCustomToken(index); }, child: Text('Delete', style: TextStyle(color: Colors.red))),
+                              ],
+                            ));
+                          },
                         ),
                       ),
                     );

@@ -1079,12 +1079,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Single player panel ---
   Widget _buildPlayerPanel(int index) {
-    // ignore: avoid_print
-    print('Player $index - resourceTrackerSetting: ${context.read<GameSettingsProvider>().resourceTrackerSetting}');
     final bool isActive = _showTurnTracker && activePlayer == index;
 
     return Container(
-      decoration: isActive ? BoxDecoration(border: Border.all(color: Colors.blue, width: 3)) : null,
+      decoration: BoxDecoration(border: Border.all(color: isActive ? Colors.blue : Colors.black, width: 3)),
       child: Stack(
         children: [
           Positioned.fill(
@@ -1261,11 +1259,11 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     final int pitchValue = _playerPitch[playerIndex];
     Color pitchColor;
     if (pitchValue >= 3) {
-      pitchColor = Colors.blue;
+      pitchColor = const Color.fromARGB(255, 60, 163, 247);
     } else if (pitchValue == 2) {
-      pitchColor = Colors.yellow;
+      pitchColor = const Color.fromARGB(255, 241, 229, 117);
     } else if (pitchValue == 1) {
-      pitchColor = Colors.red;
+      pitchColor = const Color.fromARGB(255, 190, 50, 40);
     } else {
       pitchColor = Colors.white;
     }
@@ -1612,9 +1610,9 @@ class _TokenArtBackground extends StatelessWidget {
       builder: (context, constraints) {
         // Crop values for token card art region
         const double cropLeft = 0.10;
-        const double cropTop = 0.18;
+        const double cropTop = 0.14;
         const double cropRight = 0.90;
-        const double cropBottom = 0.48;
+        const double cropBottom = 0.56;
         const double cropW = cropRight - cropLeft;
         const double cropH = cropBottom - cropTop;
 
