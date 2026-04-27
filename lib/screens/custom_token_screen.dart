@@ -400,7 +400,7 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                           onPressed: () {
                             showDialog(context: context, builder: (ctx) => AlertDialog(
                               title: Text('Delete Hero'),
-                              content: Text('Delete ${hero['name']}?'),
+                              content: Text('Delete ${hero['name']}?', style: TextStyle(fontFamily: 'CormorantGaramond', fontSize: 16)),
                               actions: [
                                 TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
                                 TextButton(onPressed: () { Navigator.pop(ctx); _deleteCustomHero(index); }, child: Text('Delete', style: TextStyle(color: Colors.red))),
@@ -436,7 +436,7 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                           onPressed: () {
                             showDialog(context: context, builder: (ctx) => AlertDialog(
                               title: Text('Delete Token'),
-                              content: Text('Delete ${token.name}?'),
+                              content: Text('Delete ${token.name}?', style: TextStyle(fontFamily: 'CormorantGaramond', fontSize: 16)),
                               actions: [
                                 TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
                                 TextButton(onPressed: () { Navigator.pop(ctx); _deleteCustomToken(index); }, child: Text('Delete', style: TextStyle(color: Colors.red))),

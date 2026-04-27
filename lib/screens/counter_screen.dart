@@ -1528,10 +1528,14 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle),
             child: IconButton(icon: Icon(Icons.home, color: Colors.white), onPressed: () {
             if (gameLog.entries.isNotEmpty) {
-              showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Leave Game'), content: Text('A game is in progress. Are you sure you want to return to the home screen?'), actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
-                TextButton(onPressed: () { _timer?.cancel(); Navigator.pop(ctx); Navigator.popUntil(context, (r) => r.isFirst); }, child: Text('Leave', style: TextStyle(color: Colors.red))),
-              ]));
+              showDialog(context: context, builder: (ctx) => AlertDialog(
+                title: Text('Leave Game', style: TextStyle(fontWeight: FontWeight.bold)),
+                content: Text('A game is in progress. Are you sure you want to return to the home screen?', style: TextStyle(fontFamily: 'CormorantGaramond', fontSize: 16)),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+                  TextButton(onPressed: () { _timer?.cancel(); Navigator.pop(ctx); Navigator.popUntil(context, (r) => r.isFirst); }, child: Text('Leave', style: TextStyle(color: Colors.red))),
+                ],
+              ));
             } else { _timer?.cancel(); Navigator.popUntil(context, (r) => r.isFirst); }
           }),
           )),
@@ -1539,9 +1543,12 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           Positioned(top: 40, right: 16, child: Container(
             decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle),
             child: IconButton(icon: Icon(Icons.refresh, color: Colors.white), onPressed: () {
-              showDialog(context: context, builder: (ctx) => AlertDialog(title: Text('Reset Game'), content: Text('Reset all health, tokens, timer, and log?'), actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
-                TextButton(onPressed: () { setState(() {
+              showDialog(context: context, builder: (ctx) => AlertDialog(
+                title: Text('Reset Game', style: TextStyle(fontWeight: FontWeight.bold)),
+                content: Text('Reset all health, tokens, timer, and log?', style: TextStyle(fontFamily: 'CormorantGaramond', fontSize: 16)),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
+                  TextButton(onPressed: () { setState(() {
                   playerHealth = List.filled(2, widget.startingLife);
                   playerTokens = List.generate(2, (_) => []);
                   _playerOverlay = List.filled(2, -1);
