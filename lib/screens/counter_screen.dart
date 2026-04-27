@@ -1251,7 +1251,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   Widget _turnTrackerBackground() {
     return Transform.flip(
-      flipY: activePlayer == 1,
       child: Image.asset(
         'assets/images/ui/turn_tracker_overlay.png',
         width: MediaQuery.of(context).size.width * 2,
