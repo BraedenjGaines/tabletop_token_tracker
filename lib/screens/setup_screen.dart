@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'dart:io';
 import 'package:provider/provider.dart';
 import '../providers/game_settings_provider.dart';
 import '../data/hero_library.dart';
@@ -275,7 +276,10 @@ class _SetupScreenState extends State<SetupScreen> {
                                     child: playerHeroes[p] != null
                                         ? ClipRRect(
                                             borderRadius: BorderRadius.circular(7),
-                                            child: HeroImage(hero: playerHeroes[p]!, fit: BoxFit.cover),
+                                            child: playerHeroes[p]!.customImagePath != null
+                                                ? Image.file(File(playerHeroes[p]!.customImagePath!), fit: BoxFit.cover,
+                                                    errorBuilder: (c, e, s) => Container(color: Colors.grey[800], child: Center(child: Icon(Icons.person, size: 28, color: Colors.grey))))
+                                                : HeroImage(hero: playerHeroes[p]!, fit: BoxFit.cover),
                                           )
                                         : Center(child: Icon(Icons.add, size: 28, color: Colors.grey)),
                                   ),

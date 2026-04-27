@@ -887,7 +887,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                   children: [
                     // Token card art background — cropped to art region
                     Positioned.fill(
-                      child: _TokenArtBackground(tokenName: token.name),
+                      child: _TokenArtBackground(tokenName: token.name, customImagePath: token.customImagePath),
                     ),
                     // Dark overlay for readability
                     Positioned.fill(
@@ -1017,6 +1017,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 }
                 playerTokens[playerIndex].add(ActiveToken(
                   name: td.name, category: td.category, destroyTrigger: td.destroyTrigger,
+                  customImagePath: td.customImagePath,
                   health: td.category == TokenCategory.ally ? td.health : null,
                   maxHealth: td.category == TokenCategory.ally ? td.health : null,
                   turnPlayed: turnCount, playerPlayed: playerIndex, phasePlayed: currentPhase,
@@ -1164,8 +1165,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           )),
           if (context.read<GameSettingsProvider>().addTokenButtonEnabled)
             Positioned(
-              left: index == 1 ? null : ((context.read<GameSettingsProvider>().resourceTrackerSetting == 0 || context.read<GameSettingsProvider>().resourceTrackerSetting == 2) ? 86 : 145),
-              right: index == 1 ? ((context.read<GameSettingsProvider>().resourceTrackerSetting == 0 || context.read<GameSettingsProvider>().resourceTrackerSetting == 2) ? 86 : 145) : null,
+              left: index == 1 ? null : ((context.read<GameSettingsProvider>().resourceTrackerSetting == 0 || context.read<GameSettingsProvider>().resourceTrackerSetting == 2) ? 86 : 143),
+              right: index == 1 ? ((context.read<GameSettingsProvider>().resourceTrackerSetting == 0 || context.read<GameSettingsProvider>().resourceTrackerSetting == 2) ? 86 : 143) : null,
               bottom: 0,
               top: 0,
               child: Align(
@@ -1601,8 +1602,9 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
 class _TokenArtBackground extends StatelessWidget {
   final String tokenName;
+  final String? customImagePath;
 
-  const _TokenArtBackground({required this.tokenName});
+  const _TokenArtBackground({required this.tokenName, this.customImagePath});
 
   String _getTokenId(String name) {
     return name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\s]'), '').replaceAll(RegExp(r'\s+'), '_');
@@ -1610,6 +1612,14 @@ class _TokenArtBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (customImagePath != null) {
+      return Image.file(
+        File(customImagePath!),
+        fit: BoxFit.cover,
+        errorBuilder: (c, e, s) => const SizedBox.shrink(),
+      );
+    }
+
     final id = _getTokenId(tokenName);
     final path = 'assets/images/tokens/${id}_token.jpg';
 

@@ -4,6 +4,7 @@ class ActiveToken {
   final String name;
   final TokenCategory category;
   final DestroyTrigger? destroyTrigger;
+  final String? customImagePath;
   int count;
   int? health;
   int? maxHealth;
@@ -15,6 +16,7 @@ class ActiveToken {
     required this.name,
     required this.category,
     this.destroyTrigger,
+    this.customImagePath,
     this.count = 1,
     this.health,
     this.maxHealth,
