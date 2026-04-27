@@ -12,12 +12,14 @@ class TokenData {
   final TokenCategory category;
   final DestroyTrigger? destroyTrigger;
   final int? health;
+  final String? customImagePath;
 
   TokenData({
     required this.name,
     required this.category,
     this.destroyTrigger,
     this.health,
+    this.customImagePath,
   });
 
   String get id => name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\s]'), '').replaceAll(RegExp(r'\s+'), '_');

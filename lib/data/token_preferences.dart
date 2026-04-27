@@ -22,6 +22,7 @@ class TokenPreferences {
             ? DestroyTrigger.values[map['destroyTrigger']]
             : null,
         health: map['health'],
+        customImagePath: map['customImagePath'],
       );
     }).toList();
   }
@@ -39,6 +40,7 @@ class TokenPreferences {
         'category': token.category.index,
         'destroyTrigger': token.destroyTrigger?.index,
         'health': token.health,
+        'customImagePath': token.customImagePath,
       }));
       await prefs.setStringList('customTokensFull_$gameId', jsonList);
     }

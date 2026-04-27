@@ -315,6 +315,7 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                   name: nameController.text.trim(),
                   category: selectedCategory,
                   destroyTrigger: selectedTrigger,
+                  customImagePath: imagePath,
                 );
                 setState(() { customTokens.add(token); });
                 TokenPreferences.addCustomToken(widget.currentGame, token);
@@ -413,6 +414,12 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                     final token = customTokens[index];
                     return Card(
                       child: ListTile(
+                        leading: token.customImagePath != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: Image.file(File(token.customImagePath!), width: 48, height: 48, fit: BoxFit.cover),
+                              )
+                            : Container(width: 48, height: 48, color: Colors.grey[800], child: Icon(Icons.token, color: Colors.grey)),
                         title: Text(token.name),
                         subtitle: Text(catNames[token.category] ?? 'Unknown'),
                         trailing: IconButton(

@@ -39,6 +39,7 @@ class HeroData {
   final bool isYoung;
   final int intellect;
   final int health;
+  final String? customImagePath;
 
   const HeroData({
     required this.id,
@@ -49,6 +50,7 @@ class HeroData {
     required this.isYoung,
     required this.intellect,
     required this.health,
+    this.customImagePath,
   });
 
   String get displayName => title.isNotEmpty ? '$name, $title' : name;

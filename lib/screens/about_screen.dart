@@ -28,7 +28,7 @@ class AboutScreen extends StatelessWidget {
             ),
             SizedBox(height: 16),
             Text(
-              'This is my first app to ever create, so please feel free to send any feedback or suggestions you have!',
+              'Please feel free to send any feedback or suggestions you have!',
               style: TextStyle(fontSize: 16),
               textAlign: TextAlign.center,
             ),

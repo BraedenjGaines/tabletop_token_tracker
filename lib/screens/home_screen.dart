@@ -12,16 +12,16 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(
-          'Flesh And Blood\nLife Counter',
-          style: TextStyle(color: Colors.black, fontSize: 32, fontWeight: FontWeight.w900, shadows: [Shadow(color: Colors.white70, blurRadius: 10), Shadow(color: Colors.white54, blurRadius: 20)]),
-          textAlign: TextAlign.center,
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        toolbarHeight: 100,
-      ),
+  title: Image.asset(
+    'assets/images/ui/flesh-and-blood_logo.png',
+    height: 200, // control size so it fits nicely
+    fit: BoxFit.contain,
+  ),
+  centerTitle: true,
+  backgroundColor: Colors.transparent,
+  elevation: 0,
+  toolbarHeight: 200,
+),
       body: Stack(
         children: [
           Positioned.fill(

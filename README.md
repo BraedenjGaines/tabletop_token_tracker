@@ -7,18 +7,17 @@ A fan-made companion app for **Flesh and Blood TCG** built with Flutter. Designe
 ### Life Tracking
 - Large, readable life totals with tap-to-adjust controls
 - Customizable starting life values
+### Custom Heroes
+- Import photos and name a custom hero to add to the already populated library
 ### Token Management
 - Built-in library of official Flesh and Blood tokens — buffs, debuffs, items, and allies
 - Automatic token destruction based on game phase triggers
 - Create and save custom tokens with trigger support
-- Favorite tokens for quick access
 ### Turn & Phase Tracking
 - Visual phase bar (Start → Action → End) between players
 - Action Point and Pitch resource counters
 ### Armor Tracking
 - Equipment slot icons for Head, Chest, Arms, and Legs
-- Tap to add/remove defense counters
-- Long-press to mark equipment as destroyed
 ### Match Timer
 - Configurable countdown timer visible to both players
 ### Game Log
@@ -28,8 +27,8 @@ A fan-made companion app for **Flesh and Blood TCG** built with Flutter. Designe
 ### First Turn Selection
 - Choose who goes first or roll dice
 ### Customization
-- Toggle visibility of clock, token button, armor, and resource trackers
-- Floating or static combat text display modes
+- Toggle visibility of clock, tokens, armor, and resource trackers
+- dyanmic or static combat text display modes
 - Custom player names
 ## Screenshots
  

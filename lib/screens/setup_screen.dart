@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:provider/provider.dart';
 import '../providers/game_settings_provider.dart';
 import '../data/hero_library.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'counter_screen.dart';
 import 'hero_selector_screen.dart';
 import 'widgets/hero_image.dart';
@@ -25,11 +27,19 @@ class _SetupScreenState extends State<SetupScreen> {
 
   late List<HeroData?> playerHeroes;
   String? _backgroundPath;
+  List<HeroData> _customHeroes = [];
+
+  HeroData? _findHero(String? id) {
+    if (id == null) return null;
+    final allHeroes = [...heroLibrary, ..._customHeroes];
+    return allHeroes.cast<HeroData?>().firstWhere((h) => h?.id == id, orElse: () => null);
+  }
 
   @override
   void initState() {
     super.initState();
     final settings = context.read<GameSettingsProvider>();
+    _loadCustomHeroesSync();
     selectedLife = settings.startingLife;
     customLifeController.text = selectedLife.toString();
     matchTimerMinutes = settings.matchTimerMinutes;
@@ -38,8 +48,8 @@ class _SetupScreenState extends State<SetupScreen> {
     final random = Random();
     if (settings.player1HeroId != null) {
       playerHeroes = [
-        heroLibrary.cast<HeroData?>().firstWhere((h) => h?.id == settings.player1HeroId, orElse: () => null),
-        heroLibrary.cast<HeroData?>().firstWhere((h) => h?.id == settings.player2HeroId, orElse: () => null),
+        _findHero(settings.player1HeroId),
+        _findHero(settings.player2HeroId),
       ];
       player1NameController = TextEditingController(text: settings.player1Name);
       player2NameController = TextEditingController(text: settings.player2Name);
@@ -58,6 +68,39 @@ class _SetupScreenState extends State<SetupScreen> {
       player2NameController = TextEditingController(text: settings.player2Name);
     }
     _loadBackground();
+  }
+
+  void _loadCustomHeroesSync() {
+    // Load synchronously from shared prefs cache if available
+    SharedPreferences.getInstance().then((prefs) {
+      final jsonStr = prefs.getString('custom_heroes') ?? '[]';
+      final List<dynamic> list = jsonDecode(jsonStr);
+      final customs = list.map((map) {
+        return HeroData(
+          id: map['id'] ?? 'custom_unknown',
+          name: map['name'] ?? 'Unknown',
+          heroClass: HeroClass.values[map['heroClass'] ?? 0],
+          talents: [HeroTalent.values[map['talent'] ?? 0]],
+          isYoung: false,
+          intellect: 0,
+          health: 0,
+          customImagePath: map['imagePath'],
+        );
+      }).toList();
+      if (mounted) {
+        setState(() {
+          _customHeroes = customs;
+          // Re-resolve heroes if they were custom
+          final settings = context.read<GameSettingsProvider>();
+          if (settings.player1HeroId != null) {
+            final h1 = _findHero(settings.player1HeroId);
+            final h2 = _findHero(settings.player2HeroId);
+            if (h1 != null && playerHeroes[0] == null) playerHeroes[0] = h1;
+            if (h2 != null && playerHeroes[1] == null) playerHeroes[1] = h2;
+          }
+        });
+      }
+    });
   }
 
   void _loadBackground() async {
