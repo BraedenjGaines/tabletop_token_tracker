@@ -937,11 +937,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                       ),
                     ),
                     // Center: count/health
-                    Stack(
-                      children: [
-                        Text('$displayValue', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'Inter', foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
-                        Text('$displayValue', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'Inter')),
-                      ],
+                    IgnorePointer(
+                      child: Stack(
+                        children: [
+                          Text('$displayValue', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, fontFamily: 'Inter', foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
+                          Text('$displayValue', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, fontFamily: 'Inter')),
+                        ],
+                      ),
                     ),
                     // Right half: add
                     Expanded(
@@ -1131,8 +1133,9 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             child: Align(alignment: Alignment(0, -0.85), child: _buildTokenChips(index)),
           ),
           Positioned.fill(
-            child: Align(
-              alignment: Alignment(0, -0.1),
+            child: IgnorePointer(
+              child: Align(
+                alignment: Alignment(0, -0.1),
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
@@ -1169,9 +1172,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                   top: 0,
                   child: _buildFloatingNumbersSide(index, negative: false),
                 ),
-              ],
-            ),
-          )),
+              ] ,
+              ),
+            )),
+          ),
           if (context.read<GameSettingsProvider>().addTokenButtonEnabled)
             Positioned(
               left: index == 1 ? null : ((settings.resourceTrackerSetting == 0 || settings.resourceTrackerSetting == 2) ? screenWidth * 0.22 : screenWidth * 0.365),
