@@ -1,4 +1,4 @@
-name: tabletop_token_tracker
+name: Flesh and Blood Companion
 description: "A Flesh and Blood TCG companion app for tracking life, tokens, and resources."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -54,6 +54,24 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.6
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icons/fabcompanion_icon.png"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#1a1a2e"
+  image: assets/images/icons/fabcompanion_icon.png
+  android_12:
+    image: assets/images/icons/fabcompanion_icon.png
+    color: "#1a1a2e"
+  ios: true
+  android: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -78,6 +96,7 @@ flutter:
     - assets/images/tokens/
     - assets/images/backgrounds/
     - assets/images/ui/
+    - assets/images/icons/
     - assets/images/armor_helmet.png
     - assets/images/armor_chest.png
     - assets/images/armor_gauntlet.png
