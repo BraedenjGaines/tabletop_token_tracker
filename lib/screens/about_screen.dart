@@ -18,7 +18,7 @@ class _AboutScreenState extends State<AboutScreen> {
   String _statusMessage = '';
 
   static const Set<String> _productIds = {
-    'com.braedengaines.fabcompanion.tip1',
+    'com.braedengaines.fabcompanion.tip',
     'com.braedengaines.fabcompanion.tip2',
     'com.braedengaines.fabcompanion.tip3',
   };
