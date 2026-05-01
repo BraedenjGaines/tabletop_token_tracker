@@ -920,13 +920,15 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                               _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: -1, undoData: {'name': token.name});
                             }
                           } else {
-                            token.count--;
-                            _log(pi, LogEventType.tokenCountChange, token.name, value: -1, undoData: {'name': token.name, 'category': token.category.index});
-                            if (token.count <= 0) {
-                              final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': 0, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
+                            final int newCount = token.count - 1;
+                            if (newCount <= 0) {
+                              final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
                               playerTokens[pi].removeAt(ti);
                               _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
                               if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1;
+                            } else {
+                              token.count = newCount;
+                              _log(pi, LogEventType.tokenCountChange, token.name, value: -1, undoData: {'name': token.name, 'category': token.category.index});
                             }
                           }
                         }); },
