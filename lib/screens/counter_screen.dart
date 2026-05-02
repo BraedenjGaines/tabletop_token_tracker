@@ -4,13 +4,13 @@ import 'dart:io';
 import 'dart:math';
 import 'package:provider/provider.dart';
 import '../providers/game_settings_provider.dart';
+import '../state/match_state.dart';
 import 'settings_screen.dart';
 import 'log_screen.dart';
 import '../data/token_library.dart';
 import '../data/token_preferences.dart';
 import '../data/game_log.dart';
 import '../data/active_token.dart';
-import '../data/armor_slot_state.dart';
 import 'widgets/armor_slot_widget.dart';
 import 'widgets/timer_display.dart';
 import 'widgets/dice_overlay.dart';
@@ -56,19 +56,21 @@ class CounterScreen extends StatefulWidget {
 }
 
 class _CounterScreenState extends State<CounterScreen> with TickerProviderStateMixin {
-  late List<int> playerHealth;
-  late List<List<ActiveToken>> playerTokens;
+  late final MatchState matchState;
 
-  int activePlayer = 0;
-  int currentPhase = 0;
-  int turnCount = 0;
+  // Read-through alias to MatchState's tokens. Mutations must go through
+  // MatchState; raw access here is only for read paths and legacy mutations
+  // that haven't been migrated yet.
+  List<List<ActiveToken>> get playerTokens => List.generate(
+        2,
+        (i) => matchState.rawTokensOf(i),
+      );
 
-  // Fix #6: Dynamic resource lists sized to playerCount
-  late List<int> _playerPitch;
-  late List<int> _playerAP;
-
-  // Fix #5: ArmorSlotState instead of magic numbers
-  late List<List<ArmorSlotState>> _playerArmor;
+  // activePlayer, currentPhase, turnCount, _playerPitch, _playerAP all live on
+  // matchState now. Convenience getters preserve call-site readability.
+  int get activePlayer => matchState.activePlayer;
+  int get currentPhase => matchState.currentPhase;
+  int get turnCount => matchState.turnCount;
 
   final List<_FloatingNumber> _floatingNumbers = [];
   int _floatSpawnIndex = 0; // cycles 0,1,2 for staggered spawn points
@@ -86,7 +88,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   List<TokenData> customTokens = [];
   List<String> favoriteTokens = [];
 
-  final GameLog gameLog = GameLog();
+  GameLog get gameLog => matchState.gameLog;
 
   // Match timer
   late int _timerSecondsRemaining;
@@ -170,7 +172,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     final int minutes = _timerSecondsRemaining ~/ 60;
     final int seconds = _timerSecondsRemaining % 60;
     final String timerStamp = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    gameLog.addEntry(LogEntry(
+    matchState.addLogEntry(LogEntry(
       playerIndex: playerIndex, type: type, description: description,
       value: value, timestamp: timerStamp,
       turn: _showTurnTracker ? turnCount : null, phase: _currentPhaseName,
@@ -196,13 +198,12 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     setState(() {
       switch (entry.type) {
         case LogEventType.healthChange:
-          playerHealth[entry.playerIndex] -= entry.value;
+          matchState.reverseHealthDelta(entry.playerIndex, entry.value);
           break;
         case LogEventType.tokenAdded:
           if (entry.undoData != null) {
             final name = entry.undoData!['name'] as String;
-            final idx = playerTokens[entry.playerIndex].lastIndexWhere((t) => t.name == name);
-            if (idx >= 0) playerTokens[entry.playerIndex].removeAt(idx);
+            matchState.removeLastTokenByName(entry.playerIndex, name);
           }
           break;
         case LogEventType.tokenDestroyed:
@@ -219,52 +220,40 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               playerPlayed: d['playerPlayed'] ?? 0,
               phasePlayed: d['phasePlayed'] ?? 0,
             );
-            final insertIdx = d['index'] as int? ?? playerTokens[entry.playerIndex].length;
-            if (insertIdx <= playerTokens[entry.playerIndex].length) {
-              playerTokens[entry.playerIndex].insert(insertIdx, token);
-            } else {
-              playerTokens[entry.playerIndex].add(token);
-            }
+            final insertIdx = d['index'] as int? ?? matchState.tokensOf(entry.playerIndex).length;
+            matchState.insertToken(entry.playerIndex, insertIdx, token);
           }
           break;
         case LogEventType.tokenCountChange:
           if (entry.undoData != null) {
             final name = entry.undoData!['name'] as String;
-            for (var t in playerTokens[entry.playerIndex]) {
-              if (t.name == name) { t.count -= entry.value; break; }
-            }
+            matchState.mutateTokenCount(entry.playerIndex, name, -entry.value);
           }
           break;
         case LogEventType.allyHealthChange:
           if (entry.undoData != null) {
             final name = entry.undoData!['name'] as String;
-            for (var t in playerTokens[entry.playerIndex]) {
-              if (t.name == name) { t.health = (t.health ?? 0) - entry.value; break; }
-            }
+            matchState.mutateAllyHealth(entry.playerIndex, name, -entry.value);
           }
           break;
         default:
           break;
       }
-      gameLog.entries.removeAt(targetIndex);
+      matchState.removeLogEntryAt(targetIndex);
     });
   }
 
   @override
   void initState() {
     super.initState();
-    playerHealth = List.filled(2, widget.startingLife);
-    playerTokens = List.generate(2, (_) => []);
+    matchState = MatchState(
+      playerCount: 2,
+      startingLife: widget.startingLife,
+      phaseCount: fabPhases.length,
+      armorSlotsPerPlayer: 4,
+    );
     _playerOverlay = List.filled(2, -1);
     _timerSecondsRemaining = widget.matchTimerMinutes * 60;
-
-    // Fix #6: Size resource lists to actual player count
-    _playerPitch = List.filled(2, 0);
-    _playerAP = List.filled(2, 0);
-
-    _playerArmor = List.generate(2, (_) =>
-      List.generate(4, (_) => ArmorSlotState()),
-    );
 
     _loadTokenPreferences();
     _loadCustomHeroesCache();
@@ -280,17 +269,16 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   }
 
   void _onFirstTurnDirectChoice(int player) {
+    matchState.setInitialActivePlayer(player);
     setState(() {
-      activePlayer = player;
-      _playerAP[activePlayer] = 1;
       _showFirstTurnChooser = false;
     });
   }
 
   void _onDiceChoice(int winner, bool goFirst) {
+    final int chosen = goFirst ? winner : (winner == 0 ? 1 : 0);
+    matchState.setInitialActivePlayer(chosen);
     setState(() {
-      activePlayer = goFirst ? winner : (winner == 0 ? 1 : 0);
-      _playerAP[activePlayer] = 1;
       _showDiceOverlay = false;
       _showFirstTurnChooser = false;
     });
@@ -607,110 +595,33 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   }
 
   // --- Phase / turn ---
-  // Fix #8: Auto-destroy now fires on each phase advance, not just on turn wrap
   void _advancePhase() {
-    setState(() {
-      final int prevTurn = turnCount;
-      final int prevPhase = currentPhase;
-      final int prevActive = activePlayer;
-      if (currentPhase < fabPhases.length - 1) {
-        currentPhase++;
-      } else {
-        currentPhase = 0;
-        _playerPitch[activePlayer] = 0;
-        _playerAP[activePlayer] = 0;
-        activePlayer = activePlayer == 0 ? 1 : 0;
-        _playerAP[activePlayer] = 1;
-        turnCount++;
-      }
-      _checkAutoDestroy(prevTurn, prevPhase, prevActive);
-    });
-  }
-
-  void _retreatPhase() { setState(() { if (currentPhase > 0) { currentPhase--; } }); }
-
-  /// Called after a forward phase advance. The three "prev" args describe the
-  /// state we just left. Tokens activated in that previous state and no longer
-  /// activated now are destroyed. Never called from retreat operations.
-  void _checkAutoDestroy(int prevTurn, int prevPhase, int prevActive) {
-    if (!_showTurnTracker) return;
-    for (int pi = 0; pi < playerTokens.length; pi++) {
-      final toRemove = <ActiveToken>[];
-      for (final t in playerTokens[pi]) {
-        if (t.count <= 0 || _shouldAutoRemoveOnAdvance(t, pi, prevTurn, prevPhase, prevActive)) {
-          toRemove.add(t);
-        }
-      }
-      for (final t in toRemove) {
-        final idx = playerTokens[pi].indexOf(t);
-        playerTokens[pi].remove(t);
-        _log(pi, LogEventType.tokenDestroyed, '${t.name} destroyed', undoData: {
-          'name': t.name,
-          'category': t.category.index,
-          'destroyTrigger': t.destroyTrigger?.index,
-          'count': t.count,
-          'health': t.health,
-          'maxHealth': t.maxHealth,
-          'turnPlayed': t.turnPlayed,
-          'playerPlayed': t.playerPlayed,
-          'phasePlayed': t.phasePlayed,
-          'index': idx,
-        });
-      }
+    final result = matchState.advancePhase(autoDestroyEnabled: _showTurnTracker);
+    for (final r in result.destroyedTokens) {
+      _log(r.playerIndex, LogEventType.tokenDestroyed, '${r.token.name} destroyed', undoData: {
+        'name': r.token.name,
+        'category': r.token.category.index,
+        'destroyTrigger': r.token.destroyTrigger?.index,
+        'count': r.token.count,
+        'health': r.token.health,
+        'maxHealth': r.token.maxHealth,
+        'turnPlayed': r.token.turnPlayed,
+        'playerPlayed': r.token.playerPlayed,
+        'phasePlayed': r.token.phasePlayed,
+        'index': r.formerIndex,
+      });
     }
   }
 
-  /// Returns the phase index (0=Start, 1=Action, 2=End) at which this trigger
-  /// fires, given a token owned by player [pi] and a specific [activePlayerIdx].
-  /// Returns null if the trigger never fires for this owner under that active
-  /// player (e.g. startOfYourTurn while opponent is active).
-  int? _triggerPhaseFor(ActiveToken t, int pi, int activePlayerIdx) {
-    if (t.destroyTrigger == null) return null;
-    final bool isOwnerActive = pi == activePlayerIdx;
-    switch (t.destroyTrigger!) {
-      case DestroyTrigger.startOfYourTurn:
-        return isOwnerActive ? 0 : null;
-      case DestroyTrigger.startOfOpponentTurn:
-        return isOwnerActive ? null : 0;
-      case DestroyTrigger.beginningOfActionPhase:
-        return isOwnerActive ? 1 : null;
-      case DestroyTrigger.beginningOfEndPhase:
-        return isOwnerActive ? 2 : null;
-    }
-  }
-
-  /// True if (a, b) compares strictly later than (c, d) in (turn, phase) order.
-  bool _isLater(int aTurn, int aPhase, int bTurn, int bPhase) {
-    if (aTurn != bTurn) return aTurn > bTurn;
-    return aPhase > bPhase;
-  }
-
-  /// True iff the token is activated under the given (turn, phase, activePlayer).
-  bool _isActivatedAt(ActiveToken t, int pi, int turn, int phase, int activePlayerIdx) {
-    if (t.destroyTrigger == null) return false;
-    final int? triggerPhase = _triggerPhaseFor(t, pi, activePlayerIdx);
-    if (triggerPhase == null) return false;
-    if (phase != triggerPhase) return false;
-    return _isLater(turn, phase, t.turnPlayed, t.phasePlayed);
+  void _retreatPhase() {
+    matchState.retreatPhase();
   }
 
   /// A token is "activated" when current state matches its trigger phase
   /// AND that trigger phase comes strictly after the moment it was played.
   bool _isTokenTriggering(ActiveToken t, int pi) {
     if (!_showTurnTracker) return false;
-    return _isActivatedAt(t, pi, turnCount, currentPhase, activePlayer);
-  }
-
-  /// Determines whether a token should be destroyed given that we just advanced
-  /// from [prevTurn]/[prevPhase] under [prevActive] to the current state. A
-  /// token is destroyed if it was activated in the previous state but is no
-  /// longer activated now. Only called on forward advances, never on retreats.
-  bool _shouldAutoRemoveOnAdvance(ActiveToken t, int pi, int prevTurn, int prevPhase, int prevActive) {
-    if (t.destroyTrigger == null) return false;
-    final bool wasActivated = _isActivatedAt(t, pi, prevTurn, prevPhase, prevActive);
-    if (!wasActivated) return false;
-    final bool stillActivated = _isTokenTriggering(t, pi);
-    return !stillActivated;
+    return MatchState.isActivatedAt(t, pi, turnCount, currentPhase, activePlayer);
   }
 
   // --- Token category chips ---
@@ -825,11 +736,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Category management overlay ---
   Widget _buildCategoryOverlay(int playerIndex, TokenCategory cat) {
-    final tokens = <int>[];
-    for (int i = 0; i < playerTokens[playerIndex].length; i++) {
-      if (playerTokens[playerIndex][i].category == cat) tokens.add(i);
-    }
-
     return Container(
       color: Colors.black.withValues(alpha: 0.8),
       child: Center(
@@ -837,34 +743,44 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           margin: EdgeInsets.all(16),
           padding: EdgeInsets.all(12),
           decoration: BoxDecoration(color: Colors.grey[900], borderRadius: BorderRadius.circular(12)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Consumer<MatchState>(
+            builder: (context, state, _) {
+              final tokens = <int>[];
+              final list = state.rawTokensOf(playerIndex);
+              for (int i = 0; i < list.length; i++) {
+                if (list[i].category == cat) tokens.add(i);
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(_categoryNames[cat] ?? '', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                  GestureDetector(onTap: () { setState(() { _playerOverlay[playerIndex] = -1; }); }, child: Icon(Icons.close, color: Colors.white, size: 22)),
-                ],
-              ),
-              SizedBox(height: 8),
-              if (tokens.isEmpty)
-                Padding(padding: EdgeInsets.all(16), child: Text('No ${_categoryNames[cat]?.toLowerCase()} in play', style: TextStyle(color: Colors.grey)))
-              else
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: 250),
-                  child: SingleChildScrollView(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (int ti in tokens)
-                          _buildTokenTile(playerTokens[playerIndex][ti], playerIndex, ti, MediaQuery.of(context).size.width * 0.8),
-                      ],
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(_categoryNames[cat] ?? '', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      GestureDetector(onTap: () { setState(() { _playerOverlay[playerIndex] = -1; }); }, child: Icon(Icons.close, color: Colors.white, size: 22)),
+                    ],
                   ),
-                ),
-            ],
+                  SizedBox(height: 8),
+                  if (tokens.isEmpty)
+                    Padding(padding: EdgeInsets.all(16), child: Text('No ${_categoryNames[cat]?.toLowerCase()} in play', style: TextStyle(color: Colors.grey)))
+                  else
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: 250),
+                      child: SingleChildScrollView(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (int ti in tokens)
+                              _buildTokenTile(list[ti], playerIndex, ti, MediaQuery.of(context).size.width * 0.8),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -928,31 +844,35 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                     Expanded(
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: () { setState(() {
+                        onTap: () {
                           if (isAlly) {
                             final int newHealth = token.health! - 1;
                             if (newHealth <= 0) {
                               final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
-                              playerTokens[pi].removeAt(ti);
+                              matchState.removeTokenAt(pi, ti);
                               _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
-                              if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1;
+                              if (!matchState.hasTokensInCategory(pi, token.category)) {
+                                setState(() { _playerOverlay[pi] = -1; });
+                              }
                             } else {
-                              token.health = newHealth;
+                              matchState.setTokenHealth(pi, token, newHealth);
                               _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: -1, undoData: {'name': token.name});
                             }
                           } else {
                             final int newCount = token.count - 1;
                             if (newCount <= 0) {
                               final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
-                              playerTokens[pi].removeAt(ti);
+                              matchState.removeTokenAt(pi, ti);
                               _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
-                              if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1;
+                              if (!matchState.hasTokensInCategory(pi, token.category)) {
+                                setState(() { _playerOverlay[pi] = -1; });
+                              }
                             } else {
-                              token.count = newCount;
+                              matchState.setTokenCount(pi, token, newCount);
                               _log(pi, LogEventType.tokenCountChange, token.name, value: -1, undoData: {'name': token.name, 'category': token.category.index});
                             }
                           }
-                        }); },
+                        },
                         child: Center(child: Stack(children: [
                           Text('-', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Inter', foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
                           Text('-', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Inter')),
@@ -972,19 +892,19 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                     Expanded(
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: () { setState(() {
+                        onTap: () {
                           if (isAlly) {
                             if (token.health! < 99) {
-                              token.health = token.health! + 1;
+                              matchState.setTokenHealth(pi, token, token.health! + 1);
                               _log(pi, LogEventType.allyHealthChange, '${token.name} health', value: 1, undoData: {'name': token.name});
                             }
                           } else {
                             if (token.count < 99) {
-                              token.count++;
+                              matchState.setTokenCount(pi, token, token.count + 1);
                               _log(pi, LogEventType.tokenCountChange, token.name, value: 1, undoData: {'name': token.name, 'category': token.category.index});
                             }
                           }
-                        }); },
+                        },
                         child: Center(child: Stack(children: [
                           Text('+', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, fontFamily: 'Inter', foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 2..color = Colors.black)),
                           Text('+', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, fontFamily: 'Inter')),
@@ -1000,12 +920,14 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap: () { setState(() {
-                    final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'index': ti};
-                    playerTokens[pi].removeAt(ti);
+                  onTap: () {
+                    final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
+                    matchState.removeTokenAt(pi, ti);
                     _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
-                    if (playerTokens[pi].where((t) => t.category == token.category).isEmpty) _playerOverlay[pi] = -1;
-                  }); },
+                    if (!matchState.hasTokensInCategory(pi, token.category)) {
+                      setState(() { _playerOverlay[pi] = -1; });
+                    }
+                  },
                   child: Padding(
                     padding: EdgeInsets.only(top: 2, right: 2),
                     child: Icon(Icons.delete_outline, size: 18, color: Colors.white.withValues(alpha: 0.7)),
@@ -1036,27 +958,27 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             playerTokens: playerTokens[playerIndex],
             gameId: settings.selectedGame,
             onTokenAdded: (TokenData td) {
-              setState(() {
-                if (td.destroyTrigger != null && td.category != TokenCategory.ally) {
-                  final existingIdx = playerTokens[playerIndex].indexWhere((t) =>
-                    t.name == td.name && !_isTokenTriggering(t, playerIndex));
-                  if (existingIdx >= 0) {
-                    playerTokens[playerIndex][existingIdx].count++;
-                    _log(playerIndex, LogEventType.tokenCountChange, td.name, value: 1, undoData: {'name': td.name, 'category': td.category.index});
-                    _playerOverlay[playerIndex] = -1;
-                    return;
-                  }
+              if (td.destroyTrigger != null && td.category != TokenCategory.ally) {
+                final merged = matchState.incrementCountOfDormantToken(
+                  playerIndex,
+                  td.name,
+                  isTriggering: (t, pi) => _isTokenTriggering(t, pi),
+                );
+                if (merged) {
+                  _log(playerIndex, LogEventType.tokenCountChange, td.name, value: 1, undoData: {'name': td.name, 'category': td.category.index});
+                  setState(() { _playerOverlay[playerIndex] = -1; });
+                  return;
                 }
-                playerTokens[playerIndex].add(ActiveToken(
-                  name: td.name, category: td.category, destroyTrigger: td.destroyTrigger,
-                  customImagePath: td.customImagePath,
-                  health: td.category == TokenCategory.ally ? td.health : null,
-                  maxHealth: td.category == TokenCategory.ally ? td.health : null,
-                  turnPlayed: turnCount, playerPlayed: playerIndex, phasePlayed: currentPhase,
-                ));
-                _log(playerIndex, LogEventType.tokenAdded, '${td.name} added', undoData: {'name': td.name, 'category': td.category.index});
-                _playerOverlay[playerIndex] = -1;
-              });
+              }
+              matchState.addToken(playerIndex, ActiveToken(
+                name: td.name, category: td.category, destroyTrigger: td.destroyTrigger,
+                customImagePath: td.customImagePath,
+                health: td.category == TokenCategory.ally ? td.health : null,
+                maxHealth: td.category == TokenCategory.ally ? td.health : null,
+                turnPlayed: turnCount, playerPlayed: playerIndex, phasePlayed: currentPhase,
+              ));
+              _log(playerIndex, LogEventType.tokenAdded, '${td.name} added', undoData: {'name': td.name, 'category': td.category.index});
+              setState(() { _playerOverlay[playerIndex] = -1; });
             },
             onCustomTokenAdded: (TokenData td) { setState(() { customTokens.add(td); }); },
             onFavoriteToggled: (name, faves) { setState(() { favoriteTokens = faves; }); },
@@ -1084,10 +1006,9 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          final newHealth = (playerHealth[index] + delta).clamp(-99, 99);
-          if (newHealth == playerHealth[index]) return;
-          final actualDelta = newHealth - playerHealth[index];
-          setState(() { playerHealth[index] = newHealth; _log(index, LogEventType.healthChange, 'Health', value: actualDelta); });
+          final actualDelta = matchState.applyHealthDelta(index, delta);
+          if (actualDelta == 0) return;
+          _log(index, LogEventType.healthChange, 'Health', value: actualDelta);
           _spawnFloatingNumber(index, actualDelta);
         },
         child: ClipRect(child: BackdropFilter(filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
@@ -1114,10 +1035,15 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   Widget _buildPlayerPanel(int index) {
     final settings = context.read<GameSettingsProvider>();
     final double screenWidth = MediaQuery.of(context).size.width;
-    final bool isActive = _showTurnTracker && activePlayer == index;
 
-    return Container(
-      decoration: BoxDecoration(border: Border.all(color: isActive ? Colors.blue : Colors.black, width: 3)),
+    return Consumer<MatchState>(
+      builder: (context, state, child) {
+        final bool isActive = _showTurnTracker && state.activePlayer == index;
+        return Container(
+          decoration: BoxDecoration(border: Border.all(color: isActive ? Colors.blue : Colors.black, width: 3)),
+          child: child,
+        );
+      },
       child: Stack(
         children: [
           Positioned.fill(
@@ -1153,7 +1079,12 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             ]),
           ),
           Positioned.fill(
-            child: Align(alignment: Alignment(0, -0.85), child: _buildTokenChips(index)),
+            child: Align(
+              alignment: Alignment(0, -0.85),
+              child: Consumer<MatchState>(
+                builder: (context, _, _) => _buildTokenChips(index),
+              ),
+            ),
           ),
           Positioned.fill(
             child: IgnorePointer(
@@ -1164,13 +1095,18 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 alignment: Alignment.center,
                 children: [
                 // Health number — always centered, never displaced
-                Stack(
-                  children: [
-                    // Black outline
-                    Text('${playerHealth[index]}', style: TextStyle(fontSize: 106, fontWeight: FontWeight.w900, fontFamily: 'Inter', foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = Colors.black)),
-                    // Fill
-                    Text('${playerHealth[index]}', style: TextStyle(fontSize: 106, fontWeight: FontWeight.w900, fontFamily: 'Inter', color: const Color.fromARGB(255, 14, 21, 22))),
-                  ],
+                Consumer<MatchState>(
+                  builder: (context, state, _) {
+                    final h = state.healthOf(index);
+                    return Stack(
+                      children: [
+                        // Black outline
+                        Text('$h', style: TextStyle(fontSize: 106, fontWeight: FontWeight.w900, fontFamily: 'Inter', foreground: Paint()..style = PaintingStyle.stroke..strokeWidth = 4..color = Colors.black)),
+                        // Fill
+                        Text('$h', style: TextStyle(fontSize: 106, fontWeight: FontWeight.w900, fontFamily: 'Inter', color: const Color.fromARGB(255, 14, 21, 22))),
+                      ],
+                    );
+                  },
                 ),
                 // Totals display — negative above-left, positive above-right
                 Positioned(
@@ -1256,7 +1192,9 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 ignoring: false,
                 child: Align(
                   alignment: Alignment(0, 0.50),
-                  child: _buildPitchCounter(index, screenWidth: screenWidth),
+                  child: Consumer<MatchState>(
+                    builder: (context, _, _) => _buildPitchCounter(index, screenWidth: screenWidth),
+                  ),
                 ),
               ),
             ),
@@ -1292,7 +1230,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   Widget _buildPitchCounter(int playerIndex, {double? screenWidth}) {
   const double iconSize = 20.0;
   const double numSize = 22.0;
-  final int pitchValue = _playerPitch[playerIndex];
+  final int pitchValue = matchState.pitchOf(playerIndex);
   Color pitchColor;
   if (pitchValue >= 3) {
     pitchColor = const Color.fromARGB(255, 60, 163, 247);
@@ -1370,9 +1308,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
-                    if (_playerPitch[playerIndex] > 0) {
-                      setState(() => _playerPitch[playerIndex]--);
-                    }
+                    final v = matchState.pitchOf(playerIndex);
+                    if (v > 0) matchState.setPitch(playerIndex, v - 1);
                   },
                   child: Align(
                     alignment: Alignment.centerLeft,
@@ -1392,9 +1329,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
-                    if (_playerPitch[playerIndex] < 99) {
-                      setState(() => _playerPitch[playerIndex]++);
-                    }
+                    final v = matchState.pitchOf(playerIndex);
+                    if (v < 99) matchState.setPitch(playerIndex, v + 1);
                   },
                   child: Align(
                     alignment: Alignment.centerRight,
@@ -1417,7 +1353,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         // Center number — non-interactive, sits on top
         IgnorePointer(
           child: Text(
-            '${_playerPitch[playerIndex]}',
+            '${matchState.pitchOf(playerIndex)}',
             style: TextStyle(
               fontSize: numSize,
               fontWeight: FontWeight.bold,
@@ -1450,18 +1386,24 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         mainAxisSize: MainAxisSize.min,
         children: [
           GestureDetector(
-            onTap: () { if (_playerAP[playerIndex] > 0) setState(() { _playerAP[playerIndex]--; }); },
+            onTap: () {
+              final v = matchState.apOf(playerIndex);
+              if (v > 0) matchState.setAP(playerIndex, v - 1);
+            },
             child: Icon(Icons.remove, size: iconSize, color: Color(0xFFF5E8C4)),
           ),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Text('AP', style: TextStyle(fontSize: labelSize, color: Color(0xFFF5E8C4), height: 1.0, fontFamily: 'CormorantGaramond')),
-              Text('${_playerAP[playerIndex]}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: Color(0xFFF5E8C4), height: 1.0)),
+              Text('${matchState.apOf(playerIndex)}', style: TextStyle(fontSize: numSize, fontWeight: FontWeight.bold, color: Color(0xFFF5E8C4), height: 1.0)),
             ]),
           ),
           GestureDetector(
-            onTap: () { if (_playerAP[playerIndex] < 99) setState(() { _playerAP[playerIndex]++; }); },
+            onTap: () {
+              final v = matchState.apOf(playerIndex);
+              if (v < 99) matchState.setAP(playerIndex, v + 1);
+            },
             child: Icon(Icons.add, size: iconSize, color: Color(0xFFF5E8C4)),
           ),
         ],
@@ -1549,7 +1491,9 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             child: Column(
               children: [
                 Spacer(),
-                _buildTurnTrackerControls(),
+                Consumer<MatchState>(
+                  builder: (context, _, _) => _buildTurnTrackerControls(),
+                ),
                 Spacer(),
               ],
             ),
@@ -1568,11 +1512,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   Widget build(BuildContext context) {
     final settings = context.watch<GameSettingsProvider>();
 
-    return PopScope(
-      canPop: false,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(children: [
+    return ChangeNotifierProvider<MatchState>.value(
+      value: matchState,
+      child: PopScope(
+        canPop: false,
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(children: [
           _buildPlayerGrid(),
           // Timer top (rotated for P1)
           if (settings.clockEnabled) Positioned(top: 35, left: 0, right: 0, child: Center(child: RotatedBox(quarterTurns: 2, child: TimerDisplay(
@@ -1585,35 +1531,43 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           if (settings.armorTrackingEnabled)
             Positioned(
               top: 90, left: 8,
-              child: RotatedBox(quarterTurns: 2, child: Column(mainAxisSize: MainAxisSize.min, children: [
-                ArmorSlotWidget(state: _playerArmor[0][0], slotIndex: 0, onIncrement: () { setState(() { _playerArmor[0][0].increment(); }); }, onDecrement: () { setState(() { _playerArmor[0][0].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[0][0].destroy(); }); }),
-                ArmorSlotWidget(state: _playerArmor[0][1], slotIndex: 1, onIncrement: () { setState(() { _playerArmor[0][1].increment(); }); }, onDecrement: () { setState(() { _playerArmor[0][1].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[0][1].destroy(); }); }),
-              ])),
+              child: RotatedBox(quarterTurns: 2, child: Consumer<MatchState>(
+                builder: (context, state, _) => Column(mainAxisSize: MainAxisSize.min, children: [
+                  ArmorSlotWidget(state: state.armorSlot(0, 0), slotIndex: 0, onIncrement: () => matchState.incrementArmor(0, 0), onDecrement: () => matchState.decrementArmor(0, 0), onDestroy: () => matchState.destroyArmor(0, 0)),
+                  ArmorSlotWidget(state: state.armorSlot(0, 1), slotIndex: 1, onIncrement: () => matchState.incrementArmor(0, 1), onDecrement: () => matchState.decrementArmor(0, 1), onDestroy: () => matchState.destroyArmor(0, 1)),
+                ]),
+              )),
             ),
           if (settings.armorTrackingEnabled)
             Positioned(
               top: 90, right: 8,
-              child: RotatedBox(quarterTurns: 2, child: Column(mainAxisSize: MainAxisSize.min, children: [
-                ArmorSlotWidget(state: _playerArmor[0][2], slotIndex: 2, onIncrement: () { setState(() { _playerArmor[0][2].increment(); }); }, onDecrement: () { setState(() { _playerArmor[0][2].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[0][2].destroy(); }); }),
-                ArmorSlotWidget(state: _playerArmor[0][3], slotIndex: 3, onIncrement: () { setState(() { _playerArmor[0][3].increment(); }); }, onDecrement: () { setState(() { _playerArmor[0][3].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[0][3].destroy(); }); }),
-              ])),
+              child: RotatedBox(quarterTurns: 2, child: Consumer<MatchState>(
+                builder: (context, state, _) => Column(mainAxisSize: MainAxisSize.min, children: [
+                  ArmorSlotWidget(state: state.armorSlot(0, 2), slotIndex: 2, onIncrement: () => matchState.incrementArmor(0, 2), onDecrement: () => matchState.decrementArmor(0, 2), onDestroy: () => matchState.destroyArmor(0, 2)),
+                  ArmorSlotWidget(state: state.armorSlot(0, 3), slotIndex: 3, onIncrement: () => matchState.incrementArmor(0, 3), onDecrement: () => matchState.decrementArmor(0, 3), onDestroy: () => matchState.destroyArmor(0, 3)),
+                ]),
+              )),
             ),
           // Player 2 armor
           if (settings.armorTrackingEnabled)
             Positioned(
               bottom: 90, left: 8,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                ArmorSlotWidget(state: _playerArmor[1][0], slotIndex: 0, onIncrement: () { setState(() { _playerArmor[1][0].increment(); }); }, onDecrement: () { setState(() { _playerArmor[1][0].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[1][0].destroy(); }); }),
-                ArmorSlotWidget(state: _playerArmor[1][1], slotIndex: 1, onIncrement: () { setState(() { _playerArmor[1][1].increment(); }); }, onDecrement: () { setState(() { _playerArmor[1][1].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[1][1].destroy(); }); }),
-              ]),
+              child: Consumer<MatchState>(
+                builder: (context, state, _) => Column(mainAxisSize: MainAxisSize.min, children: [
+                  ArmorSlotWidget(state: state.armorSlot(1, 0), slotIndex: 0, onIncrement: () => matchState.incrementArmor(1, 0), onDecrement: () => matchState.decrementArmor(1, 0), onDestroy: () => matchState.destroyArmor(1, 0)),
+                  ArmorSlotWidget(state: state.armorSlot(1, 1), slotIndex: 1, onIncrement: () => matchState.incrementArmor(1, 1), onDecrement: () => matchState.decrementArmor(1, 1), onDestroy: () => matchState.destroyArmor(1, 1)),
+                ]),
+              ),
             ),
           if (settings.armorTrackingEnabled)
             Positioned(
               bottom: 90, right: 8,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                ArmorSlotWidget(state: _playerArmor[1][2], slotIndex: 2, onIncrement: () { setState(() { _playerArmor[1][2].increment(); }); }, onDecrement: () { setState(() { _playerArmor[1][2].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[1][2].destroy(); }); }),
-                ArmorSlotWidget(state: _playerArmor[1][3], slotIndex: 3, onIncrement: () { setState(() { _playerArmor[1][3].increment(); }); }, onDecrement: () { setState(() { _playerArmor[1][3].decrement(); }); }, onDestroy: () { setState(() { _playerArmor[1][3].destroy(); }); }),
-              ]),
+              child: Consumer<MatchState>(
+                builder: (context, state, _) => Column(mainAxisSize: MainAxisSize.min, children: [
+                  ArmorSlotWidget(state: state.armorSlot(1, 2), slotIndex: 2, onIncrement: () => matchState.incrementArmor(1, 2), onDecrement: () => matchState.decrementArmor(1, 2), onDestroy: () => matchState.destroyArmor(1, 2)),
+                  ArmorSlotWidget(state: state.armorSlot(1, 3), slotIndex: 3, onIncrement: () => matchState.incrementArmor(1, 3), onDecrement: () => matchState.decrementArmor(1, 3), onDestroy: () => matchState.destroyArmor(1, 3)),
+                ]),
+              ),
             ),
           // Home
           Positioned(top: 40, left: 16, child: Container(
@@ -1641,14 +1595,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 actions: [
                   TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
                   TextButton(onPressed: () { setState(() {
-                  playerHealth = List.filled(2, widget.startingLife);
-                  playerTokens = List.generate(2, (_) => []);
+                  matchState.resetAll();
                   _playerOverlay = List.filled(2, -1);
-                  activePlayer = 0; currentPhase = 0; turnCount = 0;
-                  _playerPitch = List.filled(2, 0);
-                  _playerAP = List.filled(2, 0);
-                  _playerArmor = List.generate(2, (_) => List.generate(4, (_) => ArmorSlotState()));
-                  gameLog.clear();
                   _showFirstTurnChooser = true;
                   _showDiceOverlay = false;
                 }); _resetTimer(); Navigator.pop(ctx); }, child: Text('Reset', style: TextStyle(color: Colors.red))),
@@ -1686,6 +1634,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             if (_playerOverlay[i] == -2)
               _buildPlayerOverlayPositioned(i, _buildAddTokenOverlay(i)),
         ]),
+        ),
       ),
     );
   }
