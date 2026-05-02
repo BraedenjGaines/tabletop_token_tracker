@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../data/custom_hero_repository.dart';
 import '../data/hero_library.dart';
 import 'widgets/hero_image.dart';
 
@@ -73,23 +72,8 @@ class _HeroSelectorScreenState extends State<HeroSelectorScreen> {
   }
 
   Future<void> _loadCustomHeroes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString('custom_heroes') ?? '[]';
-    final List<dynamic> list = jsonDecode(jsonStr);
-    setState(() {
-      customHeroesAsData = list.map((map) {
-        return HeroData(
-          id: map['id'] ?? 'custom_unknown',
-          name: map['name'] ?? 'Unknown',
-          heroClass: HeroClass.values[map['heroClass'] ?? 0],
-          talents: [HeroTalent.values[map['talent'] ?? 0]],
-          isYoung: false,
-          intellect: 0,
-          health: 0,
-          customImagePath: map['imagePath'],
-        );
-      }).toList();
-    });
+    final heroes = await CustomHeroRepository.loadAll();
+    if (mounted) setState(() { customHeroesAsData = heroes; });
   }
 
   String _heroSubtitle(HeroData hero) {

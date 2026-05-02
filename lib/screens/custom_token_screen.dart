@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../data/custom_hero_repository.dart';
 import '../data/token_library.dart';
 import '../data/token_preferences.dart';
 import '../data/hero_library.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 class CustomTokenScreen extends StatefulWidget {
   final String currentGame;
@@ -20,7 +19,7 @@ class CustomTokenScreen extends StatefulWidget {
 class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<TokenData> customTokens = [];
-  List<Map<String, dynamic>> customHeroes = [];
+  List<HeroData> customHeroes = [];
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -38,23 +37,11 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
 
   Future<void> _loadData() async {
     final tokens = await TokenPreferences.getCustomTokens(widget.currentGame);
-    final heroes = await _loadCustomHeroes();
+    final heroes = await CustomHeroRepository.loadAll();
     setState(() {
       customTokens = tokens;
       customHeroes = heroes;
     });
-  }
-
-  Future<List<Map<String, dynamic>>> _loadCustomHeroes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString('custom_heroes') ?? '[]';
-    final List<dynamic> list = jsonDecode(jsonStr);
-    return list.cast<Map<String, dynamic>>();
-  }
-
-  Future<void> _saveCustomHeroes() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('custom_heroes', jsonEncode(customHeroes));
   }
 
   Future<String?> _pickAndSaveImage(String prefix) async {
@@ -193,19 +180,24 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 if (nameController.text.trim().isEmpty) return;
                 final id = 'custom_${nameController.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9\s]'), '').replaceAll(RegExp(r'\s+'), '_')}_${DateTime.now().millisecondsSinceEpoch}';
-                final heroMap = {
-                  'id': id,
-                  'name': nameController.text.trim(),
-                  'heroClass': selectedClass.index,
-                  'talent': selectedTalent.index,
-                  'imagePath': imagePath,
-                };
-                setState(() { customHeroes.add(heroMap); });
-                _saveCustomHeroes();
-                Navigator.pop(ctx);
+                final hero = HeroData(
+                  id: id,
+                  name: nameController.text.trim(),
+                  heroClass: selectedClass,
+                  talents: [selectedTalent],
+                  isYoung: false,
+                  intellect: 0,
+                  health: 0,
+                  customImagePath: imagePath,
+                );
+                final navigator = Navigator.of(ctx);
+                final updated = await CustomHeroRepository.add(hero);
+                if (!mounted) return;
+                setState(() { customHeroes = updated; });
+                navigator.pop();
               },
               child: Text('Add'),
             ),
@@ -215,14 +207,14 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
     );
   }
 
-  void _deleteCustomHero(int index) {
+  Future<void> _deleteCustomHero(int index) async {
     final hero = customHeroes[index];
-    if (hero['imagePath'] != null) {
-      final file = File(hero['imagePath']);
+    if (hero.customImagePath != null) {
+      final file = File(hero.customImagePath!);
       if (file.existsSync()) file.deleteSync();
     }
-    setState(() { customHeroes.removeAt(index); });
-    _saveCustomHeroes();
+    final updated = await CustomHeroRepository.removeById(hero.id);
+    if (mounted) setState(() { customHeroes = updated; });
   }
 
   // --- Custom Token ---
@@ -384,23 +376,23 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                   itemCount: customHeroes.length,
                   itemBuilder: (context, index) {
                     final hero = customHeroes[index];
-                    final heroClassName = classNames[HeroClass.values[hero['heroClass'] ?? 0]] ?? 'Unknown';
+                    final heroClassName = classNames[hero.heroClass] ?? 'Unknown';
                     return Card(
                       child: ListTile(
-                        leading: hero['imagePath'] != null
+                        leading: hero.customImagePath != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
-                                child: Image.file(File(hero['imagePath']), width: 48, height: 48, fit: BoxFit.cover),
+                                child: Image.file(File(hero.customImagePath!), width: 48, height: 48, fit: BoxFit.cover),
                               )
                             : Container(width: 48, height: 48, color: Colors.grey[800], child: Icon(Icons.person, color: Colors.grey)),
-                        title: Text(hero['name'] ?? 'Unknown'),
+                        title: Text(hero.name),
                         subtitle: Text(heroClassName),
                         trailing: IconButton(
                           icon: Icon(Icons.delete_outline, color: Colors.red),
                           onPressed: () {
                             showDialog(context: context, builder: (ctx) => AlertDialog(
                               title: Text('Delete Hero'),
-                              content: Text('Delete ${hero['name']}?', style: TextStyle(fontFamily: 'CormorantGaramond', fontSize: 16)),
+                              content: Text('Delete ${hero.name}?', style: TextStyle(fontFamily: 'CormorantGaramond', fontSize: 16)),
                               actions: [
                                 TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
                                 TextButton(onPressed: () { Navigator.pop(ctx); _deleteCustomHero(index); }, child: Text('Delete', style: TextStyle(color: Colors.red))),

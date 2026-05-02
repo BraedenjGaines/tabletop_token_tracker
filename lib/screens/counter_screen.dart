@@ -16,8 +16,7 @@ import 'widgets/timer_display.dart';
 import 'widgets/dice_overlay.dart';
 import 'dart:ui';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import '../data/custom_hero_repository.dart';
 import '../data/hero_library.dart';
 import 'widgets/hero_image.dart';
 
@@ -146,26 +145,9 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   }
   List<HeroData>? _customHeroesCache;
 
-  void _loadCustomHeroesCache() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString('custom_heroes') ?? '[]';
-    final List<dynamic> list = jsonDecode(jsonStr);
-    if (mounted) {
-      setState(() {
-        _customHeroesCache = list.map((map) {
-          return HeroData(
-            id: map['id'] ?? 'custom_unknown',
-            name: map['name'] ?? 'Unknown',
-            heroClass: HeroClass.values[map['heroClass'] ?? 0],
-            talents: [HeroTalent.values[map['talent'] ?? 0]],
-            isYoung: false,
-            intellect: 0,
-            health: 0,
-            customImagePath: map['imagePath'],
-          );
-        }).toList();
-      });
-    }
+  Future<void> _loadCustomHeroesCache() async {
+    final heroes = await CustomHeroRepository.loadAll();
+    if (mounted) setState(() { _customHeroesCache = heroes; });
   }
 
   void _log(int playerIndex, LogEventType type, String description, {int value = 0, Map<String, dynamic>? undoData}) {
