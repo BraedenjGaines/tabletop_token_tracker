@@ -36,17 +36,26 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildCustomButton('Play', () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const SetupScreen()));
-                }),
+                _MenuButton(
+                  text: 'Play',
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SetupScreen()));
+                  },
+                ),
                 SizedBox(height: 20),
-                _buildCustomButton('Library', () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomTokenScreen()));
-                }),
+                _MenuButton(
+                  text: 'Library',
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomTokenScreen()));
+                  },
+                ),
                 SizedBox(height: 20),
-                _buildCustomButton('Settings', () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
-                }),
+                _MenuButton(
+                  text: 'Settings',
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                  },
+                ),
               ],
             ),
           ),
@@ -69,32 +78,40 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-Widget _buildCustomButton(String text, VoidCallback onPressed) {
-  return GestureDetector(
-    onTap: onPressed,
-    child: SizedBox(
-      width: 300,
-      height: 55,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Image.asset(
-            AppAssets.playButton,
-            width: 300,
-            height: 45,
-            fit: BoxFit.fill,
-          ),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+class _MenuButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+
+  const _MenuButton({required this.text, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: SizedBox(
+        width: 300,
+        height: 55,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Image.asset(
+              AppAssets.playButton,
+              width: 300,
+              height: 45,
+              fit: BoxFit.fill,
             ),
-          ),
-        ],
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

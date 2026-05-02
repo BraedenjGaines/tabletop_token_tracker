@@ -75,9 +75,8 @@ class _DiceOverlayState extends State<DiceOverlay> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    Widget choiceButtons = Row(
+  Widget _buildChoiceButtons() {
+    return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         ElevatedButton(
@@ -93,7 +92,10 @@ class _DiceOverlayState extends State<DiceOverlay> {
         ),
       ],
     );
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Container(
       color: Colors.black.withValues(alpha: 0.85),
       child: Column(children: [
@@ -104,7 +106,7 @@ class _DiceOverlayState extends State<DiceOverlay> {
           SizedBox(height: 8),
           Text('Total: ${_p1Dice[0] + _p1Dice[1]}', style: TextStyle(color: Colors.white70, fontSize: 18)),
           if (_finished && !_rolling) ...[SizedBox(height: 8), Text(_winner == 0 ? 'WINNER!' : '', style: TextStyle(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold))],
-          if (_showChoice && _winner == 0) ...[SizedBox(height: 16), choiceButtons],
+          if (_showChoice && _winner == 0) ...[SizedBox(height: 16), _buildChoiceButtons()],
         ])))),
         Expanded(child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
           Text(widget.playerNames[1], style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
@@ -113,7 +115,7 @@ class _DiceOverlayState extends State<DiceOverlay> {
           SizedBox(height: 8),
           Text('Total: ${_p2Dice[0] + _p2Dice[1]}', style: TextStyle(color: Colors.white70, fontSize: 18)),
           if (_finished && !_rolling) ...[SizedBox(height: 8), Text(_winner == 1 ? 'WINNER!' : '', style: TextStyle(color: Colors.amber, fontSize: 22, fontWeight: FontWeight.bold))],
-          if (_showChoice && _winner == 1) ...[SizedBox(height: 16), choiceButtons],
+          if (_showChoice && _winner == 1) ...[SizedBox(height: 16), _buildChoiceButtons()],
         ]))),
       ]),
     );
