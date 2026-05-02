@@ -26,8 +26,7 @@ class TokenData {
   String get cardArtPath => 'assets/images/tokens/${id}_token.jpg';
 }
 
-final Map<String, List<TokenData>> tokenLibrary = {
-  'fab': [
+final List<TokenData> tokenLibrary = [
     // Allies
     TokenData(name: 'Aether Ashwing', category: TokenCategory.ally, health: 1),
     TokenData(name: 'Blasmophet, the Soul Harvester', category: TokenCategory.ally, health: 6),
@@ -75,6 +74,4 @@ final Map<String, List<TokenData>> tokenLibrary = {
     TokenData(name: 'Frostbite', category: TokenCategory.debuffAura, destroyTrigger: DestroyTrigger.beginningOfEndPhase),
     TokenData(name: 'Inertia', category: TokenCategory.debuffAura, destroyTrigger: DestroyTrigger.beginningOfEndPhase),
     TokenData(name: 'Marked', category: TokenCategory.debuffAura),
-  ],
-  'mtg': [],
-};
+];

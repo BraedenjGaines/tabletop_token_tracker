@@ -61,7 +61,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   // MatchState; raw access here is only for read paths and legacy mutations
   // that haven't been migrated yet.
   List<List<ActiveToken>> get playerTokens => List.generate(
-        2,
+        MatchState.playerCount,
         (i) => matchState.rawTokensOf(i),
       );
 
@@ -121,8 +121,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   };
 
   bool get _showTurnTracker {
-    final settings = context.read<GameSettingsProvider>();
-    return settings.turnTrackerEnabled && settings.selectedGame == 'fab';
+    return context.read<GameSettingsProvider>().turnTrackerEnabled;
   }
 
   bool get _showMiddleBar {
@@ -229,7 +228,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   void initState() {
     super.initState();
     matchState = MatchState(
-      playerCount: 2,
       startingLife: widget.startingLife,
       phaseCount: fabPhases.length,
       armorSlotsPerPlayer: 4,
@@ -566,10 +564,9 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Token prefs ---
   Future<void> _loadTokenPreferences() async {
-    final settings = context.read<GameSettingsProvider>();
-    final customs = await TokenPreferences.getCustomTokens(settings.selectedGame);
-    final favs = await TokenPreferences.getFavorites(settings.selectedGame);
-    setState(() { customTokens = customs; favoriteTokens = favs; });
+    final customs = await TokenPreferences.getCustomTokens();
+    final favs = await TokenPreferences.getFavorites();
+    if (mounted) setState(() { customTokens = customs; favoriteTokens = favs; });
   }
 
   int? _getQuarterTurns(int index) {
@@ -923,8 +920,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Add token picker overlay ---
   Widget _buildAddTokenOverlay(int playerIndex) {
-    final settings = context.read<GameSettingsProvider>();
-    final List<TokenData> allTokens = [...(tokenLibrary[settings.selectedGame] ?? []), ...customTokens];
+    final List<TokenData> allTokens = [...tokenLibrary, ...customTokens];
 
     return Container(
       color: Colors.black.withValues(alpha: 0.8),
@@ -938,7 +934,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             allTokens: allTokens,
             favoriteTokens: favoriteTokens,
             playerTokens: playerTokens[playerIndex],
-            gameId: settings.selectedGame,
             onTokenAdded: (TokenData td) {
               if (td.destroyTrigger != null && td.category != TokenCategory.ally) {
                 final merged = matchState.incrementCountOfDormantToken(
@@ -1697,13 +1692,12 @@ class _InlineTokenPicker extends StatefulWidget {
   final List<TokenData> allTokens;
   final List<String> favoriteTokens;
   final List<ActiveToken> playerTokens;
-  final String gameId;
   final Function(TokenData) onTokenAdded;
   final Function(TokenData) onCustomTokenAdded;
   final Function(String, List<String>) onFavoriteToggled;
   final VoidCallback onClose;
 
-  const _InlineTokenPicker({required this.allTokens, required this.favoriteTokens, required this.playerTokens, required this.gameId, required this.onTokenAdded, required this.onCustomTokenAdded, required this.onFavoriteToggled, required this.onClose});
+  const _InlineTokenPicker({required this.allTokens, required this.favoriteTokens, required this.playerTokens, required this.onTokenAdded, required this.onCustomTokenAdded, required this.onFavoriteToggled, required this.onClose});
 
   @override
   State<_InlineTokenPicker> createState() => _InlineTokenPickerState();
@@ -1764,7 +1758,8 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
                       dense: true, visualDensity: VisualDensity.compact,
                       leading: GestureDetector(
                         onTap: () async {
-                          await TokenPreferences.toggleFavorite(widget.gameId, td.name);
+                          await TokenPreferences.toggleFavorite(td.name);
+                          if (!mounted) return;
                           setState(() { fav ? currentFavorites.remove(td.name) : currentFavorites.add(td.name); });
                           widget.onFavoriteToggled(td.name, List.from(currentFavorites));
                         },

@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class GameSettingsProvider extends ChangeNotifier {
   String selectedFont = 'Cinzel';
-  String selectedGame = 'fab';
   bool turnTrackerEnabled = true;
   bool frostedGlass = false;
   int matchTimerMinutes = 50;
@@ -24,7 +23,6 @@ class GameSettingsProvider extends ChangeNotifier {
   Future<void> loadPreferences() async {
     _prefs = await SharedPreferences.getInstance();
     selectedFont = _prefs.getString('selectedFont') ?? 'Cinzel';
-    selectedGame = _prefs.getString('selectedGame') ?? 'fab';
     turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? true;
     frostedGlass = _prefs.getBool('frostedGlass') ?? false;
     matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;

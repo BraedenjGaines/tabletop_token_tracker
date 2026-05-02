@@ -40,7 +40,7 @@ class HomeScreen extends StatelessWidget {
                 }),
                 SizedBox(height: 20),
                 _buildCustomButton('Library', () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomTokenScreen(currentGame: 'fab')));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomTokenScreen()));
                 }),
                 SizedBox(height: 20),
                 _buildCustomButton('Settings', () {

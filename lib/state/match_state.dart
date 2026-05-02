@@ -37,8 +37,12 @@ class PhaseAdvanceResult {
 /// Owns mutable game state and exposes mutators that emit change notifications.
 /// Knows nothing about widgets, contexts, or rendering.
 class MatchState extends ChangeNotifier {
+  /// Player count is fixed at 2 by design. Generalizing requires a real player
+  /// list, layout work for 3+ panels, and turn-cycling logic that's not just a
+  /// flip — none of which is in scope.
+  static const int playerCount = 2;
+
   MatchState({
-    required int playerCount,
     required int startingLife,
     required int phaseCount,
     required int armorSlotsPerPlayer,
@@ -52,11 +56,9 @@ class MatchState extends ChangeNotifier {
               armorSlotsPerPlayer, (_) => ArmorSlotState()),
         ),
         _startingLife = startingLife,
-        _playerCount = playerCount,
         _phaseCount = phaseCount,
         _armorSlotsPerPlayer = armorSlotsPerPlayer;
 
-  final int _playerCount;
   final int _startingLife;
   final int _phaseCount;
   final int _armorSlotsPerPlayer;
@@ -79,8 +81,6 @@ class MatchState extends ChangeNotifier {
     gameLog.entries.removeAt(index);
     notifyListeners();
   }
-
-  int get playerCount => _playerCount;
 
   // --- Player health ---
   List<int> _playerHealth;
@@ -353,7 +353,7 @@ class MatchState extends ChangeNotifier {
     final removed = <({int playerIndex, ActiveToken token, int formerIndex})>[];
     if (!enabled) return removed;
 
-    for (int pi = 0; pi < _playerCount; pi++) {
+    for (int pi = 0; pi < playerCount; pi++) {
       final toRemove = <ActiveToken>[];
       for (final t in _playerTokens[pi]) {
         final shouldRemove = t.count <= 0 ||
@@ -381,12 +381,12 @@ class MatchState extends ChangeNotifier {
 
   // --- Reset ---
   void resetAll() {
-    _playerHealth = List<int>.filled(_playerCount, _startingLife);
-    _playerTokens = List<List<ActiveToken>>.generate(_playerCount, (_) => []);
-    _playerPitch = List<int>.filled(_playerCount, 0);
-    _playerAP = List<int>.filled(_playerCount, 0);
+    _playerHealth = List<int>.filled(playerCount, _startingLife);
+    _playerTokens = List<List<ActiveToken>>.generate(playerCount, (_) => []);
+    _playerPitch = List<int>.filled(playerCount, 0);
+    _playerAP = List<int>.filled(playerCount, 0);
     _playerArmor = List<List<ArmorSlotState>>.generate(
-      _playerCount,
+      playerCount,
       (_) => List<ArmorSlotState>.generate(
           _armorSlotsPerPlayer, (_) => ArmorSlotState()),
     );

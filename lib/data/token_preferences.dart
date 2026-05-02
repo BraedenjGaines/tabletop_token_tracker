@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'token_library.dart';
 
 class TokenPreferences {
+  static const String _customTokensKey = 'customTokensFull_fab';
+  static const String _favoritesKey = 'favoriteTokens_fab';
+  static const String _legacyCustomTokensKey = 'customTokens_fab';
+
   static SharedPreferences? _prefs;
 
   static Future<SharedPreferences> _getPrefs() async {
@@ -10,9 +14,9 @@ class TokenPreferences {
     return _prefs!;
   }
 
-  static Future<List<TokenData>> getCustomTokens(String gameId) async {
+  static Future<List<TokenData>> getCustomTokens() async {
     final prefs = await _getPrefs();
-    final jsonList = prefs.getStringList('customTokensFull_$gameId') ?? [];
+    final jsonList = prefs.getStringList(_customTokensKey) ?? [];
     return jsonList.map((json) {
       final map = jsonDecode(json);
       return TokenData(
@@ -27,9 +31,9 @@ class TokenPreferences {
     }).toList();
   }
 
-  static Future<void> addCustomToken(String gameId, TokenData token) async {
+  static Future<void> addCustomToken(TokenData token) async {
     final prefs = await _getPrefs();
-    final jsonList = prefs.getStringList('customTokensFull_$gameId') ?? [];
+    final jsonList = prefs.getStringList(_customTokensKey) ?? [];
     final exists = jsonList.any((json) {
       final map = jsonDecode(json);
       return map['name'] == token.name;
@@ -42,39 +46,38 @@ class TokenPreferences {
         'health': token.health,
         'customImagePath': token.customImagePath,
       }));
-      await prefs.setStringList('customTokensFull_$gameId', jsonList);
+      await prefs.setStringList(_customTokensKey, jsonList);
     }
   }
 
-  static Future<void> removeCustomToken(String gameId, String tokenName) async {
+  static Future<void> removeCustomToken(String tokenName) async {
     final prefs = await _getPrefs();
-    final jsonList = prefs.getStringList('customTokensFull_$gameId') ?? [];
+    final jsonList = prefs.getStringList(_customTokensKey) ?? [];
     jsonList.removeWhere((json) {
       final map = jsonDecode(json);
       return map['name'] == tokenName;
     });
-    await prefs.setStringList('customTokensFull_$gameId', jsonList);
+    await prefs.setStringList(_customTokensKey, jsonList);
 
-    // Clean up legacy format if it exists
-    final legacyKey = 'customTokens_$gameId';
-    if (prefs.containsKey(legacyKey)) {
-      await prefs.remove(legacyKey);
+    // Clean up legacy format if it exists.
+    if (prefs.containsKey(_legacyCustomTokensKey)) {
+      await prefs.remove(_legacyCustomTokensKey);
     }
   }
 
-  static Future<List<String>> getFavorites(String gameId) async {
+  static Future<List<String>> getFavorites() async {
     final prefs = await _getPrefs();
-    return prefs.getStringList('favoriteTokens_$gameId') ?? [];
+    return prefs.getStringList(_favoritesKey) ?? [];
   }
 
-  static Future<void> toggleFavorite(String gameId, String tokenName) async {
+  static Future<void> toggleFavorite(String tokenName) async {
     final prefs = await _getPrefs();
-    final favorites = prefs.getStringList('favoriteTokens_$gameId') ?? [];
+    final favorites = prefs.getStringList(_favoritesKey) ?? [];
     if (favorites.contains(tokenName)) {
       favorites.remove(tokenName);
     } else {
       favorites.add(tokenName);
     }
-    await prefs.setStringList('favoriteTokens_$gameId', favorites);
+    await prefs.setStringList(_favoritesKey, favorites);
   }
 }

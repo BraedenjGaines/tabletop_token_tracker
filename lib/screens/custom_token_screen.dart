@@ -9,8 +9,7 @@ import '../data/token_preferences.dart';
 import '../data/hero_library.dart';
 
 class CustomTokenScreen extends StatefulWidget {
-  final String currentGame;
-  const CustomTokenScreen({super.key, required this.currentGame});
+  const CustomTokenScreen({super.key});
 
   @override
   State<CustomTokenScreen> createState() => _CustomTokenScreenState();
@@ -36,7 +35,7 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
   }
 
   Future<void> _loadData() async {
-    final tokens = await TokenPreferences.getCustomTokens(widget.currentGame);
+    final tokens = await TokenPreferences.getCustomTokens();
     final heroes = await CustomHeroRepository.loadAll();
     setState(() {
       customTokens = tokens;
@@ -310,7 +309,7 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
                   customImagePath: imagePath,
                 );
                 setState(() { customTokens.add(token); });
-                TokenPreferences.addCustomToken(widget.currentGame, token);
+                TokenPreferences.addCustomToken(token);
                 Navigator.pop(ctx);
               },
               child: Text('Add'),
@@ -324,7 +323,7 @@ class _CustomTokenScreenState extends State<CustomTokenScreen> with SingleTicker
   void _deleteCustomToken(int index) {
     final tokenName = customTokens[index].name;
     setState(() { customTokens.removeAt(index); });
-    TokenPreferences.removeCustomToken(widget.currentGame, tokenName);
+    TokenPreferences.removeCustomToken(tokenName);
   }
 
   @override
