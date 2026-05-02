@@ -17,7 +17,6 @@ class LogEntry {
   final int? turn;
   final String? phase;
   final Map<String, dynamic>? undoData;
-  bool undone;
 
   LogEntry({
     required this.playerIndex,
@@ -28,7 +27,6 @@ class LogEntry {
     this.turn,
     this.phase,
     this.undoData,
-    this.undone = false,
   });
 }
 
