@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show rootBundle, AssetManifest;
 
 /// Resolves the list of available setup screen backgrounds from the asset
@@ -26,11 +27,9 @@ class SetupBackgrounds {
               key.toLowerCase().endsWith('.png'))
           .toList()
         ..sort();
-      // ignore: avoid_print
-      print('SetupBackgrounds found ${_cached!.length} images: $_cached');
+      debugPrint('SetupBackgrounds found ${_cached!.length} images: $_cached');
     } catch (e) {
-      // ignore: avoid_print
-      print('SetupBackgrounds failed to load manifest: $e');
+      debugPrint('SetupBackgrounds failed to load manifest: $e');
       _cached = const [];
     }
     return _cached!;

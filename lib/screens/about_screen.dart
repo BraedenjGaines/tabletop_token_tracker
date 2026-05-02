@@ -16,6 +16,7 @@ class _AboutScreenState extends State<AboutScreen> {
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   bool _loading = true;
   String _statusMessage = '';
+  bool _statusIsError = false;
   Timer? _statusClearTimer;
 
   static const Set<String> _productIds = {
@@ -43,6 +44,7 @@ class _AboutScreenState extends State<AboutScreen> {
       setState(() {
         _loading = false;
         _statusMessage = 'Store unreachable: $e';
+        _statusIsError = true;
       });
       return;
     }
@@ -51,6 +53,7 @@ class _AboutScreenState extends State<AboutScreen> {
       setState(() {
         _loading = false;
         _statusMessage = 'Store not available on this device.';
+        _statusIsError = true;
       });
       return;
     }
@@ -67,6 +70,7 @@ class _AboutScreenState extends State<AboutScreen> {
       setState(() {
         _loading = false;
         _statusMessage = 'Store error: ${response.error!.message}';
+        _statusIsError = true;
       });
       return;
     }
@@ -78,6 +82,7 @@ class _AboutScreenState extends State<AboutScreen> {
       setState(() {
         _loading = false;
         _statusMessage = 'Tips unavailable at this time.$missing';
+        _statusIsError = true;
       });
       return;
     }
@@ -89,6 +94,7 @@ class _AboutScreenState extends State<AboutScreen> {
       _products = sorted;
       _loading = false;
       _statusMessage = '';
+      _statusIsError = false;
     });
   }
 
@@ -119,7 +125,10 @@ class _AboutScreenState extends State<AboutScreen> {
   void _setStatus(String message, {bool isError = false}) {
     _statusClearTimer?.cancel();
     if (!mounted) return;
-    setState(() => _statusMessage = message);
+    setState(() {
+      _statusMessage = message;
+      _statusIsError = isError;
+    });
     if (message.isNotEmpty && !isError) {
       _statusClearTimer = Timer(const Duration(seconds: 5), () {
         if (mounted) setState(() => _statusMessage = '');
@@ -151,10 +160,6 @@ class _AboutScreenState extends State<AboutScreen> {
   @override
   Widget build(BuildContext context) {
     const Color mutedText = Colors.grey;
-    final bool isErrorStatus = _statusMessage.toLowerCase().contains('fail') ||
-        _statusMessage.toLowerCase().contains('error') ||
-        _statusMessage.toLowerCase().contains('unreachable') ||
-        _statusMessage.toLowerCase().contains('unavailable');
 
     return Scaffold(
       appBar: AppBar(
@@ -245,7 +250,7 @@ class _AboutScreenState extends State<AboutScreen> {
               Text(
                 _statusMessage,
                 style: TextStyle(
-                  color: isErrorStatus ? Colors.red : Colors.green,
+                  color: _statusIsError ? Colors.red : Colors.green,
                 ),
                 textAlign: TextAlign.center,
               ),

@@ -17,6 +17,7 @@ import 'widgets/dice_overlay.dart';
 import 'dart:ui';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../data/custom_hero_repository.dart';
+import '../data/app_assets.dart';
 import '../data/hero_library.dart';
 import 'widgets/hero_image.dart';
 
@@ -55,6 +56,16 @@ class CounterScreen extends StatefulWidget {
 }
 
 class _CounterScreenState extends State<CounterScreen> with TickerProviderStateMixin {
+  // --- Layout constants (fractions of screen width) ---
+  // These position the add-token button and the pitch counter inside each
+  // player panel. The "WithResource" variants are tighter to make room for an
+  // adjacent resource counter; the "NoResource" variants spread out when no
+  // resource counter is shown.
+  static const double _panelButtonWidth = 0.26;
+  static const double _panelButtonHeight = 0.13;
+  static const double _panelInsetWithResource = 0.22;
+  static const double _panelInsetNoResource = 0.365;
+
   late final MatchState matchState;
 
   // Read-through alias to MatchState's tokens. Mutations must go through
@@ -176,52 +187,50 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
     final entry = gameLog.entries[targetIndex];
 
-    setState(() {
-      switch (entry.type) {
-        case LogEventType.healthChange:
-          matchState.reverseHealthDelta(entry.playerIndex, entry.value);
-          break;
-        case LogEventType.tokenAdded:
-          if (entry.undoData != null) {
-            final name = entry.undoData!['name'] as String;
-            matchState.removeLastTokenByName(entry.playerIndex, name);
-          }
-          break;
-        case LogEventType.tokenDestroyed:
-          if (entry.undoData != null) {
-            final d = entry.undoData!;
-            final token = ActiveToken(
-              name: d['name'],
-              category: TokenCategory.values[d['category']],
-              destroyTrigger: d['destroyTrigger'] != null ? DestroyTrigger.values[d['destroyTrigger']] : null,
-              count: d['count'] ?? 1,
-              health: d['health'],
-              maxHealth: d['maxHealth'],
-              turnPlayed: d['turnPlayed'] ?? 0,
-              playerPlayed: d['playerPlayed'] ?? 0,
-              phasePlayed: d['phasePlayed'] ?? 0,
-            );
-            final insertIdx = d['index'] as int? ?? matchState.tokensOf(entry.playerIndex).length;
-            matchState.insertToken(entry.playerIndex, insertIdx, token);
-          }
-          break;
-        case LogEventType.tokenCountChange:
-          if (entry.undoData != null) {
-            final name = entry.undoData!['name'] as String;
-            matchState.mutateTokenCount(entry.playerIndex, name, -entry.value);
-          }
-          break;
-        case LogEventType.allyHealthChange:
-          if (entry.undoData != null) {
-            final name = entry.undoData!['name'] as String;
-            matchState.mutateAllyHealth(entry.playerIndex, name, -entry.value);
-          }
-          break;
-        default:
-          break;
-      }
-      matchState.removeLogEntryAt(targetIndex);
-    });
+    switch (entry.type) {
+      case LogEventType.healthChange:
+        matchState.reverseHealthDelta(entry.playerIndex, entry.value);
+        break;
+      case LogEventType.tokenAdded:
+        if (entry.undoData != null) {
+          final name = entry.undoData!['name'] as String;
+          matchState.removeLastTokenByName(entry.playerIndex, name);
+        }
+        break;
+      case LogEventType.tokenDestroyed:
+        if (entry.undoData != null) {
+          final d = entry.undoData!;
+          final token = ActiveToken(
+            name: d['name'],
+            category: TokenCategory.values[d['category']],
+            destroyTrigger: d['destroyTrigger'] != null ? DestroyTrigger.values[d['destroyTrigger']] : null,
+            count: d['count'] ?? 1,
+            health: d['health'],
+            maxHealth: d['maxHealth'],
+            turnPlayed: d['turnPlayed'] ?? 0,
+            playerPlayed: d['playerPlayed'] ?? 0,
+            phasePlayed: d['phasePlayed'] ?? 0,
+          );
+          final insertIdx = d['index'] as int? ?? matchState.tokensOf(entry.playerIndex).length;
+          matchState.insertToken(entry.playerIndex, insertIdx, token);
+        }
+        break;
+      case LogEventType.tokenCountChange:
+        if (entry.undoData != null) {
+          final name = entry.undoData!['name'] as String;
+          matchState.mutateTokenCount(entry.playerIndex, name, -entry.value);
+        }
+        break;
+      case LogEventType.allyHealthChange:
+        if (entry.undoData != null) {
+          final name = entry.undoData!['name'] as String;
+          matchState.mutateAllyHealth(entry.playerIndex, name, -entry.value);
+        }
+        break;
+      default:
+        break;
+    }
+    matchState.removeLogEntryAt(targetIndex);
   }
 
   @override
@@ -240,10 +249,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
     WakelockPlus.enable();
     // Precache pitch icons
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      precacheImage(AssetImage('assets/images/ui/pitch_value_zero.png'), context);
-      precacheImage(AssetImage('assets/images/ui/pitch_value_one.png'), context);
-      precacheImage(AssetImage('assets/images/ui/pitch_value_two.png'), context);
-      precacheImage(AssetImage('assets/images/ui/pitch_value_three.png'), context);
+      precacheImage(AssetImage(AppAssets.pitchValueZero), context);
+      precacheImage(AssetImage(AppAssets.pitchValueOne), context);
+      precacheImage(AssetImage(AppAssets.pitchValueTwo), context);
+      precacheImage(AssetImage(AppAssets.pitchValueThree), context);
     });
     // First turn chooser shows automatically — no _handleFirstTurn needed
   }
@@ -386,8 +395,6 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
       _resetTimer();
       return;
     }
-    _timerRunning = true;
-    _hasExpiredBuzzStarted = false;
     _flashTimer?.cancel();
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
@@ -407,7 +414,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         }
       });
     });
-    setState(() {});
+    setState(() {
+      _timerRunning = true;
+      _hasExpiredBuzzStarted = false;
+    });
   }
 
   void _pauseTimer() {
@@ -640,7 +650,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               top: -5,
               bottom: -5,
               child: Image.asset(
-                'assets/images/ui/add_token_button.png',
+                AppAssets.addTokenButton,
                 fit: BoxFit.cover,
                 errorBuilder: (c, e, s) => Container(color: Colors.grey[800]),
               ),
@@ -1113,18 +1123,21 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
             )),
           ),
           if (context.read<GameSettingsProvider>().addTokenButtonEnabled)
-            Positioned(
-              left: index == 1 ? null : ((settings.resourceTrackerSetting == 0 || settings.resourceTrackerSetting == 2) ? screenWidth * 0.22 : screenWidth * 0.365),
-              right: index == 1 ? ((settings.resourceTrackerSetting == 0 || settings.resourceTrackerSetting == 2) ? screenWidth * 0.22 : screenWidth * 0.365) : null,
-              bottom: 0,
-              top: 0,
-              child: Align(
-                alignment: Alignment(0, 0.50),
-                child: GestureDetector(
-                  onTap: () { setState(() { _playerOverlay[index] = -2; }); },
-                  child: Container(
-                    width: screenWidth * 0.26,
-                    height: screenWidth * 0.13,
+            Builder(builder: (context) {
+              final bool hasPitch = settings.resourceTrackerSetting == 0 || settings.resourceTrackerSetting == 2;
+              final double inset = (hasPitch ? _panelInsetWithResource : _panelInsetNoResource) * screenWidth;
+              return Positioned(
+                left: index == 1 ? null : inset,
+                right: index == 1 ? inset : null,
+                bottom: 0,
+                top: 0,
+                child: Align(
+                  alignment: Alignment(0, 0.50),
+                  child: GestureDetector(
+                    onTap: () { setState(() { _playerOverlay[index] = -2; }); },
+                    child: Container(
+                      width: screenWidth * _panelButtonWidth,
+                      height: screenWidth * _panelButtonHeight,
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
@@ -1138,7 +1151,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                           top: -10,
                           bottom: -10,
                           child: Image.asset(
-                            'assets/images/ui/add_token_button.png',
+                            AppAssets.addTokenButton,
                             fit: BoxFit.cover,
                             errorBuilder: (c, e, s) => Container(color: Colors.black.withValues(alpha: 0.5)),
                           ),
@@ -1157,15 +1170,18 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                   ),
                 ),
               ),
-            ),
+            );
+            }),
           // Pitch counter on player panel — rendered last so it's on top of tap halves
           if (context.read<GameSettingsProvider>().resourceTrackerSetting == 0 || context.read<GameSettingsProvider>().resourceTrackerSetting == 2)
-            Positioned(
-              left: index == 1 ? (settings.addTokenButtonEnabled ? screenWidth * 0.22 : screenWidth * 0.365) : null,
-              right: index == 0 ? (settings.addTokenButtonEnabled ? screenWidth * 0.22 : screenWidth * 0.365) : null,
-              bottom: 0,
-              top: 0,
-              child: IgnorePointer(
+            Builder(builder: (context) {
+              final double inset = (settings.addTokenButtonEnabled ? _panelInsetWithResource : _panelInsetNoResource) * screenWidth;
+              return Positioned(
+                left: index == 1 ? inset : null,
+                right: index == 0 ? inset : null,
+                bottom: 0,
+                top: 0,
+                child: IgnorePointer(
                 ignoring: false,
                 child: Align(
                   alignment: Alignment(0, 0.50),
@@ -1174,7 +1190,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                   ),
                 ),
               ),
-            ),
+            );
+            }),
         ],
       ),
     );
@@ -1190,7 +1207,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   Widget _turnTrackerBackground() {
     return Transform.flip(
       child: Image.asset(
-        'assets/images/ui/turn_tracker_overlay.png',
+        AppAssets.turnTrackerOverlay,
         width: MediaQuery.of(context).size.width * 2,
         fit: BoxFit.fitWidth,
       ),
@@ -1218,16 +1235,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   } else {
     pitchColor = Colors.white;
   }
-  String pitchIconPath;
-  if (pitchValue >= 3) {
-    pitchIconPath = 'assets/images/ui/pitch_value_three.png';
-  } else if (pitchValue == 2) {
-    pitchIconPath = 'assets/images/ui/pitch_value_two.png';
-  } else if (pitchValue == 1) {
-    pitchIconPath = 'assets/images/ui/pitch_value_one.png';
-  } else {
-    pitchIconPath = 'assets/images/ui/pitch_value_zero.png';
-  }
+  final String pitchIconPath = AppAssets.pitchIconFor(pitchValue);
 
   // Shadow offsets reproduce the prior 2-Icon/2-Text stack: black layer drawn
   // with no offset behind the colored layer, also with no offset. The original
@@ -1245,8 +1253,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   final double w = screenWidth ?? 390;
   return Container(
-    width: w * 0.26,
-    height: w * 0.13,
+    width: w * _CounterScreenState._panelButtonWidth,
+    height: w * _CounterScreenState._panelButtonHeight,
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(8),
@@ -1638,7 +1646,7 @@ class _TokenArtBackground extends StatelessWidget {
     }
 
     final id = _getTokenId(tokenName);
-    final path = 'assets/images/tokens/${id}_token.jpg';
+    final path = AppAssets.tokenArtFor(id);
 
     return LayoutBuilder(
       builder: (context, constraints) {

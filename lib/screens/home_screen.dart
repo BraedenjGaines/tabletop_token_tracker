@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/app_assets.dart';
 import 'setup_screen.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
@@ -13,7 +14,7 @@ class HomeScreen extends StatelessWidget {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
   title: Image.asset(
-    'assets/images/ui/flesh-and-blood_logo.png',
+    AppAssets.fleshAndBloodLogo,
     height: 200, // control size so it fits nicely
     fit: BoxFit.contain,
   ),
@@ -26,7 +27,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           Positioned.fill(
             child: Image.asset(
-              'assets/images/backgrounds/map_background.jpg',
+              AppAssets.mapBackground,
               fit: BoxFit.cover,
               errorBuilder: (c, e, s) => Container(color: Colors.grey[900]),
             ),
@@ -78,7 +79,7 @@ Widget _buildCustomButton(String text, VoidCallback onPressed) {
         alignment: Alignment.center,
         children: [
           Image.asset(
-            'assets/images/ui/play_button.png',
+            AppAssets.playButton,
             width: 300,
             height: 45,
             fit: BoxFit.fill,

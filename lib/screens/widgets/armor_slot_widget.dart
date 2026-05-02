@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../data/app_assets.dart';
 import '../../data/armor_slot_state.dart';
 
 class ArmorSlotWidget extends StatelessWidget {
@@ -17,12 +18,7 @@ class ArmorSlotWidget extends StatelessWidget {
     required this.onDestroy,
   });
 
-  static const List<String> armorAssets = [
-    'assets/images/armor_helmet.png',
-    'assets/images/armor_chest.png',
-    'assets/images/armor_gauntlet.png',
-    'assets/images/armor_greave.png',
-  ];
+  static const List<String> armorAssets = AppAssets.armorSlots;
 
   @override
   Widget build(BuildContext context) {
