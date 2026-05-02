@@ -610,9 +610,11 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   // Fix #8: Auto-destroy now fires on each phase advance, not just on turn wrap
   void _advancePhase() {
     setState(() {
+      final int prevTurn = turnCount;
+      final int prevPhase = currentPhase;
+      final int prevActive = activePlayer;
       if (currentPhase < fabPhases.length - 1) {
         currentPhase++;
-        _checkAutoDestroy();
       } else {
         currentPhase = 0;
         _playerPitch[activePlayer] = 0;
@@ -620,76 +622,95 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
         activePlayer = activePlayer == 0 ? 1 : 0;
         _playerAP[activePlayer] = 1;
         turnCount++;
-        _checkAutoDestroy();
       }
+      _checkAutoDestroy(prevTurn, prevPhase, prevActive);
     });
   }
 
   void _retreatPhase() { setState(() { if (currentPhase > 0) { currentPhase--; } }); }
 
-  void _checkAutoDestroy() {
+  /// Called after a forward phase advance. The three "prev" args describe the
+  /// state we just left. Tokens activated in that previous state and no longer
+  /// activated now are destroyed. Never called from retreat operations.
+  void _checkAutoDestroy(int prevTurn, int prevPhase, int prevActive) {
     if (!_showTurnTracker) return;
     for (int pi = 0; pi < playerTokens.length; pi++) {
-      playerTokens[pi].removeWhere((t) {
-        if (t.destroyTrigger == null) return false;
-        bool r = t.count <= 0 || _shouldAutoRemove(t, pi);
-        if (r) _log(pi, LogEventType.tokenDestroyed, '${t.name} destroyed', undoData: {'name': t.name, 'category': t.category.index, 'destroyTrigger': t.destroyTrigger?.index, 'count': t.count, 'health': t.health, 'maxHealth': t.maxHealth, 'turnPlayed': t.turnPlayed, 'playerPlayed': t.playerPlayed});
-        return r;
-      });
+      final toRemove = <ActiveToken>[];
+      for (final t in playerTokens[pi]) {
+        if (t.count <= 0 || _shouldAutoRemoveOnAdvance(t, pi, prevTurn, prevPhase, prevActive)) {
+          toRemove.add(t);
+        }
+      }
+      for (final t in toRemove) {
+        final idx = playerTokens[pi].indexOf(t);
+        playerTokens[pi].remove(t);
+        _log(pi, LogEventType.tokenDestroyed, '${t.name} destroyed', undoData: {
+          'name': t.name,
+          'category': t.category.index,
+          'destroyTrigger': t.destroyTrigger?.index,
+          'count': t.count,
+          'health': t.health,
+          'maxHealth': t.maxHealth,
+          'turnPlayed': t.turnPlayed,
+          'playerPlayed': t.playerPlayed,
+          'phasePlayed': t.phasePlayed,
+          'index': idx,
+        });
+      }
     }
   }
 
-  bool _shouldAutoRemove(ActiveToken t, int pi) {
-    // Phase indices: 0=Start, 1=Action, 2=End
+  /// Returns the phase index (0=Start, 1=Action, 2=End) at which this trigger
+  /// fires, given a token owned by player [pi] and a specific [activePlayerIdx].
+  /// Returns null if the trigger never fires for this owner under that active
+  /// player (e.g. startOfYourTurn while opponent is active).
+  int? _triggerPhaseFor(ActiveToken t, int pi, int activePlayerIdx) {
+    if (t.destroyTrigger == null) return null;
+    final bool isOwnerActive = pi == activePlayerIdx;
     switch (t.destroyTrigger!) {
       case DestroyTrigger.startOfYourTurn:
-        // Destroy at the END of the start phase on your next turn (so you see it activate first)
-        if (pi != activePlayer) return false;
-        if (turnCount > t.turnPlayed && currentPhase >= 1) return true;
-        return false;
+        return isOwnerActive ? 0 : null;
       case DestroyTrigger.startOfOpponentTurn:
-        if (pi == activePlayer) return false;
-        if (turnCount > t.turnPlayed && currentPhase >= 1) return true;
-        return false;
+        return isOwnerActive ? null : 0;
       case DestroyTrigger.beginningOfActionPhase:
-        if (pi != activePlayer) return false;
-        if (turnCount > t.turnPlayed && currentPhase >= 1) return true;
-        if (turnCount == t.turnPlayed && t.phasePlayed < 1 && currentPhase >= 1) return true;
-        return false;
+        return isOwnerActive ? 1 : null;
       case DestroyTrigger.beginningOfEndPhase:
-        // Activates during end phase, destroyed when advancing past it (turn wraps)
-        if (pi != activePlayer) {
-          if (turnCount > t.turnPlayed) return true;
-          if (turnCount == t.turnPlayed && t.phasePlayed <= 2) return true;
-        }
-        return false;
+        return isOwnerActive ? 2 : null;
     }
   }
 
+  /// True if (a, b) compares strictly later than (c, d) in (turn, phase) order.
+  bool _isLater(int aTurn, int aPhase, int bTurn, int bPhase) {
+    if (aTurn != bTurn) return aTurn > bTurn;
+    return aPhase > bPhase;
+  }
+
+  /// True iff the token is activated under the given (turn, phase, activePlayer).
+  bool _isActivatedAt(ActiveToken t, int pi, int turn, int phase, int activePlayerIdx) {
+    if (t.destroyTrigger == null) return false;
+    final int? triggerPhase = _triggerPhaseFor(t, pi, activePlayerIdx);
+    if (triggerPhase == null) return false;
+    if (phase != triggerPhase) return false;
+    return _isLater(turn, phase, t.turnPlayed, t.phasePlayed);
+  }
+
+  /// A token is "activated" when current state matches its trigger phase
+  /// AND that trigger phase comes strictly after the moment it was played.
   bool _isTokenTriggering(ActiveToken t, int pi) {
-    if (!_showTurnTracker || t.destroyTrigger == null) return false;
-    // Phase indices: 0=Start, 1=Action, 2=End
-    bool isAct = pi == activePlayer;
-    switch (t.destroyTrigger!) {
-      case DestroyTrigger.startOfYourTurn:
-        // Highlight during Start Phase on next turn
-        return isAct && turnCount > t.turnPlayed && currentPhase == 0;
-      case DestroyTrigger.startOfOpponentTurn:
-        return !isAct && turnCount > t.turnPlayed && currentPhase == 0;
-      case DestroyTrigger.beginningOfActionPhase:
-        if (!isAct) return false;
-        if (turnCount > t.turnPlayed && currentPhase == 1) return true;
-        if (turnCount == t.turnPlayed && t.phasePlayed < 1 && currentPhase == 1) return true;
-        return false;
-      case DestroyTrigger.beginningOfEndPhase:
-        // Highlight during End Phase on the active player's turn
-        if (!isAct) return false;
-        if (currentPhase == 2) {
-          if (turnCount > t.turnPlayed) return true;
-          if (turnCount == t.turnPlayed && t.phasePlayed < 2) return true;
-        }
-        return false;
-    }
+    if (!_showTurnTracker) return false;
+    return _isActivatedAt(t, pi, turnCount, currentPhase, activePlayer);
+  }
+
+  /// Determines whether a token should be destroyed given that we just advanced
+  /// from [prevTurn]/[prevPhase] under [prevActive] to the current state. A
+  /// token is destroyed if it was activated in the previous state but is no
+  /// longer activated now. Only called on forward advances, never on retreats.
+  bool _shouldAutoRemoveOnAdvance(ActiveToken t, int pi, int prevTurn, int prevPhase, int prevActive) {
+    if (t.destroyTrigger == null) return false;
+    final bool wasActivated = _isActivatedAt(t, pi, prevTurn, prevPhase, prevActive);
+    if (!wasActivated) return false;
+    final bool stillActivated = _isTokenTriggering(t, pi);
+    return !stillActivated;
   }
 
   // --- Token category chips ---
