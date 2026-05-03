@@ -48,6 +48,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  http: ^1.2.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -93,6 +94,8 @@ flutter:
         - asset: assets/fonts/Inter_28pt-ExtraBold.ttf
 
   assets:
+    - assets/data/
+    - assets/fonts/
     - assets/images/heroes/
     - assets/images/tokens/
     - assets/images/backgrounds/

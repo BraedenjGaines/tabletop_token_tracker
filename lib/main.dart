@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'providers/game_settings_provider.dart';
 import 'screens/home_screen.dart';
+import 'state/library_state.dart';
 
 class _NoOverscrollBehavior extends ScrollBehavior {
   @override
@@ -25,8 +26,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => GameSettingsProvider()..loadPreferences(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => GameSettingsProvider()..loadPreferences(),
+        ),
+        ChangeNotifierProvider(
+          lazy: false,
+          create: (_) => LibraryState()..loadFromAssets(),
+        ),
+      ],
       child: Consumer<GameSettingsProvider>(
         builder: (context, settings, _) {
           if (!settings.isLoaded) {
