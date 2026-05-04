@@ -1,12 +1,11 @@
-/// Set IDs corresponding to main FaB expansions plus "History Pack 1."
-/// Other set IDs (armory decks, blitz decks, promos, etc.) are excluded
-/// from the filter UI because they contain reprints, not unique cards
-/// players would typically filter by.
+/// Set IDs corresponding to FaB core/expansion sets that exist in v8.1.0 of
+/// the upstream data. Other set IDs (armory decks, hero decks, blitz decks,
+/// promos, etc.) are excluded from the filter UI.
 ///
-/// Update this list when new main expansions release. Last updated for
-/// version v8.1.0 of the-fab-cube/flesh-and-blood-cards.
+/// Sets released after v8.1.0 (Compendium of Rathe / PEN, Omens of the Third
+/// Age) are not included here — they will become available when we bump the
+/// upstream data version pin in tool/fetch_cards.dart.
 const Set<String> kMainSetIds = {
-  '1HP', // History Pack 1
   'WTR', // Welcome to Rathe
   'ARC', // Arcane Rising
   'CRU', // Crucible of War
@@ -23,4 +22,5 @@ const Set<String> kMainSetIds = {
   'ROS', // Rosetta
   'HNT', // The Hunted
   'SEA', // High Seas
+  'SUP', // Super Slam
 };

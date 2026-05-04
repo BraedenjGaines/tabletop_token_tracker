@@ -32,27 +32,6 @@ class LibraryState extends ChangeNotifier {
   /// Non-hero cards — convenience filter.
   Iterable<CardData> get otherCards => _cards.where((c) => !c.isHero);
 
-  /// Cached set of class names, derived from hero card types.
-  Set<String>? _classNamesCache;
-
-  /// Class names known to exist in the data, derived from hero cards.
-  ///
-  /// A hero card's `types` array contains "Hero" plus its class(es), e.g.
-  /// `["Runeblade", "Hero"]`. Walking all heroes and collecting non-"Hero"
-  /// types gives a self-updating list of FaB classes.
-  Set<String> get classNames {
-    if (_classNamesCache != null) return _classNamesCache!;
-    final classes = <String>{};
-    for (final card in _cards) {
-      if (!card.isHero) continue;
-      for (final t in card.types) {
-        if (t != 'Hero') classes.add(t);
-      }
-    }
-    _classNamesCache = classes;
-    return classes;
-  }
-
   Future<void> loadFromAssets() async {
     try {
       final cardsJson = await rootBundle.loadString('assets/data/cards.json');

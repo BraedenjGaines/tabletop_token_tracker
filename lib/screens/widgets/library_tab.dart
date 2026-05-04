@@ -83,23 +83,21 @@ class _LibraryTabState extends State<LibraryTab> {
   /// 0: name equals query exactly
   /// 1: name starts with query
   /// 2: name contains query
-  /// 3: any variant's functional text contains query
-  /// 4: any variant's printing belongs to a matching set
+  /// 3: any variant's printing belongs to a matching set
   /// null: no match
+  ///
+  /// Card text matching is handled by the dedicated "Cards containing text"
+  /// filter, not the main search bar.
   int? _matchTier(CardGroup group, String q, Set<String> exactSetIds) {
     final name = group.name.toLowerCase();
     if (name == q) return 0;
     if (name.startsWith(q)) return 1;
     if (name.contains(q)) return 2;
 
-    for (final v in group.variants) {
-      if (v.functionalTextPlain.toLowerCase().contains(q)) return 3;
-    }
-
     if (exactSetIds.isNotEmpty) {
       for (final v in group.variants) {
         for (final p in v.printings) {
-          if (exactSetIds.contains(p.setId)) return 4;
+          if (exactSetIds.contains(p.setId)) return 3;
         }
       }
     }
@@ -152,7 +150,7 @@ class _LibraryTabState extends State<LibraryTab> {
             controller: _searchController,
             onChanged: _onSearchChanged,
             decoration: InputDecoration(
-              hintText: 'Search by name, text, or set',
+              hintText: 'Search by name or set',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _searchController.text.isEmpty
                   ? null
@@ -202,7 +200,7 @@ class _LibraryTabState extends State<LibraryTab> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => CardDetailView(card: group.representative),
+                            builder: (_) => CardDetailView(group: group),
                           ),
                         );
                       },

@@ -63,7 +63,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
       initial: _filters,
       allCards: library.cards,
       allSets: library.sets,
-      classNames: library.classNames,
     );
     if (result != null && mounted) {
       setState(() => _filters = result);
