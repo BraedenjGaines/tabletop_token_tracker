@@ -8,6 +8,10 @@
 // To update card data when a new set releases: bump _version below to the new
 // release tag, re-run the script, ship a new app version.
 
+// This is a build-time CLI script, not production app code. `print` is the
+// expected output mechanism; the avoid_print rule doesn't apply here.
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'dart:io';
 
