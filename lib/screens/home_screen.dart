@@ -52,7 +52,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 20),
                 _MenuButton(
-                  text: 'Custom Content',
+                  text: 'Custom Library',
                   onPressed: () {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomTokenScreen()));
                   },

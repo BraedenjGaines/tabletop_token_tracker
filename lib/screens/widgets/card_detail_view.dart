@@ -99,8 +99,6 @@ class _CardDetailViewState extends State<CardDetailView> {
         appBar: AppBar(
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
-          // Replace the auto-leading with one we control explicitly so
-          // dismiss only happens via this button.
           automaticallyImplyLeading: false,
           leading: IconButton(
             icon: const Icon(Icons.close),
@@ -113,7 +111,7 @@ class _CardDetailViewState extends State<CardDetailView> {
             children: [
               if (_availableFoilings.length > 1) _buildFoilingTabs(),
               Expanded(child: _buildPitchPager()),
-              if (_variants.length > 1) _buildPitchDots(),
+              _buildBottomBar(),
             ],
           ),
         ),
@@ -219,19 +217,42 @@ class _CardDetailViewState extends State<CardDetailView> {
   }
 
   Widget _buildPitchDots() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12, top: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          for (int i = 0; i < _variants.length; i++)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: _PitchDot(
-                color: _dotColor(_variants[i]),
-                active: i == _pitchIndex,
-              ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (int i = 0; i < _variants.length; i++)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: _PitchDot(
+              color: _dotColor(_variants[i]),
+              active: i == _pitchIndex,
             ),
+          ),
+      ],
+    );
+  }
+
+  /// Bottom bar: info button on the left, pitch dots centered, empty space
+  /// on the right to keep the row symmetric.
+  Widget _buildBottomBar() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 12, left: 8, right: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 48,
+            child: IconButton(
+              icon: const Icon(Icons.info_outline, color: Colors.white),
+              tooltip: 'Card text',
+              onPressed: () => _showCardInfo(context),
+            ),
+          ),
+          Expanded(
+            child: _variants.length > 1
+                ? _buildPitchDots()
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(width: 48),
         ],
       ),
     );
@@ -264,6 +285,98 @@ class _CardDetailViewState extends State<CardDetailView> {
       default:
         return code;
     }
+  }
+
+  /// Show a modal with the card's official text. Information shown:
+  /// name + title, type line, stats (cost/pitch/power/defense as applicable),
+  /// and the rules text. Works offline since this data is bundled.
+  void _showCardInfo(BuildContext context) {
+    final variant = _currentVariant;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title row.
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _formatTitleLine(variant),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              if (variant.typeText.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  variant.typeText,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.white60,
+                  ),
+                ),
+              ],
+              if (_formatStatsLine(variant).isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _formatStatsLine(variant),
+                  style: const TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+              ],
+              const SizedBox(height: 12),
+              const Divider(color: Colors.white12, height: 1),
+              const SizedBox(height: 12),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Text(
+                    variant.functionalTextPlain.isEmpty
+                        ? 'No card text.'
+                        : variant.functionalTextPlain,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.white,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatTitleLine(CardData v) {
+    return v.name;
+  }
+
+  String _formatStatsLine(CardData v) {
+    final parts = <String>[];
+    if (v.cost.isNotEmpty) parts.add('Cost: ${v.cost}');
+    if (v.pitch.isNotEmpty) parts.add('Pitch: ${v.pitch}');
+    if (v.power.isNotEmpty) parts.add('Power: ${v.power}');
+    if (v.defense.isNotEmpty) parts.add('Defense: ${v.defense}');
+    return parts.join(' · ');
   }
 }
 

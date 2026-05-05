@@ -26,7 +26,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           title: const Text('Card Library'),
           actions: [
             IconButton(
-              tooltip: 'Manage Custom Content',
+              tooltip: 'Manage Custom Library',
               icon: const Icon(Icons.edit_note),
               onPressed: () {
                 Navigator.push(

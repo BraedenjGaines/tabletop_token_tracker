@@ -40,6 +40,9 @@ class HeroData {
   final int intellect;
   final int health;
   final String? customImagePath;
+  /// Free-form rules text users can attach to a custom hero. Empty for
+  /// stock heroes from the bundled library.
+  final String cardText;
 
   const HeroData({
     required this.id,
@@ -51,6 +54,7 @@ class HeroData {
     required this.intellect,
     required this.health,
     this.customImagePath,
+    this.cardText = '',
   });
 
   String get displayName => title.isNotEmpty ? '$name, $title' : name;

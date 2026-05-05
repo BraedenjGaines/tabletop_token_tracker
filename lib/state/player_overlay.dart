@@ -15,8 +15,11 @@ class AddTokenOverlay extends PlayerOverlay {
   const AddTokenOverlay();
 }
 
-/// The category management overlay is showing, scoped to one category.
+/// The category management overlay is showing, scoped to one display bucket
+/// (e.g. Buffs, Debuffs, Items). The bucket is the user-facing grouping; the
+/// underlying [TokenCategory] of contained tokens may differ (auras share a
+/// single category but split into buff/debuff buckets).
 class CategoryOverlay extends PlayerOverlay {
-  final TokenCategory category;
-  const CategoryOverlay(this.category);
+  final TokenDisplayBucket bucket;
+  const CategoryOverlay(this.bucket);
 }
