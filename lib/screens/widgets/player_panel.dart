@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
@@ -8,6 +7,7 @@ import '../../data/hero_library.dart';
 import '../../data/token_library.dart';
 import '../../providers/game_settings_provider.dart';
 import '../../state/match_state.dart';
+import 'custom_image.dart';
 import 'hero_image.dart';
 
 /// Renders one player's panel: hero art background, tap halves for health
@@ -136,12 +136,12 @@ class PlayerPanel extends StatelessWidget {
           if (hero == null) {
             return Container(color: Colors.grey[900]);
           }
-          if (hero.customImagePath != null) {
-            return Image.file(
-              File(hero.customImagePath!),
-              fit: BoxFit.cover,
-              errorBuilder: (c, e, s) => Container(color: Colors.grey[900]),
-            );
+          // Custom heroes (whether they have an image or not) use CustomImage,
+          // which falls back to add_token_button.png when the path is null
+          // or unreadable. Stock heroes use HeroImage.
+          final isCustom = customHeroes.any((h) => h.id == hero.id);
+          if (isCustom) {
+            return CustomImage(path: hero.customImagePath, fit: BoxFit.cover);
           }
           return HeroImage(
             hero: hero,

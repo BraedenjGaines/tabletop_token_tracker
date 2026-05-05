@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import 'dart:io';
 import 'package:provider/provider.dart';
 import '../providers/game_settings_provider.dart';
 import '../data/hero_library.dart';
@@ -10,6 +9,8 @@ import 'counter_screen.dart';
 import 'hero_selector_screen.dart';
 import 'widgets/hero_image.dart';
 import '../data/setup_backgrounds.dart';
+import 'widgets/custom_image.dart';
+import 'package:flutter/services.dart';
 
 class SetupScreen extends StatefulWidget {
   const SetupScreen({super.key});
@@ -172,6 +173,7 @@ class _SetupScreenState extends State<SetupScreen> {
                               child: TextField(
                                 controller: customLifeController,
                                 keyboardType: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                                 textAlign: TextAlign.center,
                                 maxLength: 2,
                                 style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w800),
@@ -276,9 +278,8 @@ class _SetupScreenState extends State<SetupScreen> {
                                     child: playerHeroes[p] != null
                                         ? ClipRRect(
                                             borderRadius: BorderRadius.circular(7),
-                                            child: playerHeroes[p]!.customImagePath != null
-                                                ? Image.file(File(playerHeroes[p]!.customImagePath!), fit: BoxFit.cover,
-                                                    errorBuilder: (c, e, s) => Container(color: Colors.grey[800], child: Center(child: Icon(Icons.person, size: 28, color: Colors.grey))))
+                                            child: _customHeroes.any((h) => h.id == playerHeroes[p]!.id)
+                                                ? CustomImage(path: playerHeroes[p]!.customImagePath, fit: BoxFit.cover)
                                                 : HeroImage(hero: playerHeroes[p]!, fit: BoxFit.cover),
                                           )
                                         : Center(child: Icon(Icons.add, size: 28, color: Colors.grey)),
@@ -318,6 +319,7 @@ class _SetupScreenState extends State<SetupScreen> {
                               child: TextField(
                                 controller: timerController,
                                 keyboardType: TextInputType.number,
+                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                                 textAlign: TextAlign.center,
                                 maxLength: 2,
                                 style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.w700),
@@ -371,14 +373,23 @@ class _SetupScreenState extends State<SetupScreen> {
                                         final p2 = player2NameController.text.isEmpty ? 'Player 2' : player2NameController.text;
                                         settings.player1Name = p1;
                                         settings.player2Name = p2;
+                                        // Empty field at match start = use the minimum value. Avoids
+                                        // a stale state-var value from a previous keystroke leaking
+                                        // through after the user clears the input.
+                                        final lifeToUse = customLifeController.text.trim().isEmpty
+                                            ? 20
+                                            : selectedLife;
+                                        final timerToUse = timerController.text.trim().isEmpty
+                                            ? 30
+                                            : matchTimerMinutes;
                                         return CounterScreen(
-                                          startingLife: selectedLife,
+                                          startingLife: lifeToUse,
                                           playerHeroes: [
                                             playerHeroes[0]?.id ?? 'default',
                                             playerHeroes[1]?.id ?? 'default',
                                           ],
                                           playerNames: [p1, p2],
-                                          matchTimerMinutes: matchTimerMinutes,
+                                          matchTimerMinutes: timerToUse,
                                         );
                                       },
                                     ),

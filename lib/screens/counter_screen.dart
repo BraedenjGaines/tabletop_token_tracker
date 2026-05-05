@@ -262,7 +262,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Phase / turn ---
   void _advancePhase() {
-    final result = matchState.advancePhase(autoDestroyEnabled: _showTurnTracker);
+    final settings = context.read<GameSettingsProvider>();
+    final result = matchState.advancePhase(
+      autoDestroyEnabled: _showTurnTracker && settings.autoDestroyTokens,
+    );
     for (final r in result.destroyedTokens) {
       _log(r.playerIndex, LogEventType.tokenDestroyed, '${r.token.name} destroyed', undoData: {
         'name': r.token.name,
@@ -287,6 +290,8 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   /// AND that trigger phase comes strictly after the moment it was played.
   bool _isTokenTriggering(ActiveToken t, int pi) {
     if (!_showTurnTracker) return false;
+    final settings = context.read<GameSettingsProvider>();
+    if (!settings.autoDestroyTokens) return false;
     return MatchState.isActivatedAt(t, pi, turnCount, currentPhase, activePlayer);
   }
 
@@ -813,14 +818,23 @@ class _TokenArtBackground extends StatelessWidget {
     return name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\s]'), '').replaceAll(RegExp(r'\s+'), '_');
   }
 
+  /// True if this token name doesn't match any stock token in the library —
+  /// i.e., it was created via Custom Library. Custom tokens get the
+  /// add_token_button.png fallback instead of trying to load a non-existent
+  /// asset.
+  bool get _isCustom => !tokenLibrary.any((t) => t.name == tokenName);
+
   @override
   Widget build(BuildContext context) {
     if (customImagePath != null) {
       return Image.file(
         File(customImagePath!),
         fit: BoxFit.cover,
-        errorBuilder: (c, e, s) => const SizedBox.shrink(),
+        errorBuilder: (_, _, _) => _buildDefault(),
       );
+    }
+    if (_isCustom) {
+      return _buildDefault();
     }
 
     final id = _getTokenId(tokenName);
@@ -869,6 +883,15 @@ class _TokenArtBackground extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  /// Default art used when a custom token has no user-supplied image.
+  Widget _buildDefault() {
+    return Image.asset(
+      AppAssets.addTokenButton,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => const SizedBox.shrink(),
     );
   }
 }

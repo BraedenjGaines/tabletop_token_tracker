@@ -1,8 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../data/app_assets.dart';
 import '../../data/hero_library.dart';
 import '../../data/token_library.dart';
+import 'custom_image.dart';
 
 /// Full-screen detail view for a custom hero or custom token. Mirrors the
 /// structure of [CardDetailView] but reads from the custom-data shape.
@@ -67,27 +66,7 @@ class CustomDetailView extends StatelessWidget {
   }
 
   Widget _buildImage() {
-    if (_customImagePath != null) {
-      return Image.file(
-        File(_customImagePath!),
-        fit: BoxFit.contain,
-        errorBuilder: (c, e, s) => _buildFallbackImage(),
-      );
-    }
-    return _buildFallbackImage();
-  }
-
-  Widget _buildFallbackImage() {
-    return Image.asset(
-      AppAssets.addTokenButton,
-      fit: BoxFit.contain,
-      errorBuilder: (c, e, s) => Container(
-        color: Colors.grey[900],
-        child: const Center(
-          child: Icon(Icons.image_not_supported, color: Colors.white24, size: 80),
-        ),
-      ),
-    );
+    return CustomImage(path: _customImagePath, fit: BoxFit.contain);
   }
 
   Widget _buildBottomActions(BuildContext context) {

@@ -5,10 +5,11 @@ class GameSettingsProvider extends ChangeNotifier {
   String selectedFont = 'Cinzel';
   bool turnTrackerEnabled = true;
   bool frostedGlass = false;
-  int matchTimerMinutes = 50;
+  int matchTimerMinutes = 30;
   int startingLife = 20;
   int resourceTrackerSetting = 3; // 0=Both, 1=AP Only, 2=Pitch Only, 3=None
   bool armorTrackingEnabled = false;
+  bool autoDestroyTokens = true;
   String player1Name = 'Player 1';
   String player2Name = 'Player 2';
   String? player1HeroId;
@@ -25,10 +26,11 @@ class GameSettingsProvider extends ChangeNotifier {
     selectedFont = _prefs.getString('selectedFont') ?? 'Cinzel';
     turnTrackerEnabled = _prefs.getBool('turnTrackerEnabled') ?? true;
     frostedGlass = _prefs.getBool('frostedGlass') ?? false;
-    matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 50;
+    matchTimerMinutes = _prefs.getInt('matchTimerMinutes') ?? 30;
     startingLife = _prefs.getInt('startingLife') ?? 20;
     resourceTrackerSetting = _prefs.getInt('resourceTrackerSetting') ?? 3;
     armorTrackingEnabled = _prefs.getBool('armorTrackingEnabled') ?? false;
+    autoDestroyTokens = _prefs.getBool('autoDestroyTokens') ?? true;
     clockEnabled = _prefs.getBool('clockEnabled') ?? true;
     addTokenButtonEnabled = _prefs.getBool('addTokenButtonEnabled') ?? true;
     damageDisplayMode = _prefs.getInt('damageDisplayMode') ?? 0;
@@ -75,6 +77,11 @@ class GameSettingsProvider extends ChangeNotifier {
   void updateArmorTracking(bool enabled) {
     armorTrackingEnabled = enabled;
     _prefs.setBool('armorTrackingEnabled', enabled);
+    notifyListeners();
+  }
+  void updateAutoDestroyTokens(bool enabled) {
+    autoDestroyTokens = enabled;
+    _prefs.setBool('autoDestroyTokens', enabled);
     notifyListeners();
   }
 

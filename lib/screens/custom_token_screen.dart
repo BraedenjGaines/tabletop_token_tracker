@@ -9,6 +9,7 @@ import '../data/token_library.dart';
 import '../data/token_preferences.dart';
 import '../data/hero_library.dart';
 import 'widgets/custom_detail_view.dart';
+import 'widgets/custom_image.dart';
 
 class CustomTokenScreen extends StatefulWidget {
   const CustomTokenScreen({super.key});
@@ -654,22 +655,14 @@ class _CustomTokenScreenState extends State<CustomTokenScreen>
         final heroClassName = _classNames[hero.heroClass] ?? 'Unknown';
         return Card(
           child: ListTile(
-            leading: hero.customImagePath != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Image.file(
-                      File(hero.customImagePath!),
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : Container(
-                    width: 48,
-                    height: 48,
-                    color: Colors.grey[800],
-                    child: const Icon(Icons.person, color: Colors.grey),
-                  ),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: CustomImage(
+                path: hero.customImagePath,
+                width: 48,
+                height: 48,
+              ),
+            ),
             title: Text(hero.name),
             subtitle: Text(heroClassName),
             onTap: () => _openHeroDetail(hero),
@@ -704,22 +697,14 @@ class _CustomTokenScreenState extends State<CustomTokenScreen>
         final token = filtered[index];
         return Card(
           child: ListTile(
-            leading: token.customImagePath != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Image.file(
-                      File(token.customImagePath!),
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : Container(
-                    width: 48,
-                    height: 48,
-                    color: Colors.grey[800],
-                    child: const Icon(Icons.token, color: Colors.grey),
-                  ),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: CustomImage(
+                path: token.customImagePath,
+                width: 48,
+                height: 48,
+              ),
+            ),
             title: Text(token.name),
             subtitle: Text(_tokenSubtitle(token)),
             onTap: () => _openTokenDetail(token),
