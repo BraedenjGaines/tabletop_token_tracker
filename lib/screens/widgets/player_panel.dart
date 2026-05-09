@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
@@ -8,6 +7,7 @@ import '../../data/hero_library.dart';
 import '../../data/token_library.dart';
 import '../../providers/game_settings_provider.dart';
 import '../../state/match_state.dart';
+import 'custom_image.dart';
 import 'hero_image.dart';
 
 /// Renders one player's panel: hero art background, tap halves for health
@@ -32,7 +32,7 @@ class PlayerPanel extends StatelessWidget {
   final VoidCallback onAddTokenTap;
 
   /// Called when the user taps a category chip.
-  final void Function(TokenCategory category) onCategoryTap;
+  final void Function(TokenDisplayBucket bucket) onCategoryTap;
 
   /// Predicate used to render the "triggering" highlight on chips. Provided by
   /// the parent because it depends on phase/turn context held there.
@@ -66,18 +66,22 @@ class PlayerPanel extends StatelessWidget {
   static const double _panelInsetWithResource = 0.22;
   static const double _panelInsetNoResource = 0.365;
 
-  static const Map<TokenCategory, String> _categoryNames = {
-    TokenCategory.ally: 'Allies',
-    TokenCategory.item: 'Items',
-    TokenCategory.boonAura: 'Buffs',
-    TokenCategory.debuffAura: 'Debuffs',
+  static const Map<TokenDisplayBucket, String> _bucketNames = {
+    TokenDisplayBucket.ally: 'Allies',
+    TokenDisplayBucket.item: 'Items',
+    TokenDisplayBucket.buffAura: 'Buffs',
+    TokenDisplayBucket.debuffAura: 'Debuffs',
+    TokenDisplayBucket.genericToken: 'Tokens',
+    TokenDisplayBucket.landmark: 'Landmarks',
   };
 
-  static const Map<TokenCategory, Color> _categoryColors = {
-    TokenCategory.ally: Color.fromARGB(255, 160, 106, 25),
-    TokenCategory.boonAura: Color.fromARGB(255, 41, 134, 177),
-    TokenCategory.debuffAura: Color.fromARGB(255, 120, 32, 136),
-    TokenCategory.item: Color(0xFFD2A679),
+  static const Map<TokenDisplayBucket, Color> _bucketColors = {
+    TokenDisplayBucket.ally: Color.fromARGB(255, 160, 106, 25),
+    TokenDisplayBucket.buffAura: Color.fromARGB(255, 41, 134, 177),
+    TokenDisplayBucket.debuffAura: Color.fromARGB(255, 120, 32, 136),
+    TokenDisplayBucket.item: Color(0xFFD2A679),
+    TokenDisplayBucket.genericToken: Color.fromARGB(255, 80, 80, 80),
+    TokenDisplayBucket.landmark: Color.fromARGB(255, 56, 142, 60),
   };
 
   @override
@@ -132,12 +136,12 @@ class PlayerPanel extends StatelessWidget {
           if (hero == null) {
             return Container(color: Colors.grey[900]);
           }
-          if (hero.customImagePath != null) {
-            return Image.file(
-              File(hero.customImagePath!),
-              fit: BoxFit.cover,
-              errorBuilder: (c, e, s) => Container(color: Colors.grey[900]),
-            );
+          // Custom heroes (whether they have an image or not) use CustomImage,
+          // which falls back to add_token_button.png when the path is null
+          // or unreadable. Stock heroes use HeroImage.
+          final isCustom = customHeroes.any((h) => h.id == hero.id);
+          if (isCustom) {
+            return CustomImage(path: hero.customImagePath, fit: BoxFit.cover);
           }
           return HeroImage(
             hero: hero,
@@ -286,16 +290,22 @@ class PlayerPanel extends StatelessWidget {
   // --- Token chips ---
   Widget _buildTokenChips(BuildContext context) {
     final state = context.read<MatchState>();
-    final byCategory = <TokenCategory, List<int>>{};
     final tokens = state.rawTokensOf(playerIndex);
+    final byBucket = <TokenDisplayBucket, List<int>>{};
     for (int i = 0; i < tokens.length; i++) {
-      byCategory.putIfAbsent(tokens[i].category, () => []).add(i);
+      byBucket.putIfAbsent(tokens[i].displayBucket, () => []).add(i);
     }
+
+    // Counter-screen chip row: 4 fixed slots, always reserved, invisible
+    // when their bucket has no tokens. Generic Token and Landmark buckets
+    // are deliberately omitted from the chip row — those custom token types
+    // exist only in the underlying state and the picker, not as dedicated
+    // chips on the play screen.
     const order = [
-      TokenCategory.boonAura,
-      TokenCategory.debuffAura,
-      TokenCategory.item,
-      TokenCategory.ally,
+      TokenDisplayBucket.buffAura,
+      TokenDisplayBucket.debuffAura,
+      TokenDisplayBucket.item,
+      TokenDisplayBucket.ally,
     ];
 
     return LayoutBuilder(
@@ -309,13 +319,15 @@ class PlayerPanel extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              for (var cat in order)
+              for (var bucket in order)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: byCategory.containsKey(cat)
+                  child: byBucket.containsKey(bucket)
                       ? _buildCategoryChip(
-                          cat,
-                          tokens.where((t) => t.category == cat).fold<int>(0, (sum, t) => sum + t.count),
+                          bucket,
+                          tokens
+                              .where((t) => t.displayBucket == bucket)
+                              .fold<int>(0, (sum, t) => sum + t.count),
                           chipWidth,
                           chipHeight,
                         )
@@ -328,16 +340,16 @@ class PlayerPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryChip(TokenCategory cat, int count, double chipWidth, double chipHeight) {
+  Widget _buildCategoryChip(TokenDisplayBucket bucket, int count, double chipWidth, double chipHeight) {
     return Builder(
       builder: (context) {
         final tokens = context.read<MatchState>().rawTokensOf(playerIndex);
         final hasTriggering = tokens
-            .where((t) => t.category == cat)
+            .where((t) => t.displayBucket == bucket)
             .any((t) => isTokenTriggering(t, playerIndex));
 
         return GestureDetector(
-          onTap: () => onCategoryTap(cat),
+          onTap: () => onCategoryTap(bucket),
           child: Container(
             width: chipWidth,
             height: chipHeight,
@@ -362,7 +374,7 @@ class PlayerPanel extends StatelessWidget {
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: _categoryColors[cat]!.withValues(alpha: 0.6),
+                      color: _bucketColors[bucket]!.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -377,7 +389,7 @@ class PlayerPanel extends StatelessWidget {
                       child: Stack(
                         children: [
                           Text(
-                            _categoryNames[cat] ?? '',
+                            _bucketNames[bucket] ?? '',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -391,7 +403,7 @@ class PlayerPanel extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            _categoryNames[cat] ?? '',
+                            _bucketNames[bucket] ?? '',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

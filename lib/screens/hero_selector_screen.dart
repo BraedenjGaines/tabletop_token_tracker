@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import '../data/custom_hero_repository.dart';
 import '../data/hero_library.dart';
 import 'widgets/hero_image.dart';
+import 'widgets/custom_image.dart';
 
 class HeroSelectorScreen extends StatefulWidget {
   final String? currentHeroId;
@@ -325,7 +325,7 @@ class _HeroSelectorScreenState extends State<HeroSelectorScreen> {
                       (context, index) {
                         final hero = filtered[index];
                         final bool isSelected = hero.id == widget.currentHeroId;
-                        final bool isCustom = hero.customImagePath != null;
+                        final bool isCustom = customHeroesAsData.any((h) => h.id == hero.id);
                         return GestureDetector(
                           onTap: () => Navigator.pop(context, hero),
                           child: Container(
@@ -343,8 +343,7 @@ class _HeroSelectorScreenState extends State<HeroSelectorScreen> {
                                     child: SizedBox(
                                       width: double.infinity,
                                       child: isCustom
-                                          ? Image.file(File(hero.customImagePath!), fit: BoxFit.cover,
-                                              errorBuilder: (c, e, s) => Container(color: Colors.grey[800], child: Center(child: Icon(Icons.person, size: 32, color: Colors.grey))))
+                                          ? CustomImage(path: hero.customImagePath, fit: BoxFit.cover)
                                           : HeroImage(hero: hero, fit: BoxFit.cover),
                                     ),
                                   ),

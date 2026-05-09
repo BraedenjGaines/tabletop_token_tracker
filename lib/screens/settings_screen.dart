@@ -50,7 +50,13 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.addTokenButtonEnabled,
                 onChanged: (value) => settings.updateAddTokenButtonEnabled(value),
               ),
-              Text('Displays a button that will allow you to add tokens to the board. Some tokens are automatically destroyed when their trigger phase is reached, and you have Turn Tracking enabled.', style: descStyle),
+              Text('Displays a button that will allow you to add tokens to the board.', style: descStyle),
+              SwitchListTile(
+                title: Text('Auto-destroy tokens'),
+                value: settings.autoDestroyTokens,
+                onChanged: (value) => settings.updateAutoDestroyTokens(value),
+              ),
+              Text('When Turn Tracking is enabled, tokens with a destroy trigger are automatically removed when their trigger phase is reached. Disable to keep tokens on the board until you remove them manually.', style: descStyle),
 
               // --- Clock ---
               SizedBox(height: 32),

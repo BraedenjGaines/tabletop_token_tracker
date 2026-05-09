@@ -4,6 +4,7 @@ import 'setup_screen.dart';
 import 'settings_screen.dart';
 import 'about_screen.dart';
 import 'custom_token_screen.dart';
+import 'library_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -44,7 +45,14 @@ class HomeScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 20),
                 _MenuButton(
-                  text: 'Library',
+                  text: 'Card Library',
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const LibraryScreen()));
+                  },
+                ),
+                SizedBox(height: 20),
+                _MenuButton(
+                  text: 'Custom Library',
                   onPressed: () {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomTokenScreen()));
                   },

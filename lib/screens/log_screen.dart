@@ -47,11 +47,22 @@ class _LogScreenState extends State<LogScreen> {
 
   Color _getCategoryColor(int? categoryIndex) {
     if (categoryIndex == null) return Colors.white70;
+    if (categoryIndex < 0 || categoryIndex >= TokenCategory.values.length) {
+      return Colors.white70;
+    }
     switch (TokenCategory.values[categoryIndex]) {
-      case TokenCategory.debuffAura: return Colors.purpleAccent;
-      case TokenCategory.boonAura: return Colors.lightBlueAccent;
-      case TokenCategory.ally: return Colors.orange;
-      case TokenCategory.item: return Color(0xFFD2A679);
+      case TokenCategory.aura:
+        // Buff vs debuff distinction is not stored in undoData; auras share
+        // a neutral color in the log.
+        return Colors.lightBlueAccent;
+      case TokenCategory.ally:
+        return Colors.orange;
+      case TokenCategory.item:
+        return const Color(0xFFD2A679);
+      case TokenCategory.genericToken:
+        return Colors.white70;
+      case TokenCategory.landmark:
+        return Colors.greenAccent;
     }
   }
 
@@ -91,21 +102,21 @@ class _LogScreenState extends State<LogScreen> {
         final Color tokenColor = _getCategoryColor(category);
         String verb = 'gained';
         String suffix = '';
-        if (category != null) {
+        if (category != null &&
+            category >= 0 &&
+            category < TokenCategory.values.length) {
           switch (TokenCategory.values[category]) {
-            case TokenCategory.boonAura:
+            case TokenCategory.aura:
               verb = 'gained';
-              break;
-            case TokenCategory.debuffAura:
-              verb = 'was inflicted with';
-              break;
             case TokenCategory.item:
               verb = 'acquired';
-              break;
             case TokenCategory.ally:
               verb = 'gained';
               suffix = ' as an ally';
-              break;
+            case TokenCategory.genericToken:
+              verb = 'gained';
+            case TokenCategory.landmark:
+              verb = 'placed';
           }
         }
         spans = [

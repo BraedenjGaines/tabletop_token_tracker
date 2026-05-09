@@ -78,18 +78,22 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   // Per-player overlay state — what (if anything) is currently shown over each panel.
   late List<PlayerOverlay> _playerOverlay;
 
-  final Map<TokenCategory, String> _categoryNames = {
-    TokenCategory.ally: 'Allies',
-    TokenCategory.item: 'Items',
-    TokenCategory.boonAura: 'Buffs',
-    TokenCategory.debuffAura: 'Debuffs',
+  final Map<TokenDisplayBucket, String> _categoryNames = {
+    TokenDisplayBucket.ally: 'Allies',
+    TokenDisplayBucket.item: 'Items',
+    TokenDisplayBucket.buffAura: 'Buffs',
+    TokenDisplayBucket.debuffAura: 'Debuffs',
+    TokenDisplayBucket.genericToken: 'Tokens',
+    TokenDisplayBucket.landmark: 'Landmarks',
   };
 
-  final Map<TokenCategory, Color> _categoryColors = {
-    TokenCategory.ally: const Color.fromARGB(255, 160, 106, 25),
-    TokenCategory.boonAura: const Color.fromARGB(255, 41, 134, 177),
-    TokenCategory.debuffAura: const Color.fromARGB(255, 120, 32, 136),
-    TokenCategory.item: Color(0xFFD2A679),
+  final Map<TokenDisplayBucket, Color> _categoryColors = {
+    TokenDisplayBucket.ally: const Color.fromARGB(255, 160, 106, 25),
+    TokenDisplayBucket.buffAura: const Color.fromARGB(255, 41, 134, 177),
+    TokenDisplayBucket.debuffAura: const Color.fromARGB(255, 120, 32, 136),
+    TokenDisplayBucket.item: const Color(0xFFD2A679),
+    TokenDisplayBucket.genericToken: const Color.fromARGB(255, 80, 80, 80),
+    TokenDisplayBucket.landmark: const Color.fromARGB(255, 56, 142, 60),
   };
 
   bool get _showTurnTracker {
@@ -164,6 +168,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           final token = ActiveToken(
             name: d['name'],
             category: TokenCategory.values[d['category']],
+            auraType: d['auraType'] != null ? AuraType.values[d['auraType']] : null,
             destroyTrigger: d['destroyTrigger'] != null ? DestroyTrigger.values[d['destroyTrigger']] : null,
             count: d['count'] ?? 1,
             health: d['health'],
@@ -257,7 +262,10 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
 
   // --- Phase / turn ---
   void _advancePhase() {
-    final result = matchState.advancePhase(autoDestroyEnabled: _showTurnTracker);
+    final settings = context.read<GameSettingsProvider>();
+    final result = matchState.advancePhase(
+      autoDestroyEnabled: _showTurnTracker && settings.autoDestroyTokens,
+    );
     for (final r in result.destroyedTokens) {
       _log(r.playerIndex, LogEventType.tokenDestroyed, '${r.token.name} destroyed', undoData: {
         'name': r.token.name,
@@ -282,11 +290,13 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
   /// AND that trigger phase comes strictly after the moment it was played.
   bool _isTokenTriggering(ActiveToken t, int pi) {
     if (!_showTurnTracker) return false;
+    final settings = context.read<GameSettingsProvider>();
+    if (!settings.autoDestroyTokens) return false;
     return MatchState.isActivatedAt(t, pi, turnCount, currentPhase, activePlayer);
   }
 
   // --- Category management overlay ---
-  Widget _buildCategoryOverlay(int playerIndex, TokenCategory cat) {
+  Widget _buildCategoryOverlay(int playerIndex, TokenDisplayBucket cat) {
     return Container(
       color: Colors.black.withValues(alpha: 0.8),
       child: Center(
@@ -299,7 +309,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
               final tokens = <int>[];
               final list = state.rawTokensOf(playerIndex);
               for (int i = 0; i < list.length; i++) {
-                if (list[i].category == cat) tokens.add(i);
+                if (list[i].displayBucket == cat) tokens.add(i);
               }
 
               return Column(
@@ -369,7 +379,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 height: tileWidth * 1.2,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: _categoryColors[token.category]!.withValues(alpha: 0.6),
+                  color: _categoryColors[token.displayBucket]!.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(6),
                   border: triggering
                       ? Border.all(color: Colors.amber, width: 2)
@@ -399,7 +409,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                           if (isAlly) {
                             final int newHealth = token.health! - 1;
                             if (newHealth <= 0) {
-                              final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
+                              final undoData = {'name': token.name, 'category': token.category.index, 'auraType': token.auraType?.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
                               matchState.removeTokenAt(pi, ti);
                               _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
                               if (!matchState.hasTokensInCategory(pi, token.category)) {
@@ -412,8 +422,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                           } else {
                             final int newCount = token.count - 1;
                             if (newCount <= 0) {
-                              final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
-                              matchState.removeTokenAt(pi, ti);
+                              final undoData = {'name': token.name, 'category': token.category.index, 'auraType': token.auraType?.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};                              matchState.removeTokenAt(pi, ti);
                               _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
                               if (!matchState.hasTokensInCategory(pi, token.category)) {
                                 setState(() { _playerOverlay[pi] = const NoOverlay(); });
@@ -472,8 +481,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
                   onTap: () {
-                    final undoData = {'name': token.name, 'category': token.category.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};
-                    matchState.removeTokenAt(pi, ti);
+                    final undoData = {'name': token.name, 'category': token.category.index, 'auraType': token.auraType?.index, 'destroyTrigger': token.destroyTrigger?.index, 'count': token.count, 'health': token.health, 'maxHealth': token.maxHealth, 'turnPlayed': token.turnPlayed, 'playerPlayed': token.playerPlayed, 'phasePlayed': token.phasePlayed, 'index': ti};                    matchState.removeTokenAt(pi, ti);
                     _log(pi, LogEventType.tokenDestroyed, '${token.name} destroyed', undoData: undoData);
                     if (!matchState.hasTokensInCategory(pi, token.category)) {
                       setState(() { _playerOverlay[pi] = const NoOverlay(); });
@@ -520,7 +528,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
                 }
               }
               matchState.addToken(playerIndex, ActiveToken(
-                name: td.name, category: td.category, destroyTrigger: td.destroyTrigger,
+                name: td.name, category: td.category, auraType: td.auraType, destroyTrigger: td.destroyTrigger,
                 customImagePath: td.customImagePath,
                 health: td.category == TokenCategory.ally ? td.health : null,
                 maxHealth: td.category == TokenCategory.ally ? td.health : null,
@@ -788,7 +796,7 @@ class _CounterScreenState extends State<CounterScreen> with TickerProviderStateM
           )),
           // Player overlays
           for (int i = 0; i < 2; i++)
-            if (_playerOverlay[i] case CategoryOverlay(category: final cat))
+            if (_playerOverlay[i] case CategoryOverlay(bucket: final cat))
               _buildPlayerOverlayPositioned(i, _buildCategoryOverlay(i, cat)),
           for (int i = 0; i < 2; i++)
             if (_playerOverlay[i] is AddTokenOverlay)
@@ -810,14 +818,23 @@ class _TokenArtBackground extends StatelessWidget {
     return name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\s]'), '').replaceAll(RegExp(r'\s+'), '_');
   }
 
+  /// True if this token name doesn't match any stock token in the library —
+  /// i.e., it was created via Custom Library. Custom tokens get the
+  /// add_token_button.png fallback instead of trying to load a non-existent
+  /// asset.
+  bool get _isCustom => !tokenLibrary.any((t) => t.name == tokenName);
+
   @override
   Widget build(BuildContext context) {
     if (customImagePath != null) {
       return Image.file(
         File(customImagePath!),
         fit: BoxFit.cover,
-        errorBuilder: (c, e, s) => const SizedBox.shrink(),
+        errorBuilder: (_, _, _) => _buildDefault(),
       );
+    }
+    if (_isCustom) {
+      return _buildDefault();
     }
 
     final id = _getTokenId(tokenName);
@@ -868,6 +885,15 @@ class _TokenArtBackground extends StatelessWidget {
       },
     );
   }
+
+  /// Default art used when a custom token has no user-supplied image.
+  Widget _buildDefault() {
+    return Image.asset(
+      AppAssets.addTokenButton,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+    );
+  }
 }
 
 // --- Inline token picker ---
@@ -888,10 +914,17 @@ class _InlineTokenPicker extends StatefulWidget {
 
 class _InlineTokenPickerState extends State<_InlineTokenPicker> {
   String searchQuery = '';
-  final Set<TokenCategory> selectedCategories = {};
+  final Set<TokenDisplayBucket> selectedCategories = {};
   final searchController = TextEditingController();
   late List<String> currentFavorites;
-  final Map<TokenCategory, String> catNames = {TokenCategory.boonAura: 'Buffs', TokenCategory.debuffAura: 'Debuffs', TokenCategory.item: 'Items', TokenCategory.ally: 'Allies'};
+  final Map<TokenDisplayBucket, String> catNames = {
+    TokenDisplayBucket.buffAura: 'Buffs',
+    TokenDisplayBucket.debuffAura: 'Debuffs',
+    TokenDisplayBucket.item: 'Items',
+    TokenDisplayBucket.ally: 'Allies',
+    TokenDisplayBucket.genericToken: 'Tokens',
+    TokenDisplayBucket.landmark: 'Landmarks',
+  };
 
   @override
   void initState() { super.initState(); currentFavorites = List.from(widget.favoriteTokens); }
@@ -900,7 +933,7 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
 
   List<TokenData> _getFiltered() {
     var tokens = List<TokenData>.from(widget.allTokens);
-    if (selectedCategories.isNotEmpty) tokens = tokens.where((t) => selectedCategories.contains(t.category)).toList();
+    if (selectedCategories.isNotEmpty) tokens = tokens.where((t) => selectedCategories.contains(t.displayBucket)).toList();
     if (searchQuery.isNotEmpty) tokens = tokens.where((t) => t.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
     final favs = tokens.where((t) => currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
     final rest = tokens.where((t) => !currentFavorites.contains(t.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
@@ -921,7 +954,12 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
-            for (var c in [TokenCategory.boonAura, TokenCategory.debuffAura, TokenCategory.item, TokenCategory.ally])
+            for (var c in [
+              TokenDisplayBucket.buffAura,
+              TokenDisplayBucket.debuffAura,
+              TokenDisplayBucket.item,
+              TokenDisplayBucket.ally,
+            ])
               Padding(padding: EdgeInsets.only(right: 4), child: FilterChip(label: Text(catNames[c] ?? '', style: TextStyle(fontSize: 14)), selected: selectedCategories.contains(c), showCheckmark: false, onSelected: (_) { setState(() { selectedCategories.contains(c) ? selectedCategories.remove(c) : selectedCategories.add(c); }); }, visualDensity: VisualDensity.compact)),
           ]),
         ),
@@ -949,7 +987,7 @@ class _InlineTokenPickerState extends State<_InlineTokenPicker> {
                         child: Icon(fav ? Icons.star : Icons.star_border, color: fav ? Colors.amber : Colors.grey, size: 20),
                       ),
                       title: Text(td.name, style: TextStyle(fontSize: 13, color: Colors.white)),
-                      subtitle: Text(catNames[td.category] ?? '', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      subtitle: Text(catNames[td.displayBucket] ?? '', style: TextStyle(fontSize: 10, color: Colors.grey)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

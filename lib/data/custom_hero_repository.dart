@@ -52,8 +52,23 @@ class CustomHeroRepository {
     return heroes;
   }
 
+  /// Replaces the hero with the same id. Preserves list position. Persists.
+  /// Returns the updated list.
+  static Future<List<HeroData>> update(HeroData hero) async {
+    final heroes = await loadAll();
+    final index = heroes.indexWhere((h) => h.id == hero.id);
+    if (index < 0) {
+      heroes.add(hero);
+    } else {
+      heroes[index] = hero;
+    }
+    await saveAll(heroes);
+    return heroes;
+  }
+
   // --- Schema ---
-  // Centralized JSON shape. Change here and only here if the schema evolves.
+  // Centralized JSON shape. The schema supports both new format
+  // (`talents: [int, int, ...]`) and legacy format (`talent: int`).
 
   static HeroData _fromMap(dynamic raw) {
     final map = raw as Map<String, dynamic>;
@@ -61,12 +76,36 @@ class CustomHeroRepository {
       id: map['id'] as String? ?? 'custom_unknown',
       name: map['name'] as String? ?? 'Unknown',
       heroClass: HeroClass.values[map['heroClass'] as int? ?? 0],
-      talents: [HeroTalent.values[map['talent'] as int? ?? 0]],
+      talents: _talentsFromMap(map),
       isYoung: false,
-      intellect: 0,
-      health: 0,
+      intellect: map['intellect'] as int? ?? 0,
+      health: map['health'] as int? ?? 0,
       customImagePath: map['imagePath'] as String?,
+      cardText: map['cardText'] as String? ?? '',
     );
+  }
+
+  /// Reads talents from either the new `talents` array or the legacy
+  /// `talent` single-int field. Drops `HeroTalent.none` entries since the
+  /// new model uses an empty list to mean "no talents."
+  static List<HeroTalent> _talentsFromMap(Map<String, dynamic> map) {
+    final raw = map['talents'];
+    if (raw is List) {
+      final result = <HeroTalent>[];
+      for (final t in raw) {
+        if (t is int && t >= 0 && t < HeroTalent.values.length) {
+          final talent = HeroTalent.values[t];
+          if (talent != HeroTalent.none) result.add(talent);
+        }
+      }
+      return result.isEmpty ? [HeroTalent.none] : result;
+    }
+    // Legacy single-talent fallback.
+    final legacyIdx = map['talent'] as int? ?? 0;
+    if (legacyIdx >= 0 && legacyIdx < HeroTalent.values.length) {
+      return [HeroTalent.values[legacyIdx]];
+    }
+    return [HeroTalent.none];
   }
 
   static Map<String, dynamic> _toMap(HeroData hero) {
@@ -74,10 +113,11 @@ class CustomHeroRepository {
       'id': hero.id,
       'name': hero.name,
       'heroClass': hero.heroClass.index,
-      // Existing schema stores a single 'talent' int, not a list. Preserve that
-      // for backward compatibility — pull the first talent.
-      'talent': hero.talents.isNotEmpty ? hero.talents.first.index : 0,
+      'talents': hero.talents.map((t) => t.index).toList(),
+      'intellect': hero.intellect,
+      'health': hero.health,
       'imagePath': hero.customImagePath,
+      'cardText': hero.cardText,
     };
   }
 }
