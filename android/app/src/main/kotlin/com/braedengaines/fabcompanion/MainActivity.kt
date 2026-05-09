@@ -1,4 +1,4 @@
-package com.example.tabletop_token_tracker
+package com.braedengaines.fabcompanion
 
 import io.flutter.embedding.android.FlutterActivity
 
